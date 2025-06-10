@@ -22,6 +22,14 @@ def main():
     contacts_parser.add_argument('--prefix', '-p', type=str, default='Contact',
                                help='Prefix for contact names')
 
+    # Send Bulk Emails Parser (with enhanced deliverability)
+    emails_parser = subparsers.add_parser('send_bulk_emails', help='Send emails with enhanced deliverability features')
+    emails_parser.add_argument('emails_file', type=str, help='Text file containing email addresses (one per line)')
+    emails_parser.add_argument('subject', type=str, help='Email subject')
+    emails_parser.add_argument('body_file', type=str, help='Text file containing email body')
+    emails_parser.add_argument('--config', '-c', type=str, default='data/email_config_enhanced.json',
+                              help='Enhanced email configuration JSON file')
+
     # Add more automation parsers here as needed
 
     args = parser.parse_args()
@@ -51,6 +59,15 @@ def main():
             print(f"- Duplicate numbers: {results['duplicates']}")
             print(f"- Invalid numbers: {results['invalid']}")
             print(f"Output file: {results['output_file']}")
+        
+        elif args.automation == 'send_bulk_emails':
+            from automations.send_enhanced_emails import send_same_email_enhanced
+            
+            # Run the enhanced email automation
+            results = send_same_email_enhanced(args.emails_file, args.subject, args.body_file, args.config)
+            
+            if results['total'] == 0:
+                sys.exit(1)
 
     except Exception as e:
         print(f"Error: {str(e)}")
