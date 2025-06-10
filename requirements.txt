@@ -1,0 +1,5 @@
+# Core dependencies
+pytest>=7.0.0
+pathlib
+typing
+argparse
