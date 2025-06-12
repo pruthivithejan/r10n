@@ -15,12 +15,12 @@ def main():
     subparsers = parser.add_subparsers(dest='automation', help='Available automations')
 
     # Generate Contacts Parser
-    contacts_parser = subparsers.add_parser('generate_contacts', help='Generate VCF contact cards')
-    contacts_parser.add_argument('input_file', type=str, help='File containing phone numbers (one per line)')
-    contacts_parser.add_argument('--output', '-o', type=str, default='contacts.vcf', 
-                               help='Output VCF file name')
+    contacts_parser = subparsers.add_parser('generate_contacts', help='Generate VCF contact cards from phone numbers')
+    contacts_parser.add_argument('input_file', type=str, help='Text file containing phone numbers (one per line)')
+    contacts_parser.add_argument('--output', '-o', type=str, default=None, 
+                               help='Output VCF file name (default: auto-generated based on input filename)')
     contacts_parser.add_argument('--prefix', '-p', type=str, default='Contact',
-                               help='Prefix for contact names')
+                               help='Prefix for contact names (default: Contact)')
 
     # Send Bulk Emails Parser (with enhanced deliverability)
     emails_parser = subparsers.add_parser('send_bulk_emails', help='Send emails with enhanced deliverability features')
@@ -43,17 +43,13 @@ def main():
     try:
         # Import and run the selected automation
         if args.automation == 'generate_contacts':
-            from automations.generate_contacts import generate_vcf
+            from automations.generate_contacts import generate_vcf_from_file
             
-            # Read input file
-            with open(args.input_file, 'r') as f:
-                numbers = f.read()
-            
-            # Run the automation
-            results = generate_vcf(numbers, args.output, args.prefix)
+            # Run the automation using file input
+            results = generate_vcf_from_file(args.input_file, args.output, args.prefix)
             
             # Print results
-            print(f"Total numbers in array: {results['total']}")
+            print(f"Total numbers in input file: {results['total']}")
             print(f"Numbers added to VCF: {results['valid']}")
             print(f"Numbers removed: {results['duplicates'] + results['invalid']}")
             print(f"- Duplicate numbers: {results['duplicates']}")

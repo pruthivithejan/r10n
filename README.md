@@ -23,7 +23,9 @@ This is a basic Python project with a virtual environment setup.
   - `email_config_enhanced.json`: Your email configuration (create from template)
   - `email_lists/`: Text files with email addresses
   - `email_templates/`: Email content templates
+  - `phone_numbers/`: Text files with phone numbers for contact generation
   - `attachments/`: Files to attach to emails
+  - Generated VCF files and outputs are saved here
 - `docs/`: Documentation and guides
 - `tests/`: Test files directory
 - `requirements.txt`: Project dependencies
@@ -52,20 +54,34 @@ python src/main.py
 ### Contact Card Generator
 Converts a list of phone numbers into a VCF file that can be imported into your contacts.
 
-1. Create a text file with phone numbers (one per line)
-2. Run the command:
+1. **Prepare Phone Numbers:**
+   - Create a text file with phone numbers (one per line) in `data/phone_numbers/`
+   - Supported formats: 0712345678, +94712345678, 071 234 5678, etc.
+
+2. **Run the command:**
 ```bash
 python src/main.py generate_contacts <input_file> [options]
 ```
 
 Options:
-- `--output`, `-o`: Output VCF file name (default: contacts.vcf)
+- `--output`, `-o`: Output VCF file name (default: auto-generated from input filename)
 - `--prefix`, `-p`: Prefix for contact names (default: Contact)
 
-Example:
+Examples:
 ```bash
-python src/main.py generate_contacts numbers.txt --output my_contacts.vcf --prefix "Friend"
+# Basic usage - creates data/my_numbers_contacts.vcf
+python src/main.py generate_contacts data/phone_numbers/my_numbers.txt
+
+# Custom output filename and prefix
+python src/main.py generate_contacts data/phone_numbers/friends.txt --output family_contacts.vcf --prefix "Friend"
 ```
+
+**Features:**
+- Automatically cleans and validates phone numbers
+- Removes duplicates
+- Converts to Sri Lankan (+94) format
+- Outputs VCF files to `data/` directory for organization
+- Reports statistics (total, valid, duplicates, invalid)
 
 ### Bulk Email Sender (Enhanced Deliverability)
 Sends the same email to multiple recipients with enhanced deliverability features to avoid spam folders.

@@ -37,5 +37,6 @@ Thumbs.db
 
 # Project specific
 *.vcf
-data/
+data/email_config_enhanced.json
+data/email_config.json
 
