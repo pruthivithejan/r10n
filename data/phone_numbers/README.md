@@ -1,31 +1,30 @@
-# Phone Numbers
+# 📞 Phone Numbers for Contact Generation
 
-This directory contains phone number lists for generating contact cards.
-
-## Format:
-Create a text file with one phone number per line:
-
-```
-0729553860
-0785952202
-0715132486
-+94714707197
-071 5335421
-076 321 3985
-```
+## How to Use:
+1. **Paste your phone numbers** into `numbers.txt` (one per line)
+2. **Run the automation**: `python src/main.py generate_contacts`
+3. **Find your VCF file** generated in this directory
 
 ## Supported Formats:
-- Sri Lankan numbers starting with 0 (e.g., 0712345678)
-- International format with +94 (e.g., +94712345678)
-- Numbers with spaces or dashes (automatically cleaned)
-- Numbers without leading 0 (automatically prefixed)
+```
+0729553860
++94785952202
+071 533 5421
+076-321-3985
+775581028
+```
 
 ## Example Usage:
 ```bash
-python src/main.py generate_contacts data/phone_numbers/my_contacts.txt --prefix "Friend"
+# Generate contacts with default names
+python src/main.py generate_contacts
+
+# Generate with custom prefix
+python src/main.py generate_contacts --prefix "Workshop Participant"
 ```
 
 ## Output:
-- VCF files are automatically saved to the `data/` directory
+- VCF files are saved in this directory
 - Duplicate numbers are automatically removed
 - Invalid numbers are reported and excluded
+- Statistics are displayed after generation

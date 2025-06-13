@@ -52,9 +52,9 @@ def generate_vcf_from_file(input_file: str, output_name: str = None, prefix: str
         base_name = input_path.stem
         output_name = f"{base_name}_contacts.vcf"
     
-    # Ensure output goes to data folder
-    if not output_name.startswith('data/'):
-        output_path = Path("data") / output_name
+    # Ensure output goes to phone_numbers directory
+    if not output_name.startswith('data/phone_numbers/'):
+        output_path = Path("data/phone_numbers") / output_name
     else:
         output_path = Path(output_name)
     
@@ -109,9 +109,9 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
 
     cleaned_numbers = sorted(cleaned_numbers)
 
-    # Ensure output goes to data folder
-    if not output_name.startswith('data/'):
-        output_path = Path("data") / output_name
+    # Ensure output goes to phone_numbers directory
+    if not output_name.startswith('data/phone_numbers/'):
+        output_path = Path("data/phone_numbers") / output_name
     else:
         output_path = Path(output_name)
     

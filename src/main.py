@@ -16,19 +16,23 @@ def main():
 
     # Generate Contacts Parser
     contacts_parser = subparsers.add_parser('generate_contacts', help='Generate VCF contact cards from phone numbers')
-    contacts_parser.add_argument('input_file', type=str, help='Text file containing phone numbers (one per line)')
+    contacts_parser.add_argument('--input', '-i', type=str, default='data/phone_numbers/numbers.txt',
+                               help='Text file containing phone numbers (default: data/phone_numbers/numbers.txt)')
     contacts_parser.add_argument('--output', '-o', type=str, default=None, 
-                               help='Output VCF file name (default: auto-generated based on input filename)')
+                               help='Output VCF file name (default: auto-generated in data/phone_numbers/)')
     contacts_parser.add_argument('--prefix', '-p', type=str, default='Contact',
                                help='Prefix for contact names (default: Contact)')
 
-    # Send Bulk Emails Parser (with enhanced deliverability)
-    emails_parser = subparsers.add_parser('send_bulk_emails', help='Send emails with enhanced deliverability features')
-    emails_parser.add_argument('emails_file', type=str, help='Text file containing email addresses (one per line)')
-    emails_parser.add_argument('subject', type=str, help='Email subject')
-    emails_parser.add_argument('body_file', type=str, help='Text file containing email body')
-    emails_parser.add_argument('--config', '-c', type=str, default='data/email_config_enhanced.json',
-                              help='Enhanced email configuration JSON file')
+    # Send Bulk Emails Parser
+    emails_parser = subparsers.add_parser('send_bulk_emails', help='Send the same email to multiple recipients')
+    emails_parser.add_argument('--emails', '-e', type=str, default='data/emails/email_list.txt',
+                              help='Text file containing email addresses (default: data/emails/email_list.txt)')
+    emails_parser.add_argument('--subject', '-s', type=str, required=True,
+                              help='Email subject')
+    emails_parser.add_argument('--body', '-b', type=str, default='data/emails/email.txt',
+                              help='Text file containing email body (default: data/emails/email.txt)')
+    emails_parser.add_argument('--config', '-c', type=str, default='data/emails/email_config.json',
+                              help='Email configuration JSON file (default: data/emails/email_config.json)')
 
     # Add more automation parsers here as needed
 
@@ -46,7 +50,7 @@ def main():
             from automations.generate_contacts import generate_vcf_from_file
             
             # Run the automation using file input
-            results = generate_vcf_from_file(args.input_file, args.output, args.prefix)
+            results = generate_vcf_from_file(args.input, args.output, args.prefix)
             
             # Print results
             print(f"Total numbers in input file: {results['total']}")
@@ -57,10 +61,10 @@ def main():
             print(f"Output file: {results['output_file']}")
         
         elif args.automation == 'send_bulk_emails':
-            from automations.send_enhanced_emails import send_same_email_enhanced
+            from automations.send_same_email import send_from_file
             
-            # Run the enhanced email automation
-            results = send_same_email_enhanced(args.emails_file, args.subject, args.body_file, args.config)
+            # Run the simple email automation
+            results = send_from_file(args.emails, args.subject, args.body, args.config, 'data/emails/attachments')
             
             if results['total'] == 0:
                 sys.exit(1)

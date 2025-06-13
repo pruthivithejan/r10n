@@ -164,8 +164,8 @@ def send_from_file(
     emails_file: str,
     subject: str,
     body_file: str,
-    config_file: str = "data/email_config.json",
-    attachments_dir: str = "data/attachments"
+    config_file: str = "data/emails/email_config.json",
+    attachments_dir: str = "data/emails/attachments"
 ):
     """Send emails from a file containing email addresses and body from a text file"""
     try:
@@ -195,28 +195,6 @@ def send_from_file(
 
 
 if __name__ == "__main__":
-    # Example usage
-    example_emails = [
-        "pruthivithejan@outlook.com",
-        "ict22930@fot.sjp.ac.lk",
-        "ict22911@fot.sjp.ac.lk",
-        "ict22915@fot.sjp.ac.lk"
-    ]
-    
-    example_subject = "[ Join ICTS ] Today and Maximize Your Envision Workshop Experience!"
-    
-    example_body = """Dear Participant,
-
-Thank you for signing up for the Envision Workshop organized by ICTS. We're thrilled to have you on board for this exciting event that promises to offer valuable insights and opportunities.
-
-To make the most out of your Envision Workshop experience and gain access to exclusive resources, we warmly invite you to become an ICTS member. Membership with ICTS opens doors to a vibrant community, exclusive events, and continuous learning opportunities.
-
-Joining is simple! Please complete the membership form via the following link: https://forms.gle/4iDrYcB2QrJBniWn9
-
-Sincerely,
-Pruthivi Thejan,
-Assistant Secretary, ICTS"""
-    
     print("Simple Email Sender")
     print("Use the main CLI to run this automation:")
-    print("python src/main.py send_same_email <emails_file> <subject> <body_file> [options]")
+    print("python src/main.py send_bulk_emails --subject 'Your Subject Here'")
