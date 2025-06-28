@@ -34,6 +34,17 @@ def main():
     emails_parser.add_argument('--config', '-c', type=str, default='data/emails/email_config.json',
                               help='Email configuration JSON file (default: data/emails/email_config.json)')
 
+    # Send Outlook Emails with Attachments Parser
+    outlook_parser = subparsers.add_parser('send_outlook_emails', help='Send personalized emails with individual attachments via Outlook')
+    outlook_parser.add_argument('--recipients', '-r', type=str, default='data/outlook/recipients.txt',
+                               help='CSV file with recipients and their certificate filenames (default: data/outlook/recipients.txt)')
+    outlook_parser.add_argument('--body', '-b', type=str, default='data/outlook/email.txt',
+                               help='Text file containing email body template (default: data/outlook/email.txt)')
+    outlook_parser.add_argument('--config', '-c', type=str, default='data/outlook/email_config.json',
+                               help='Email configuration JSON file (default: data/outlook/email_config.json)')
+    outlook_parser.add_argument('--certificates', '-cert', type=str, default='data/outlook/certificates',
+                               help='Directory containing certificate files (default: data/outlook/certificates)')
+
     # Add more automation parsers here as needed
 
     args = parser.parse_args()
@@ -67,6 +78,17 @@ def main():
             results = send_from_file(args.emails, args.subject, args.body, args.config, 'data/emails/attachments')
             
             if results['total'] == 0:
+                sys.exit(1)
+        
+        elif args.automation == 'send_outlook_emails':
+            from automations.send_emails_outlook import send_from_file
+            
+            # Run the Outlook email automation with attachments
+            results = send_from_file(args.recipients, args.body, args.config, args.certificates)
+            
+            print(f"\nCompleted: {results['sent']}/{results['total']} emails sent successfully")
+            if results['failed'] > 0:
+                print(f"Failed: {results['failed']} emails")
                 sys.exit(1)
 
     except Exception as e:

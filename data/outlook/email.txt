@@ -1,0 +1,8 @@
+Hi {name},
+
+Congratulations!
+
+Please find your certificate attached.
+
+Best regards,
+Pruthivi Thejan

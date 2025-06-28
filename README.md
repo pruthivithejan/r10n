@@ -81,15 +81,67 @@ python src/main.py send_bulk_emails --subject "Workshop Invitation - Join Us Tod
 - ✅ Attachment support
 - ✅ Detailed delivery reporting
 
+---
+
+### 📬 Outlook Email with Individual Attachments
+Sends personalized emails with individual attachments to each recipient via Outlook.
+
+**Steps:**
+1. **Setup Outlook configuration** in `data/outlook/email_config.json`:
+   ```json
+   {
+     "smtp_server": "smtp.office365.com",
+     "smtp_port": 587,
+     "sender_email": "your_email@outlook.com",
+     "password": "your_app_password",
+     "subject": "Your Certificate"
+   }
+   ```
+
+2. **Add recipients with their attachments** in `data/outlook/recipients.txt`:
+   ```
+   Student One,student1@outlook.com,student1.pdf
+   Student Two,student2@outlook.com,student2.pdf
+   ```
+
+3. **Create email template** in `data/outlook/email.txt` (use `{name}` for personalization):
+   ```
+   Hi {name},
+   
+   Please find your certificate attached.
+   
+   Best regards,
+   Your Name
+   ```
+
+4. **Add certificate files** to `data/outlook/certificates/` folder
+
+5. **Run the automation:**
+   ```bash
+   python src/main.py send_outlook_emails
+   ```
+
+**Features:**
+- ✅ Personalized emails with recipient names
+- ✅ Individual attachments per recipient
+- ✅ Outlook/Office365 SMTP support
+- ✅ Certificate file validation
+- ✅ Detailed sending reports
+
 ## Project Structure
 
 ```
 data/
-├── emails/                    # Email automation assets
-│   ├── email_config.json     # Your email settings
+├── emails/                    # Bulk email automation assets
+│   ├── email_config.json     # Your Gmail/email settings
 │   ├── email_list.txt        # Paste email addresses here
 │   ├── email.txt             # Paste email message here
 │   └── attachments/          # Add files to attach
+├── outlook/                   # Outlook email automation assets
+│   ├── email_config.json     # Your Outlook settings
+│   ├── recipients.txt        # Recipients with attachment filenames
+│   ├── email.txt             # Email template with {name} placeholder
+│   └── certificates/         # Individual attachment files
 ├── phone_numbers/            # Contact generation assets
 │   ├── numbers.txt           # Paste phone numbers here
 │   └── *.vcf                 # Generated contact files
@@ -101,8 +153,9 @@ src/
 ## Security Notes
 
 - **Gmail Users:** Use App Passwords instead of regular passwords
-- **Never commit** `email_config.json` with real credentials
-- **Test first** with a small email list
+- **Outlook Users:** Enable 2FA and create App Passwords for email sending
+- **Never commit** config files with real credentials
+- **Test first** with a small recipient list
 
 ## Getting Help
 
@@ -110,4 +163,5 @@ Run any automation without arguments to see available options:
 ```bash
 python src/main.py generate_contacts --help
 python src/main.py send_bulk_emails --help
+python src/main.py send_outlook_emails --help
 ```

@@ -1,0 +1,9 @@
+This is a sample certificate file for testing the Outlook automation.
+
+In a real scenario, this would be a PDF certificate file.
+The filename should match what's listed in recipients.txt.
+
+For testing purposes, you can:
+1. Create actual PDF files with certificate content
+2. Name them according to your recipients.txt entries
+3. Place them in this certificates/ folder
