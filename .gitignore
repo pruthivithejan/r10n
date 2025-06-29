@@ -31,7 +31,8 @@ ENV/
 *.swp
 *.swo
 
-data
+# Data
+data/
 
 # Operating System
 .DS_Store
@@ -39,6 +40,5 @@ Thumbs.db
 
 # Project specific
 *.vcf
-data/email_config_enhanced.json
-data/email_config.json
+
 
