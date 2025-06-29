@@ -1,0 +1,25 @@
+{
+    "template_pdf": "templates/CryptX.pdf",
+    "output_directory": "output",
+    "fields": {
+        "name": {
+            "x": 420,
+            "y": 365,
+            "font_size": 32,
+            "font_weight": "bold",
+            "color": [0, 0, 0],
+            "alignment": "center"
+        },
+        "position": {
+            "x": 420,
+            "y": 295,
+            "font_size": 24,
+            "font_weight": "medium",
+            "color": [0, 0, 0],
+            "alignment": "center"
+        }
+    },
+    "page_width": 792,
+    "page_height": 612,
+    "font_family": "Roboto"
+}

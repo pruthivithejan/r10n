@@ -1,4 +1,1 @@
-Student One,student1@outlook.com,student1.pdf
-Student Two,student2@outlook.com,student2.pdf
-# Add more entries in format: Name,Email,Certificate_Filename
-# Example: John Smith,john.smith@example.com,john_certificate.pdf
+Pruthivi Thejan,pruthivi@pruthivithejan.me,Pruthivi_Thejan_certificate.pdf

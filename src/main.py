@@ -45,6 +45,15 @@ def main():
     outlook_parser.add_argument('--certificates', '-cert', type=str, default='data/outlook/certificates',
                                help='Directory containing certificate files (default: data/outlook/certificates)')
 
+    # Fill Certificates Parser
+    certs_parser = subparsers.add_parser('fill_certificates', help='Generate personalized certificates from PDF template')
+    certs_parser.add_argument('--recipients', '-r', type=str, default='recipients.txt',
+                             help='CSV file with recipient data (default: data/certificates/recipients.txt)')
+    certs_parser.add_argument('--config', '-c', type=str, default='config.json',
+                             help='Certificate configuration JSON file (default: data/certificates/config.json)')
+    certs_parser.add_argument('--base-dir', '-d', type=str, default='data/certificates',
+                             help='Base directory for certificate files (default: data/certificates)')
+
     # Add more automation parsers here as needed
 
     args = parser.parse_args()
@@ -89,6 +98,17 @@ def main():
             print(f"\nCompleted: {results['sent']}/{results['total']} emails sent successfully")
             if results['failed'] > 0:
                 print(f"Failed: {results['failed']} emails")
+                sys.exit(1)
+        
+        elif args.automation == 'fill_certificates':
+            from automations.fill_certificates import fill_certificates_from_file
+            
+            # Run the certificate filling automation
+            results = fill_certificates_from_file(args.recipients, args.config, args.base_dir)
+            
+            print(f"\nCompleted: {results['generated']}/{results['total']} certificates generated successfully")
+            if results['failed'] > 0:
+                print(f"Failed: {results['failed']} certificates")
                 sys.exit(1)
 
     except Exception as e:

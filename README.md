@@ -128,6 +128,54 @@ Sends personalized emails with individual attachments to each recipient via Outl
 - ✅ Certificate file validation
 - ✅ Detailed sending reports
 
+---
+
+### 📄 Certificate Generator
+Fills blank PDF certificate templates with recipient information and generates personalized certificates.
+
+**Steps:**
+1. **Create or obtain a blank certificate PDF template** and place it in `data/certificates/templates/`
+
+2. **Configure field positions** in `data/certificates/config.json`:
+   ```json
+   {
+     "template_pdf": "templates/certificate_template.pdf",
+     "output_directory": "output",
+     "fields": {
+       "name": {
+         "x": 396, "y": 370,
+         "font_size": 28, "font_weight": "bold",
+         "color": [0, 0, 139], "alignment": "center"
+       },
+       "course": {
+         "x": 396, "y": 270,
+         "font_size": 20, "font_weight": "bold",
+         "color": [0, 0, 0], "alignment": "center"
+       }
+     }
+   }
+   ```
+
+3. **Add recipients** in `data/certificates/recipients.txt`:
+   ```
+   John Smith,Workshop on AI,2024-06-28,Excellent Performance
+   Jane Doe,Data Science Bootcamp,2024-06-25,Outstanding Achievement
+   ```
+
+4. **Run the automation:**
+   ```bash
+   python src/main.py fill_certificates
+   ```
+
+5. **Find generated certificates** in `data/certificates/output/`
+
+**Features:**
+- ✅ PDF template overlay with precise positioning
+- ✅ Customizable fonts, sizes, colors, and alignment
+- ✅ Support for multiple data fields (name, course, date, achievement)
+- ✅ Automatic filename generation from recipient names
+- ✅ Batch processing with detailed progress reports
+
 ## Project Structure
 
 ```
@@ -142,6 +190,11 @@ data/
 │   ├── recipients.txt        # Recipients with attachment filenames
 │   ├── email.txt             # Email template with {name} placeholder
 │   └── certificates/         # Individual attachment files
+├── certificates/             # Certificate generation assets
+│   ├── config.json           # Field positions and styling
+│   ├── recipients.txt        # Recipients with course/achievement data
+│   ├── templates/            # Blank PDF certificate templates
+│   └── output/               # Generated personalized certificates
 ├── phone_numbers/            # Contact generation assets
 │   ├── numbers.txt           # Paste phone numbers here
 │   └── *.vcf                 # Generated contact files
@@ -164,4 +217,5 @@ Run any automation without arguments to see available options:
 python src/main.py generate_contacts --help
 python src/main.py send_bulk_emails --help
 python src/main.py send_outlook_emails --help
+python src/main.py fill_certificates --help
 ```

@@ -31,6 +31,8 @@ ENV/
 *.swp
 *.swo
 
+data
+
 # Operating System
 .DS_Store
 Thumbs.db
