@@ -179,36 +179,69 @@ Fills blank PDF certificate templates with recipient information and generates p
 ## Project Structure
 
 ```
-data/
-├── emails/                    # Bulk email automation assets
-│   ├── email_config.json     # Your Gmail/email settings
-│   ├── email_list.txt        # Paste email addresses here
-│   ├── email.txt             # Paste email message here
-│   └── attachments/          # Add files to attach
-├── outlook/                   # Outlook email automation assets
-│   ├── email_config.json     # Your Outlook settings
-│   ├── recipients.txt        # Recipients with attachment filenames
-│   ├── email.txt             # Email template with {name} placeholder
-│   └── certificates/         # Individual attachment files
+data/                          # Data folder (excluded from git)
+├── attachments/              # General attachments
 ├── certificates/             # Certificate generation assets
-│   ├── config.json           # Field positions and styling
-│   ├── recipients.txt        # Recipients with course/achievement data
-│   ├── templates/            # Blank PDF certificate templates
-│   └── output/               # Generated personalized certificates
-├── phone_numbers/            # Contact generation assets
-│   ├── numbers.txt           # Paste phone numbers here
-│   └── *.vcf                 # Generated contact files
+│   ├── config.json          # Field positions and styling
+│   ├── recipients.txt       # Recipients with course/achievement data
+│   ├── recipients_ex.txt    # Example recipients file
+│   ├── templates/           # Blank PDF certificate templates
+│   │   ├── CryptX.pdf      # Certificate template
+│   │   └── Participants.pdf # Alternative template
+│   └── output/              # Generated personalized certificates
+├── email_config.json        # Global email configuration
+├── email_config_enhanced.json # Enhanced email settings
+├── email_config_template.md # Email config template/documentation
+├── email_lists/             # Email list files
+│   ├── icts_participants.txt # Workshop participants
+│   └── icts_workshop_emails.csv # CSV format email lists
+├── email_templates/         # Email template files
+│   ├── icts_workshop_body.txt # Workshop email body
+│   └── icts_workshop_enhanced.txt # Enhanced email template
+├── emails/                  # Bulk email automation assets
+│   ├── email_config.json   # Your Gmail/email settings
+│   ├── email_list.txt      # Paste email addresses here (tab-separated name\temail)
+│   ├── email.txt           # Paste email message here (supports {name} placeholder)
+│   └── attachments/        # Individual certificate files for personalized sending
+├── outlook/                 # Outlook email automation assets
+│   ├── email_config.json   # Your Outlook settings
+│   ├── recipients.txt      # Recipients with attachment filenames
+│   ├── email.txt           # Email template with {name} placeholder
+│   └── certificates/       # Individual attachment files
+└── phone_numbers/          # Contact generation assets
+    ├── numbers.txt         # Paste phone numbers here
+    ├── sample_numbers.txt  # Example phone numbers
+    ├── envision_contacts.vcf # Generated contact files
+    ├── numbers_contacts.vcf # Generated contact files
+    └── *.vcf               # Other generated contact files
+
 src/
-├── automations/              # Automation scripts
-└── main.py                   # Main CLI interface
+├── automations/            # Automation scripts
+│   ├── fill_certificates.py # Certificate generation
+│   ├── generate_contacts.py # Contact VCF generation
+│   ├── send_emails_outlook.py # Outlook email sending
+│   ├── send_enhanced_emails.py # Enhanced email features
+│   └── send_same_email.py  # Bulk/personalized email sending
+├── utils/                  # Utility modules
+│   ├── email_template_generator.py # Email template utilities
+│   └── file_utils.py       # File handling utilities
+└── main.py                 # Main CLI interface
+
+docs/                       # Documentation
+├── email_deliverability_guide.md # Email best practices
+└── PROJECT_SUMMARY.md      # Project overview
+
+tests/                      # Test files
+└── test_main.py           # Main tests
 ```
 
 ## Security Notes
 
 - **Gmail Users:** Use App Passwords instead of regular passwords
 - **Outlook Users:** Enable 2FA and create App Passwords for email sending
-- **Never commit** config files with real credentials
-- **Test first** with a small recipient list
+- **Data folder is excluded from git:** The entire `data/` folder is in `.gitignore` to protect sensitive information like email addresses, certificates, and configuration files
+- **Never commit** config files with real credentials to version control
+- **Test first** with a small recipient list before running bulk operations
 
 ## Getting Help
 

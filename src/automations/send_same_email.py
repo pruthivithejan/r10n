@@ -160,34 +160,171 @@ def send_same_email_to_all(
         return {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
 
 
-def send_from_file(
-    emails_file: str,
+def send_personalized_emails_with_certificates(
+    email_list_file: str,
     subject: str,
-    body_file: str,
-    config_file: str = "data/emails/email_config.json",
-    attachments_dir: str = "data/emails/attachments"
-):
-    """Send emails from a file containing email addresses and body from a text file"""
+    body_template: str,
+    config_file: str,
+    certificates_dir: str
+) -> dict:
+    """Send personalized emails with individual certificate attachments"""
     try:
-        # Read email addresses from file
-        with open(emails_file, 'r') as f:
-            email_list = [line.strip() for line in f if line.strip() and '@' in line]
+        # Load configuration
+        config = load_simple_config(config_file)
         
+        # Parse email list with names and emails
+        recipients = []
+        with open(email_list_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and '\t' in line:
+                    parts = line.split('\t')
+                    if len(parts) >= 2:
+                        name = parts[0].strip()
+                        email = parts[1].strip()
+                        recipients.append({'name': name, 'email': email})
+        
+        if not recipients:
+            print("❌ No valid recipients found in email list")
+            return {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
+        
+        # Create name to certificate mapping
+        certificate_files = {}
+        certificates_path = Path(certificates_dir)
+        if certificates_path.exists():
+            for cert_file in certificates_path.glob("*.pdf"):
+                certificate_files[cert_file.stem] = str(cert_file)
+        
+        print(f"📧 Found {len(recipients)} recipients")
+        print(f"📎 Found {len(certificate_files)} certificate files")
+        
+        # Initialize results
+        results = {"sent": 0, "failed": 0, "total": len(recipients), "failed_emails": [], "missing_certificates": []}
+        
+        # Connect to SMTP
+        sender = SimpleEmailSender(config)
+        if not sender.connect():
+            return results
+        
+        print(f"📤 Sending personalized emails...")
+        print()
+        
+        for i, recipient in enumerate(recipients, 1):
+            name = recipient['name']
+            email = recipient['email']
+            
+            print(f"📧 Processing {i}/{len(recipients)}: {name} ({email})")
+            
+            try:
+                # Find matching certificate
+                certificate_path = find_matching_certificate(name, certificate_files)
+                
+                if not certificate_path:
+                    print(f"⚠️  No matching certificate found for {name}")
+                    results["missing_certificates"].append(name)
+                    # Still send email without certificate
+                    attachments = []
+                else:
+                    print(f"📎 Found certificate: {Path(certificate_path).name}")
+                    attachments = [certificate_path]
+                
+                # Personalize email body
+                personalized_body = body_template.format(name=name)
+                
+                # Create and send email
+                msg = sender.create_message(email, subject, personalized_body, attachments)
+                sender.smtp_connection.send_message(msg)
+                
+                results["sent"] += 1
+                print(f"✅ Email sent successfully")
+                
+            except Exception as e:
+                results["failed"] += 1
+                results["failed_emails"].append(email)
+                print(f"❌ Failed to send email: {str(e)}")
+            
+            print()
+        
+        sender.disconnect()
+        
+        # Print summary
+        print("📊 Email Sending Summary:")
+        print(f"Total recipients: {results['total']}")
+        print(f"✅ Successfully sent: {results['sent']}")
+        print(f"❌ Failed: {results['failed']}")
+        print(f"⚠️  Missing certificates: {len(results['missing_certificates'])}")
+        print(f"📈 Success rate: {(results['sent']/results['total']*100):.1f}%")
+        
+        if results['failed_emails']:
+            print(f"\n❌ Failed email addresses:")
+            for email in results['failed_emails']:
+                print(f"  - {email}")
+        
+        if results['missing_certificates']:
+            print(f"\n⚠️  Missing certificates for:")
+            for name in results['missing_certificates']:
+                print(f"  - {name}")
+        
+        return results
+        
+    except Exception as e:
+        print(f"❌ Error in email sending: {str(e)}")
+        return {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
+
+
+def find_matching_certificate(name: str, certificate_files: dict) -> str:
+    """Find matching certificate file for a given name"""
+    # Normalize name for matching
+    normalized_name = normalize_name_for_matching(name)
+    
+    # Try exact match first
+    for cert_name, cert_path in certificate_files.items():
+        if normalized_name in cert_name.lower():
+            return cert_path
+    
+    # Try partial matching
+    name_parts = normalized_name.split('_')
+    for cert_name, cert_path in certificate_files.items():
+        cert_name_lower = cert_name.lower()
+        # Check if most name parts are in certificate name
+        matches = sum(1 for part in name_parts if part in cert_name_lower and len(part) > 2)
+        if matches >= max(1, len(name_parts) // 2):  # At least half the parts match
+            return cert_path
+    
+    return None
+
+
+def normalize_name_for_matching(name: str) -> str:
+    """Normalize name for certificate matching"""
+    import re
+    # Remove special characters and normalize spacing
+    normalized = re.sub(r'[^\w\s]', '', name)
+    # Replace spaces with underscores and convert to lowercase
+    normalized = re.sub(r'\s+', '_', normalized).lower()
+    return normalized
+
+
+def send_from_file(
+    email_list_file: str,
+    subject: str, 
+    body_file: str,
+    config_file: str,
+    attachments_dir: str
+) -> dict:
+    """Send personalized emails from files with individual certificate attachments"""
+    try:
         # Read email body from file
-        with open(body_file, 'r') as f:
-            body = f.read()
+        with open(body_file, 'r', encoding='utf-8') as f:
+            body_template = f.read()
         
-        # Get attachments if directory exists
-        attachments = []
-        if Path(attachments_dir).exists():
-            for file_path in Path(attachments_dir).iterdir():
-                if file_path.is_file() and not file_path.name.startswith('.'):
-                    attachments.append(str(file_path))
-        
-        print(f"📧 Found {len(email_list)} email addresses")
-        print(f"📎 Found {len(attachments)} attachments")
-        
-        return send_same_email_to_all(email_list, subject, body, config_file, attachments if attachments else None)
+        # Call the personalized email function
+        return send_personalized_emails_with_certificates(
+            email_list_file=email_list_file,
+            subject=subject,
+            body_template=body_template,
+            config_file=config_file,
+            certificates_dir=attachments_dir
+        )
         
     except Exception as e:
         print(f"❌ Error reading files: {str(e)}")
