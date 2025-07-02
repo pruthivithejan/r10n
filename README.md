@@ -4,17 +4,36 @@ This is a Python automation project with organized data folders for easy use.
 
 ## Quick Start
 
-1. **Activate the virtual environment:**
+1. **Clone and setup:**
    ```bash
-   source .venv/bin/activate
+   git clone https://github.com/pruthivithejan/automations.git
+   cd automations
    ```
 
-2. **Install dependencies:**
+2. **Create virtual environment:**
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+   ```
+
+3. **Install dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Choose your automation and paste your data into the appropriate files**
+4. **Set up data folder structure:**
+   ```bash
+   # Linux/Mac
+   ./setup.sh
+   
+   # Windows
+   setup.bat
+   ```
+
+5. **Configure your settings:**
+   - Edit configuration files in `data/` folders with your credentials
+   - Add your data (email lists, certificates, phone numbers)
+   - See `examples/SETUP_GUIDE.md` for detailed instructions
 
 ## Available Automations
 
@@ -179,60 +198,74 @@ Fills blank PDF certificate templates with recipient information and generates p
 ## Project Structure
 
 ```
-data/                          # Data folder (excluded from git)
-├── attachments/              # General attachments
-├── certificates/             # Certificate generation assets
-│   ├── config.json          # Field positions and styling
-│   ├── recipients.txt       # Recipients with course/achievement data
-│   ├── recipients_ex.txt    # Example recipients file
-│   ├── templates/           # Blank PDF certificate templates
-│   │   ├── CryptX.pdf      # Certificate template
+examples/                    # Example configurations (safe to commit)
+├── SETUP_GUIDE.md          # Complete setup instructions
+├── README.md               # Examples documentation
+├── emails/                 # Email automation examples
+│   ├── email_config.json.example
+│   ├── email_list.txt.example
+│   └── email.txt.example
+├── outlook/                # Outlook automation examples
+├── certificates/           # Certificate generation examples
+└── phone_numbers/          # Contact generation examples
+
+data/                       # Your local data (excluded from git)
+├── attachments/            # General attachments
+├── certificates/           # Certificate generation assets
+│   ├── config.json        # Field positions and styling
+│   ├── recipients.txt     # Recipients with course/achievement data
+│   ├── recipients_ex.txt  # Example recipients file
+│   ├── templates/         # Blank PDF certificate templates
+│   │   ├── CryptX.pdf    # Certificate template
 │   │   └── Participants.pdf # Alternative template
-│   └── output/              # Generated personalized certificates
-├── email_config.json        # Global email configuration
+│   └── output/            # Generated personalized certificates
+├── email_config.json      # Global email configuration
 ├── email_config_enhanced.json # Enhanced email settings
 ├── email_config_template.md # Email config template/documentation
-├── email_lists/             # Email list files
+├── email_lists/           # Email list files
 │   ├── icts_participants.txt # Workshop participants
 │   └── icts_workshop_emails.csv # CSV format email lists
-├── email_templates/         # Email template files
+├── email_templates/       # Email template files
 │   ├── icts_workshop_body.txt # Workshop email body
 │   └── icts_workshop_enhanced.txt # Enhanced email template
-├── emails/                  # Bulk email automation assets
-│   ├── email_config.json   # Your Gmail/email settings
-│   ├── email_list.txt      # Paste email addresses here (tab-separated name\temail)
-│   ├── email.txt           # Paste email message here (supports {name} placeholder)
-│   └── attachments/        # Individual certificate files for personalized sending
-├── outlook/                 # Outlook email automation assets
-│   ├── email_config.json   # Your Outlook settings
-│   ├── recipients.txt      # Recipients with attachment filenames
-│   ├── email.txt           # Email template with {name} placeholder
-│   └── certificates/       # Individual attachment files
-└── phone_numbers/          # Contact generation assets
-    ├── numbers.txt         # Paste phone numbers here
-    ├── sample_numbers.txt  # Example phone numbers
+├── emails/                # Bulk email automation assets
+│   ├── email_config.json # Your Gmail/email settings
+│   ├── email_list.txt    # Paste email addresses here (tab-separated name\temail)
+│   ├── email.txt         # Paste email message here (supports {name} placeholder)
+│   └── attachments/      # Individual certificate files for personalized sending
+├── outlook/              # Outlook email automation assets
+│   ├── email_config.json # Your Outlook settings
+│   ├── recipients.txt    # Recipients with attachment filenames
+│   ├── email.txt         # Email template with {name} placeholder
+│   └── certificates/     # Individual attachment files
+└── phone_numbers/        # Contact generation assets
+    ├── numbers.txt       # Paste phone numbers here
+    ├── sample_numbers.txt # Example phone numbers
     ├── envision_contacts.vcf # Generated contact files
     ├── numbers_contacts.vcf # Generated contact files
-    └── *.vcf               # Other generated contact files
+    └── *.vcf             # Other generated contact files
 
 src/
-├── automations/            # Automation scripts
+├── automations/          # Automation scripts
 │   ├── fill_certificates.py # Certificate generation
 │   ├── generate_contacts.py # Contact VCF generation
 │   ├── send_emails_outlook.py # Outlook email sending
 │   ├── send_enhanced_emails.py # Enhanced email features
-│   └── send_same_email.py  # Bulk/personalized email sending
-├── utils/                  # Utility modules
+│   └── send_same_email.py # Bulk/personalized email sending
+├── utils/                # Utility modules
 │   ├── email_template_generator.py # Email template utilities
-│   └── file_utils.py       # File handling utilities
-└── main.py                 # Main CLI interface
+│   └── file_utils.py     # File handling utilities
+└── main.py               # Main CLI interface
 
-docs/                       # Documentation
+docs/                     # Documentation
 ├── email_deliverability_guide.md # Email best practices
-└── PROJECT_SUMMARY.md      # Project overview
+└── PROJECT_SUMMARY.md    # Project overview
 
-tests/                      # Test files
-└── test_main.py           # Main tests
+tests/                    # Test files
+└── test_main.py         # Main tests
+
+setup.sh                 # Linux/Mac setup script
+setup.bat                # Windows setup script
 ```
 
 ## Security Notes
@@ -245,10 +278,15 @@ tests/                      # Test files
 
 ## Getting Help
 
-Run any automation without arguments to see available options:
+- **Complete setup guide:** See `examples/SETUP_GUIDE.md` for detailed instructions
+- **Example configurations:** Check the `examples/` folder for template files
+- **Command help:** Run any automation without arguments to see available options:
+
 ```bash
 python src/main.py generate_contacts --help
 python src/main.py send_bulk_emails --help
 python src/main.py send_outlook_emails --help
 python src/main.py fill_certificates --help
 ```
+
+- **Quick setup:** Run `./setup.sh` (Linux/Mac) or `setup.bat` (Windows) to create the data folder structure

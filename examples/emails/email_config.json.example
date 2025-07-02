@@ -1,0 +1,9 @@
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "email": "your_email@gmail.com",
+  "password": "your_16_character_app_password",
+  "sender_name": "Your Full Name",
+  "organization": "Your Organization Name",
+  "use_tls": true
+}

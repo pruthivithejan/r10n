@@ -1,0 +1,7 @@
+{
+  "smtp_server": "smtp.office365.com",
+  "smtp_port": 587,
+  "sender_email": "your_email@outlook.com",
+  "password": "your_outlook_app_password",
+  "subject": "Your Certificate - [Course/Workshop Name]"
+}

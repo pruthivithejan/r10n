@@ -1,0 +1,38 @@
+{
+  "template_pdf": "templates/certificate_template.pdf",
+  "output_directory": "output",
+  "fields": {
+    "name": {
+      "x": 396,
+      "y": 370,
+      "font_size": 28,
+      "font_weight": "bold",
+      "color": [0, 0, 139],
+      "alignment": "center"
+    },
+    "course": {
+      "x": 396,
+      "y": 270,
+      "font_size": 20,
+      "font_weight": "bold",
+      "color": [0, 0, 0],
+      "alignment": "center"
+    },
+    "date": {
+      "x": 200,
+      "y": 200,
+      "font_size": 16,
+      "font_weight": "normal",
+      "color": [0, 0, 0],
+      "alignment": "left"
+    },
+    "achievement": {
+      "x": 600,
+      "y": 200,
+      "font_size": 16,
+      "font_weight": "normal",
+      "color": [0, 0, 139],
+      "alignment": "right"
+    }
+  }
+}
