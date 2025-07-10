@@ -11,3 +11,9 @@ openpyxl>=3.0.0
 # PDF manipulation dependencies
 PyPDF2>=3.0.0
 reportlab>=4.0.0
+
+# AI/Blog generation dependencies
+openai>=1.0.0
+
+# Image optimization dependencies
+Pillow>=10.0.0

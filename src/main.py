@@ -54,6 +54,40 @@ def main():
     certs_parser.add_argument('--base-dir', '-d', type=str, default='data/certificates',
                              help='Base directory for certificate files (default: data/certificates)')
 
+    # Generate Blog MDX Parser
+    blog_parser = subparsers.add_parser('generate_blog_mdx', help='Generate well-structured MDX blog files with AI proofreading')
+    blog_parser.add_argument('--input', '-i', type=str, required=True,
+                           help='Input text file containing blog content')
+    blog_parser.add_argument('--config', '-c', type=str, default='data/blog_config.json',
+                           help='Blog configuration JSON file (default: data/blog_config.json)')
+    blog_parser.add_argument('--title', '-t', type=str, default=None,
+                           help='Override blog title')
+    blog_parser.add_argument('--author', '-a', type=str, default=None,
+                           help='Override blog author')
+    blog_parser.add_argument('--tags', type=str, nargs='+', default=None,
+                           help='Blog tags (space-separated)')
+    blog_parser.add_argument('--description', '-d', type=str, default=None,
+                           help='Blog description')
+
+    # Optimize Images Parser
+    images_parser = subparsers.add_parser('optimize_images', help='Optimize and rename images for web use')
+    images_parser.add_argument('--input', '-i', type=str, required=True,
+                             help='Input directory containing images')
+    images_parser.add_argument('--output', '-o', type=str, default=None,
+                             help='Output directory for optimized images (default: input_dir/optimized)')
+    images_parser.add_argument('--prefix', '-p', type=str, default='img',
+                             help='Prefix for renamed files (default: img)')
+    images_parser.add_argument('--max-size', '-s', type=float, default=1.0,
+                             help='Maximum file size in MB (default: 1.0)')
+    images_parser.add_argument('--quality', '-q', type=int, default=85,
+                             help='Image quality percentage (default: 85)')
+    images_parser.add_argument('--max-width', type=int, default=1920,
+                             help='Maximum image width (default: 1920)')
+    images_parser.add_argument('--max-height', type=int, default=1080,
+                             help='Maximum image height (default: 1080)')
+    images_parser.add_argument('--config', '-c', type=str, default=None,
+                             help='Image optimization configuration JSON file')
+
     # Add more automation parsers here as needed
 
     args = parser.parse_args()
@@ -110,6 +144,59 @@ def main():
             if results['failed'] > 0:
                 print(f"Failed: {results['failed']} certificates")
                 sys.exit(1)
+        
+        elif args.automation == 'generate_blog_mdx':
+            from automations.generate_blog_mdx import generate_blog_mdx
+            
+            # Run the blog MDX generation automation
+            results = generate_blog_mdx(
+                input_file=args.input,
+                config_file=args.config,
+                title=args.title,
+                author=args.author,
+                tags=args.tags,
+                description=args.description
+            )
+            
+            if results['success']:
+                print(f"\n🎉 Blog MDX generated successfully!")
+                print(f"📄 Title: {results['metadata']['title']}")
+                print(f"👤 Author: {results['metadata']['author']}")
+                print(f"📅 Date: {results['metadata']['date']}")
+                print(f"🏷️  Tags: {', '.join(results['metadata']['tags'])}")
+                print(f"📁 Output: {results['output_path']}")
+            else:
+                print(f"\n❌ Failed to generate blog MDX: {results['error']}")
+                sys.exit(1)
+        
+        elif args.automation == 'optimize_images':
+            from automations.optimize_images import optimize_images
+            
+            # Run the image optimization automation
+            results = optimize_images(
+                input_dir=args.input,
+                output_dir=args.output,
+                prefix=args.prefix,
+                max_size_mb=args.max_size,
+                quality=args.quality,
+                max_width=args.max_width,
+                max_height=args.max_height,
+                config_file=args.config
+            )
+            
+            if results.get('error'):
+                print(f"\n❌ Image optimization failed: {results['error']}")
+                sys.exit(1)
+            elif results['processed'] == 0 and results['skipped'] == 0:
+                print(f"\n⚠️  No images were processed")
+                sys.exit(1)
+            else:
+                print(f"\n🎉 Image optimization completed!")
+                print(f"✅ Processed: {results['processed']} images")
+                if results['skipped'] > 0:
+                    print(f"⏭️  Skipped: {results['skipped']} images")
+                if results['failed'] > 0:
+                    print(f"❌ Failed: {results['failed']} images")
 
     except Exception as e:
         print(f"Error: {str(e)}")

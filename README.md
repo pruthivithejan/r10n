@@ -195,6 +195,87 @@ Fills blank PDF certificate templates with recipient information and generates p
 - ✅ Automatic filename generation from recipient names
 - ✅ Batch processing with detailed progress reports
 
+---
+
+### 🤖 AI Blog MDX Generator
+Generates well-structured MDX blog files with AI proofreading using OpenAI API.
+
+**Steps:**
+1. **Get OpenAI API key** from [OpenAI Platform](https://platform.openai.com/api-keys)
+
+2. **Setup blog configuration** in `data/blog_config.json`:
+   ```json
+   {
+     "openai_api_key": "your_openai_api_key_here",
+     "model": "gpt-4",
+     "temperature": 0.3,
+     "max_tokens": 4000,
+     "output_directory": "data/blog_output",
+     "author": "Your Name",
+     "default_tags": ["blog", "article", "tech"]
+   }
+   ```
+
+3. **Write your blog content** in a text file (e.g., `my_blog_post.txt`)
+
+4. **Run the automation:**
+   ```bash
+   python src/main.py generate_blog_mdx --input "my_blog_post.txt" --title "My Amazing Blog Post"
+   ```
+
+**Example:**
+```bash
+python src/main.py generate_blog_mdx --input "examples/sample_blog_post.txt" --title "AI in Web Development" --author "John Doe" --tags "ai" "web-dev" "technology"
+```
+
+**Features:**
+- ✅ AI-powered grammar and spelling correction
+- ✅ Preserves original writing style and tone
+- ✅ Automatic MDX frontmatter generation
+- ✅ SEO-friendly metadata extraction
+- ✅ Custom title, author, and tags support
+- ✅ Structured content formatting
+- ✅ Filename generation from title
+
+---
+
+### 🖼️ Image Optimizer
+Optimizes and renames images for web use with WebP conversion and size compression.
+
+**Steps:**
+1. **Place your images** in a folder (supports JPG, PNG, GIF, BMP, TIFF, WebP)
+
+2. **Run the automation:**
+   ```bash
+   python src/main.py optimize_images --input "path/to/images" --prefix "photo"
+   ```
+
+**Example:**
+```bash
+# Basic optimization with custom prefix
+python src/main.py optimize_images --input "data/images/input" --prefix "gallery" --max-size 0.5
+
+# Advanced optimization with custom dimensions
+python src/main.py optimize_images --input "photos" --output "web-photos" --prefix "img" --quality 90 --max-width 1200 --max-height 800
+```
+
+**Features:**
+- ✅ Converts images to WebP format for better compression
+- ✅ Automatic file size reduction to under specified limit (default 1MB)
+- ✅ Bulk renaming with custom prefix (img1.webp, img2.webp, etc.)
+- ✅ Smart resizing while preserving aspect ratio
+- ✅ Auto-orientation based on EXIF data
+- ✅ Quality adjustment to meet size requirements
+- ✅ Batch processing with detailed progress reports
+- ✅ Supports all common image formats
+
+**Configuration Options:**
+- **Max file size:** Control final file size (default: 1MB)
+- **Quality:** JPEG/WebP quality 10-100% (default: 85%)
+- **Dimensions:** Max width/height (default: 1920x1080)
+- **Prefix:** Custom filename prefix (default: "img")
+- **Format:** Convert to WebP or keep original format
+
 ## Project Structure
 
 ```
@@ -287,6 +368,8 @@ python src/main.py generate_contacts --help
 python src/main.py send_bulk_emails --help
 python src/main.py send_outlook_emails --help
 python src/main.py fill_certificates --help
+python src/main.py generate_blog_mdx --help
+python src/main.py optimize_images --help
 ```
 
 - **Quick setup:** Run `./setup.sh` (Linux/Mac) or `setup.bat` (Windows) to create the data folder structure
