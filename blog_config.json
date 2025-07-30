@@ -1,9 +1,0 @@
-{
-  "openai_api_key": "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",
-  "model": "gpt-4o-mini",
-  "temperature": 0.3,
-  "max_tokens": 4000,
-  "output_directory": "data/blog_output",
-  "author": "Pruthivi Thejan",
-  "default_tags": ["blog", "article", "tech"]
-}

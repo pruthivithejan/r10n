@@ -25,14 +25,14 @@ def main():
 
     # Send Bulk Emails Parser
     emails_parser = subparsers.add_parser('send_bulk_emails', help='Send the same email to multiple recipients')
-    emails_parser.add_argument('--emails', '-e', type=str, default='data/emails/email_list.txt',
-                              help='Text file containing email addresses (default: data/emails/email_list.txt)')
-    emails_parser.add_argument('--subject', '-s', type=str, required=True,
-                              help='Email subject')
+    emails_parser.add_argument('--emails', '-e', type=str, default='data/emails/email_list.csv',
+                              help='CSV file containing email addresses (default: data/emails/email_list.csv)')
     emails_parser.add_argument('--body', '-b', type=str, default='data/emails/email.txt',
                               help='Text file containing email body (default: data/emails/email.txt)')
     emails_parser.add_argument('--config', '-c', type=str, default='data/emails/email_config.json',
                               help='Email configuration JSON file (default: data/emails/email_config.json)')
+    emails_parser.add_argument('--certificates', '-cert', type=str, default='data/certificates/output',
+                              help='Directory containing certificate files (default: data/certificates/output)')
 
     # Send Outlook Emails with Attachments Parser
     outlook_parser = subparsers.add_parser('send_outlook_emails', help='Send personalized emails with individual attachments via Outlook')
@@ -118,7 +118,7 @@ def main():
             from automations.send_same_email import send_from_file
             
             # Run the simple email automation
-            results = send_from_file(args.emails, args.subject, args.body, args.config, 'data/emails/attachments')
+            results = send_from_file(args.emails, args.body, args.config, args.certificates)
             
             if results['total'] == 0:
                 sys.exit(1)
