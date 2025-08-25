@@ -20,6 +20,7 @@ class ImageOptimizationConfig:
     convert_to_webp: bool = True
     preserve_aspect_ratio: bool = True
     auto_orient: bool = True
+    preserve_filename: bool = False
 
 
 class ImageOptimizer:
@@ -159,14 +160,25 @@ class ImageOptimizer:
         image_files.sort(key=lambda x: x.name.lower())
         return image_files
     
-    def generate_output_filename(self, index: int, original_extension: str = None) -> str:
-        """Generate output filename with prefix and number"""
-        if self.config.convert_to_webp:
-            extension = '.webp'
+    def generate_output_filename(self, index: int, original_name: str, original_extension: str = None) -> str:
+        """Generate output filename with prefix and number or preserve original name"""
+        if self.config.preserve_filename:
+            # Preserve original filename but change extension if converting to WebP
+            if self.config.convert_to_webp:
+                # Remove original extension and add .webp
+                name_without_ext = Path(original_name).stem
+                return f"{name_without_ext}.webp"
+            else:
+                # Keep original extension
+                return original_name
         else:
-            extension = original_extension or '.jpg'
-        
-        return f"{self.config.prefix}{index}{extension}"
+            # Use prefix + index naming
+            if self.config.convert_to_webp:
+                extension = '.webp'
+            else:
+                extension = original_extension or '.jpg'
+            
+            return f"{self.config.prefix}{index}{extension}"
     
     def process_directory(self) -> Dict[str, Any]:
         """Process all images in the input directory"""
@@ -197,7 +209,7 @@ class ImageOptimizer:
             
             # Process each image
             for index, image_file in enumerate(image_files, 1):
-                output_filename = self.generate_output_filename(index, image_file.suffix)
+                output_filename = self.generate_output_filename(index, image_file.name, image_file.suffix)
                 output_file_path = output_path / output_filename
                 
                 # Skip if output file already exists
@@ -271,6 +283,7 @@ def optimize_images(
     quality: int = 85,
     max_width: int = 1920,
     max_height: int = 1080,
+    preserve_filename: bool = False,
     config_file: str = None
 ) -> Dict[str, Any]:
     """Main function to optimize images"""
@@ -295,7 +308,8 @@ def optimize_images(
                 max_size_mb=max_size_mb,
                 quality=quality,
                 max_width=max_width,
-                max_height=max_height
+                max_height=max_height,
+                preserve_filename=preserve_filename
             )
         
         # Create optimizer and process

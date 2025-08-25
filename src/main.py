@@ -87,6 +87,8 @@ def main():
                              help='Maximum image height (default: 1080)')
     images_parser.add_argument('--config', '-c', type=str, default=None,
                              help='Image optimization configuration JSON file')
+    images_parser.add_argument('--preserve-filename', action='store_true',
+                             help='Preserve original filenames instead of using prefix+number naming')
 
     # Add more automation parsers here as needed
 
@@ -181,6 +183,7 @@ def main():
                 quality=args.quality,
                 max_width=args.max_width,
                 max_height=args.max_height,
+                preserve_filename=args.preserve_filename,
                 config_file=args.config
             )
             
