@@ -1,375 +1,351 @@
+# Automations by Pruthvi Thejan
+
+> 🚀 A modern, versatile automation toolkit for bulk operations - emails, certificates, contacts, images, and more. Built with Python, enhanced with UV for blazing-fast performance, and featuring a beautiful CLI interface.
+
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![UV](https://img.shields.io/badge/UV-Package%20Manager-green.svg)](https://github.com/astral-sh/uv)
+[![Rich CLI](https://img.shields.io/badge/CLI-Rich%20Interface-purple.svg)](https://github.com/Textualize/rich)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+## ✨ Features
+
+- **📧 Bulk Email Automation** - Send personalized emails with templates and attachments
+- **📜 Certificate Generation** - Create PDF certificates from templates with custom data
+- **📱 Contact Management** - Generate VCF contact cards from phone numbers
+- **🖼️ Image Optimization** - Batch convert and optimize images to WebP format
+- **✍️ Blog MDX Generation** - Create SEO-optimized blog posts with AI proofreading
+- **⚡ Lightning Fast** - 10-100x faster than traditional pip with UV package manager
+- **🎨 Beautiful CLI** - Interactive mode with rich terminal UI
+- **🔧 One-Command Setup** - Get started in seconds
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.9 or higher
+- macOS, Linux, or Windows
+- UV package manager (installed automatically)
+
+### Installation
+
+```bash
+# 1. Clone the repository
+git clone https://github.com/pruthivithejan/automations.git
+cd automations
+
+# 2. Install UV (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# 3. Run the one-command setup
+make setup
+```
+
+That's it! The setup will:
+- Create a virtual environment
+- Install all dependencies (super fast with UV)
+- Set up your workspace structure
+- Create configuration templates
+- Generate example files
+
+## 📖 Step-by-Step Usage Guide
+
+### Step 1: Configure Your Environment
+
+After setup, edit your credentials:
+
+```bash
+# Edit the environment file
+nano workspace/.env
+
+# Update these values:
+EMAIL_ADDRESS=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password  # Use app-specific password
+OPENAI_API_KEY=sk-your-api-key    # For blog generation (optional)
+```
+
+### Step 2: Check Your Setup
+
+Verify everything is configured correctly:
+
+```bash
+# Check status
+uv run python -m src.cli status
+
+# See all available commands
+make help
+```
+
+### Step 3: Run Your First Automation
+
+Let's start with the simplest - generating contacts:
+
+```bash
+# Run interactively (recommended for beginners)
+make contacts
+```
+
+The interactive mode will guide you through:
+1. Selecting input file
+2. Setting contact prefix
+3. Choosing output location
+4. Confirming generation
+
+## 🎯 Available Automations
+
+### 📧 Email Automation
+
+Send bulk emails with personalization:
+
+```bash
+# Interactive mode
+make email
+
+# Or direct command
+uv run python -m src.cli email \
+  --recipients workspace/inputs/email/recipients.csv \
+  --body workspace/inputs/email/template.txt \
+  --config workspace/configs/email.json
+```
+
+**Input Format** (`recipients.csv`):
+```csv
+name,email
+John Doe,john@example.com
+Jane Smith,jane@example.com
+```
+
+**Template** (`template.txt`):
+```
+Dear {name},
+
+Your personalized message here.
+
+Best regards,
+{sender_name}
+```
+
+### 📜 Certificate Generation
+
+Create personalized PDF certificates:
+
+```bash
+# Interactive mode
+make certs
+
+# Direct command
+uv run python -m src.cli certificates \
+  --recipients workspace/inputs/certificates/recipients.txt \
+  --template templates/certificates/template.pdf
+```
+
+**Recipients Format** (`recipients.txt`):
+```
+John Doe,Python Mastery,2024-01-15,Excellence
+Jane Smith,Data Science,2024-01-16,Outstanding
+```
+
+### 📱 Contact Generation
+
+Convert phone numbers to VCF contact cards:
+
+```bash
+# Interactive mode
+make contacts
+
+# Direct command
+uv run python -m src.cli contacts \
+  --input workspace/inputs/contacts/numbers.txt \
+  --prefix "Customer"
+```
+
+**Input Format** (`numbers.txt`):
+```
+0771234567
+0712345678
++94771234567
+```
+
+### 🖼️ Image Optimization
+
+Optimize and convert images to WebP:
+
+```bash
+# Interactive mode
+make images
+
+# Direct command
+uv run python -m src.cli images \
+  --input workspace/inputs/images \
+  --quality 85 \
+  --max-size 1.0
+```
+
+### ✍️ Blog MDX Generation
+
+Generate SEO-optimized blog posts:
+
+```bash
+# Interactive mode
+make blog
+
+# Direct command
+uv run python -m src.cli blog \
+  --input workspace/inputs/blog/post.txt \
+  --title "My Blog Title" \
+  --author "Your Name"
+```
+
+## 📁 Project Structure
+
+```
+automations/
+├── src/                    # Source code
+│   ├── cli.py             # Enhanced CLI interface
+│   └── automations/       # Core automation modules
+├── workspace/             # Your data (gitignored)
+│   ├── .env              # Your credentials
+│   ├── configs/          # Your configurations
+│   ├── inputs/           # Input files
+│   └── outputs/          # Generated outputs
+├── templates/             # Your templates (gitignored)
+│   ├── email/            # Email templates
+│   └── certificates/     # PDF templates
+├── configs/               # Default configurations
+├── scripts/               # Utility scripts
+├── Makefile              # Task runner
+└── pyproject.toml        # Project configuration
+```
+
+## 🛠️ Configuration
+
+### Email Configuration (`workspace/configs/email.json`)
+
+```json
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "sender_email": "your-email@gmail.com",
+  "rate_limit": {
+    "delay_seconds": 3,
+    "batch_size": 5
+  }
+}
+```
+
+### Certificate Configuration (`workspace/configs/certificates.json`)
+
+```json
+{
+  "template_path": "templates/certificates/template.pdf",
+  "fields": {
+    "name": {"x": 300, "y": 400, "font_size": 30},
+    "course": {"x": 300, "y": 350, "font_size": 20}
+  }
+}
+```
+
+## 🔄 Migrating from Old Structure
+
+If you have data in the old structure:
+
+```bash
+# Preview what will be migrated
+make migrate-dry
+
+# Run migration
+make migrate
+```
+
+## 🎮 All Available Commands
+
+```bash
+# Core Commands
+make help          # Show all commands
+make setup         # Initial setup
+make clean         # Clean temporary files
+
 # Automations
+make email         # Email automation
+make certs         # Certificate generation
+make contacts      # Contact generation
+make images        # Image optimization
+make blog          # Blog generation
 
-This is a Python automation project with organized data folders for easy use.
-
-## Quick Start
-
-1. **Clone and setup:**
-   ```bash
-   git clone https://github.com/pruthivithejan/automations.git
-   cd automations
-   ```
-
-2. **Create virtual environment:**
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Set up data folder structure:**
-   ```bash
-   # Linux/Mac
-   ./setup.sh
-   
-   # Windows
-   setup.bat
-   ```
-
-5. **Configure your settings:**
-   - Edit configuration files in `data/` folders with your credentials
-   - Add your data (email lists, certificates, phone numbers)
-   - See `examples/SETUP_GUIDE.md` for detailed instructions
-
-## Available Automations
-
-### 📞 Contact Card Generator
-Converts phone numbers to VCF contact files for importing into your phone.
-
-**Steps:**
-1. **Paste your phone numbers** into `data/phone_numbers/numbers.txt` (one per line)
-2. **Run the automation:**
-   ```bash
-   python src/main.py generate_contacts
-   ```
-3. **Find your VCF file** in `data/phone_numbers/` directory
-
-**Example:**
-```bash
-# Generate contacts with custom prefix
-python src/main.py generate_contacts --prefix "Workshop Participant"
+# Utilities
+make migrate       # Migrate old data
+make lint          # Run code linting
+make test          # Run tests
+make update        # Update dependencies
 ```
 
-**Supported Phone Formats:**
-- 0712345678 (Sri Lankan)
-- +94712345678 (International)
-- 071 234 5678 (With spaces)
+## 💡 Tips & Tricks
+
+### 1. Use Interactive Mode
+Perfect for beginners - guides you through each step:
+```bash
+make contacts  # Will prompt for all needed information
+```
+
+### 2. Batch Processing
+For automation and scripts, use direct commands:
+```bash
+# Process all at once
+make run-contacts-batch
+make run-email-bulk
+```
+
+### 3. Custom Templates
+Add your templates to `templates/` folder:
+- They're automatically gitignored for privacy
+- Reference them in your configs
+
+### 4. Testing
+Always test with small datasets first:
+```bash
+# Create a test file with 2-3 entries
+echo "0771234567" > workspace/inputs/contacts/test.txt
+make contacts
+```
+
+## 🔒 Security Notes
+
+- **Never commit** `workspace/` or `templates/` folders (already gitignored)
+- Use **app-specific passwords** for email automation
+- Keep your `.env` file secure
+- Test with small batches before bulk operations
+
+## 📚 Documentation
+
+- [Quick Start Guide](QUICK_START.md) - Get up and running quickly
+- [Migration Guide](MIGRATION_GUIDE.md) - Migrate from old structure
+- [Cleanup Guide](CLEANUP_GUIDE.md) - Remove old files safely
+- [WARP Integration](WARP.md) - For Warp terminal users
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 👨‍💻 Author
+
+**Pruthvi Thejan**
+- GitHub: [@pruthivithejan](https://github.com/pruthivithejan)
+
+## 🙏 Acknowledgments
+
+- Built with [UV](https://github.com/astral-sh/uv) for blazing-fast package management
+- CLI powered by [Click](https://click.palletsprojects.com/) and [Rich](https://github.com/Textualize/rich)
+- PDF manipulation with [PyPDF2](https://pypdf2.readthedocs.io/) and [ReportLab](https://www.reportlab.com/)
 
 ---
 
-### 📧 Bulk Email Sender
-Sends the same email to multiple recipients with enhanced deliverability.
+<p align="center">
+  Made with ❤️ by Pruthvi Thejan
+</p>
 
-**Steps:**
-1. **Setup email configuration** in `data/emails/email_config.json`:
-   ```json
-   {
-     "smtp_server": "smtp.gmail.com",
-     "smtp_port": 587,
-     "email": "your_email@gmail.com",
-     "password": "your_app_password",
-     "sender_name": "Your Name",
-     "organization": "Your Organization"
-   }
-   ```
-
-2. **Paste your email addresses** into `data/emails/email_list.txt` (one per line)
-
-3. **Paste your email message** into `data/emails/email.txt`
-
-4. **Add attachments** (optional) to `data/emails/attachments/`
-
-5. **Run the automation:**
-   ```bash
-   python src/main.py send_bulk_emails --subject "Your Email Subject"
-   ```
-
-**Example:**
-```bash
-python src/main.py send_bulk_emails --subject "Workshop Invitation - Join Us Today!"
-```
-
-**Features:**
-- ✅ Anti-spam headers and formatting
-- ✅ Rate limiting to protect sender reputation
-- ✅ Professional organization footer
-- ✅ Attachment support
-- ✅ Detailed delivery reporting
-
----
-
-### 📬 Outlook Email with Individual Attachments
-Sends personalized emails with individual attachments to each recipient via Outlook.
-
-**Steps:**
-1. **Setup Outlook configuration** in `data/outlook/email_config.json`:
-   ```json
-   {
-     "smtp_server": "smtp.office365.com",
-     "smtp_port": 587,
-     "sender_email": "your_email@outlook.com",
-     "password": "your_app_password",
-     "subject": "Your Certificate"
-   }
-   ```
-
-2. **Add recipients with their attachments** in `data/outlook/recipients.txt`:
-   ```
-   Student One,student1@outlook.com,student1.pdf
-   Student Two,student2@outlook.com,student2.pdf
-   ```
-
-3. **Create email template** in `data/outlook/email.txt` (use `{name}` for personalization):
-   ```
-   Hi {name},
-   
-   Please find your certificate attached.
-   
-   Best regards,
-   Your Name
-   ```
-
-4. **Add certificate files** to `data/outlook/certificates/` folder
-
-5. **Run the automation:**
-   ```bash
-   python src/main.py send_outlook_emails
-   ```
-
-**Features:**
-- ✅ Personalized emails with recipient names
-- ✅ Individual attachments per recipient
-- ✅ Outlook/Office365 SMTP support
-- ✅ Certificate file validation
-- ✅ Detailed sending reports
-
----
-
-### 📄 Certificate Generator
-Fills blank PDF certificate templates with recipient information and generates personalized certificates.
-
-**Steps:**
-1. **Create or obtain a blank certificate PDF template** and place it in `data/certificates/templates/`
-
-2. **Configure field positions** in `data/certificates/config.json`:
-   ```json
-   {
-     "template_pdf": "templates/certificate_template.pdf",
-     "output_directory": "output",
-     "fields": {
-       "name": {
-         "x": 396, "y": 370,
-         "font_size": 28, "font_weight": "bold",
-         "color": [0, 0, 139], "alignment": "center"
-       },
-       "course": {
-         "x": 396, "y": 270,
-         "font_size": 20, "font_weight": "bold",
-         "color": [0, 0, 0], "alignment": "center"
-       }
-     }
-   }
-   ```
-
-3. **Add recipients** in `data/certificates/recipients.txt`:
-   ```
-   John Smith,Workshop on AI,2024-06-28,Excellent Performance
-   Jane Doe,Data Science Bootcamp,2024-06-25,Outstanding Achievement
-   ```
-
-4. **Run the automation:**
-   ```bash
-   python src/main.py fill_certificates
-   ```
-
-5. **Find generated certificates** in `data/certificates/output/`
-
-**Features:**
-- ✅ PDF template overlay with precise positioning
-- ✅ Customizable fonts, sizes, colors, and alignment
-- ✅ Support for multiple data fields (name, course, date, achievement)
-- ✅ Automatic filename generation from recipient names
-- ✅ Batch processing with detailed progress reports
-
----
-
-### 🤖 AI Blog MDX Generator
-Generates well-structured MDX blog files with AI proofreading using OpenAI API.
-
-**Steps:**
-1. **Get OpenAI API key** from [OpenAI Platform](https://platform.openai.com/api-keys)
-
-2. **Setup blog configuration** in `data/blog_config.json`:
-   ```json
-   {
-     "openai_api_key": "your_openai_api_key_here",
-     "model": "gpt-4",
-     "temperature": 0.3,
-     "max_tokens": 4000,
-     "output_directory": "data/blog_output",
-     "author": "Your Name",
-     "default_tags": ["blog", "article", "tech"]
-   }
-   ```
-
-3. **Write your blog content** in a text file (e.g., `my_blog_post.txt`)
-
-4. **Run the automation:**
-   ```bash
-   python src/main.py generate_blog_mdx --input "my_blog_post.txt" --title "My Amazing Blog Post"
-   ```
-
-**Example:**
-```bash
-python src/main.py generate_blog_mdx --input "examples/sample_blog_post.txt" --title "AI in Web Development" --author "John Doe" --tags "ai" "web-dev" "technology"
-```
-
-**Features:**
-- ✅ AI-powered grammar and spelling correction
-- ✅ Preserves original writing style and tone
-- ✅ Automatic MDX frontmatter generation
-- ✅ SEO-friendly metadata extraction
-- ✅ Custom title, author, and tags support
-- ✅ Structured content formatting
-- ✅ Filename generation from title
-
----
-
-### 🖼️ Image Optimizer
-Optimizes and renames images for web use with WebP conversion and size compression.
-
-**Steps:**
-1. **Place your images** in a folder (supports JPG, PNG, GIF, BMP, TIFF, WebP)
-
-2. **Run the automation:**
-   ```bash
-   python src/main.py optimize_images --input "path/to/images" --prefix "photo"
-   ```
-
-**Example:**
-```bash
-# Basic optimization with custom prefix
-python src/main.py optimize_images --input "data/images/input" --prefix "gallery" --max-size 0.5
-
-# Advanced optimization with custom dimensions
-python src/main.py optimize_images --input "photos" --output "web-photos" --prefix "img" --quality 90 --max-width 1200 --max-height 800
-```
-
-**Features:**
-- ✅ Converts images to WebP format for better compression
-- ✅ Automatic file size reduction to under specified limit (default 1MB)
-- ✅ Bulk renaming with custom prefix (img1.webp, img2.webp, etc.)
-- ✅ Smart resizing while preserving aspect ratio
-- ✅ Auto-orientation based on EXIF data
-- ✅ Quality adjustment to meet size requirements
-- ✅ Batch processing with detailed progress reports
-- ✅ Supports all common image formats
-
-**Configuration Options:**
-- **Max file size:** Control final file size (default: 1MB)
-- **Quality:** JPEG/WebP quality 10-100% (default: 85%)
-- **Dimensions:** Max width/height (default: 1920x1080)
-- **Prefix:** Custom filename prefix (default: "img")
-- **Format:** Convert to WebP or keep original format
-
-## Project Structure
-
-```
-examples/                    # Example configurations (safe to commit)
-├── SETUP_GUIDE.md          # Complete setup instructions
-├── README.md               # Examples documentation
-├── emails/                 # Email automation examples
-│   ├── email_config.json.example
-│   ├── email_list.txt.example
-│   └── email.txt.example
-├── outlook/                # Outlook automation examples
-├── certificates/           # Certificate generation examples
-└── phone_numbers/          # Contact generation examples
-
-data/                       # Your local data (excluded from git)
-├── attachments/            # General attachments
-├── certificates/           # Certificate generation assets
-│   ├── config.json        # Field positions and styling
-│   ├── recipients.txt     # Recipients with course/achievement data
-│   ├── recipients_ex.txt  # Example recipients file
-│   ├── templates/         # Blank PDF certificate templates
-│   │   ├── CryptX.pdf    # Certificate template
-│   │   └── Participants.pdf # Alternative template
-│   └── output/            # Generated personalized certificates
-├── email_config.json      # Global email configuration
-├── email_config_enhanced.json # Enhanced email settings
-├── email_config_template.md # Email config template/documentation
-├── email_lists/           # Email list files
-│   ├── icts_participants.txt # Workshop participants
-│   └── icts_workshop_emails.csv # CSV format email lists
-├── email_templates/       # Email template files
-│   ├── icts_workshop_body.txt # Workshop email body
-│   └── icts_workshop_enhanced.txt # Enhanced email template
-├── emails/                # Bulk email automation assets
-│   ├── email_config.json # Your Gmail/email settings
-│   ├── email_list.txt    # Paste email addresses here (tab-separated name\temail)
-│   ├── email.txt         # Paste email message here (supports {name} placeholder)
-│   └── attachments/      # Individual certificate files for personalized sending
-├── outlook/              # Outlook email automation assets
-│   ├── email_config.json # Your Outlook settings
-│   ├── recipients.txt    # Recipients with attachment filenames
-│   ├── email.txt         # Email template with {name} placeholder
-│   └── certificates/     # Individual attachment files
-└── phone_numbers/        # Contact generation assets
-    ├── numbers.txt       # Paste phone numbers here
-    ├── sample_numbers.txt # Example phone numbers
-    ├── envision_contacts.vcf # Generated contact files
-    ├── numbers_contacts.vcf # Generated contact files
-    └── *.vcf             # Other generated contact files
-
-src/
-├── automations/          # Automation scripts
-│   ├── fill_certificates.py # Certificate generation
-│   ├── generate_contacts.py # Contact VCF generation
-│   ├── send_emails_outlook.py # Outlook email sending
-│   ├── send_enhanced_emails.py # Enhanced email features
-│   └── send_same_email.py # Bulk/personalized email sending
-├── utils/                # Utility modules
-│   ├── email_template_generator.py # Email template utilities
-│   └── file_utils.py     # File handling utilities
-└── main.py               # Main CLI interface
-
-docs/                     # Documentation
-├── email_deliverability_guide.md # Email best practices
-└── PROJECT_SUMMARY.md    # Project overview
-
-tests/                    # Test files
-└── test_main.py         # Main tests
-
-setup.sh                 # Linux/Mac setup script
-setup.bat                # Windows setup script
-```
-
-## Security Notes
-
-- **Gmail Users:** Use App Passwords instead of regular passwords
-- **Outlook Users:** Enable 2FA and create App Passwords for email sending
-- **Data folder is excluded from git:** The entire `data/` folder is in `.gitignore` to protect sensitive information like email addresses, certificates, and configuration files
-- **Never commit** config files with real credentials to version control
-- **Test first** with a small recipient list before running bulk operations
-
-## Getting Help
-
-- **Complete setup guide:** See `examples/SETUP_GUIDE.md` for detailed instructions
-- **Example configurations:** Check the `examples/` folder for template files
-- **Command help:** Run any automation without arguments to see available options:
-
-```bash
-python src/main.py generate_contacts --help
-python src/main.py send_bulk_emails --help
-python src/main.py send_outlook_emails --help
-python src/main.py fill_certificates --help
-python src/main.py generate_blog_mdx --help
-python src/main.py optimize_images --help
-```
-
-- **Quick setup:** Run `./setup.sh` (Linux/Mac) or `setup.bat` (Windows) to create the data folder structure
+<p align="center">
+  ⭐ Star this repository if you find it helpful!
+</p>

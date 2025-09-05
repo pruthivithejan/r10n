@@ -31,12 +31,19 @@ ENV/
 *.swp
 *.swo
 
+# Enviroment Variables
+.env
+!.env.example 
+
 # User Workspace (contains sensitive data)
 workspace/
 !workspace/.gitkeep
 
 # Legacy Data Directory
 data/
+
+#Templates
+templates/
 
 # Operating System
 .DS_Store

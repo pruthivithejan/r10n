@@ -21,7 +21,7 @@ console = Console()
 
 
 def create_directory_structure():
-    """Create the workspace directory structure"""
+    """Create the workspace and templates directory structure"""
     directories = [
         "workspace/configs",
         "workspace/inputs/email",
@@ -35,6 +35,10 @@ def create_directory_structure():
         "workspace/outputs/images",
         "workspace/outputs/blog",
         "workspace/cache",
+        "templates/email",
+        "templates/certificates",
+        "templates/blog",
+        "templates/images",
     ]
     
     with Progress(
