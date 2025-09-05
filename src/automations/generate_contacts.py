@@ -52,13 +52,22 @@ def generate_vcf_from_file(input_file: str, output_name: str = None, prefix: str
         base_name = input_path.stem
         output_name = f"{base_name}_contacts.vcf"
     
-    # Ensure output goes to phone_numbers directory
-    if not output_name.startswith('data/phone_numbers/'):
-        output_path = Path("data/phone_numbers") / output_name
-    else:
-        output_path = Path(output_name)
+    # Handle output path - support both old and new structure
+    output_path = Path(output_name)
     
-    # Create data directory if it doesn't exist
+    # If it's just a filename, put it in the appropriate directory
+    if not output_path.is_absolute() and len(output_path.parts) == 1:
+        # Check if workspace exists (new structure)
+        if Path("workspace/outputs/contacts").exists():
+            output_path = Path("workspace/outputs/contacts") / output_name
+        # Fall back to old structure
+        elif Path("data/phone_numbers").exists():
+            output_path = Path("data/phone_numbers") / output_name
+        else:
+            # Default to workspace structure
+            output_path = Path("workspace/outputs/contacts") / output_name
+    
+    # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Generate VCF file
@@ -109,13 +118,22 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
 
     cleaned_numbers = sorted(cleaned_numbers)
 
-    # Ensure output goes to phone_numbers directory
-    if not output_name.startswith('data/phone_numbers/'):
-        output_path = Path("data/phone_numbers") / output_name
-    else:
-        output_path = Path(output_name)
+    # Handle output path - support both old and new structure
+    output_path = Path(output_name)
     
-    # Create data directory if it doesn't exist
+    # If it's just a filename, put it in the appropriate directory
+    if not output_path.is_absolute() and len(output_path.parts) == 1:
+        # Check if workspace exists (new structure)
+        if Path("workspace/outputs/contacts").exists():
+            output_path = Path("workspace/outputs/contacts") / output_name
+        # Fall back to old structure
+        elif Path("data/phone_numbers").exists():
+            output_path = Path("data/phone_numbers") / output_name
+        else:
+            # Default to workspace structure
+            output_path = Path("workspace/outputs/contacts") / output_name
+    
+    # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Generate VCF file

@@ -1,0 +1,26 @@
+{
+  "output_dir": "workspace/outputs/blog",
+  "default_author": "Your Name",
+  "default_tags": ["blog", "article"],
+  "openai_api_key": "",
+  "proofreading": {
+    "enabled": true,
+    "model": "gpt-3.5-turbo",
+    "max_tokens": 4000,
+    "temperature": 0.3,
+    "system_prompt": "You are a professional editor. Proofread the content for grammar, spelling, and clarity while maintaining the author's voice and style."
+  },
+  "mdx_template": {
+    "include_reading_time": true,
+    "include_table_of_contents": false,
+    "image_optimization": true,
+    "default_image": "/images/default-blog-image.jpg",
+    "date_format": "YYYY-MM-DD"
+  },
+  "seo": {
+    "include_meta_description": true,
+    "max_description_length": 160,
+    "include_og_tags": true,
+    "include_twitter_card": true
+  }
+}

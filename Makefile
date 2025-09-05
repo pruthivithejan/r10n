@@ -67,23 +67,23 @@ clean:  ## Clean temporary files and caches
 
 email:  ## Send bulk emails interactively
 	@echo "$(BLUE)📧 Email Automation$(RESET)"
-	@uv run automate email --interactive
+	@uv run python -m src.cli email --interactive
 
 certs:  ## Generate certificates interactively
 	@echo "$(BLUE)📜 Certificate Generation$(RESET)"
-	@uv run automate certificates --interactive
+	@uv run python -m src.cli certificates --interactive
 
 contacts:  ## Generate VCF contacts interactively
 	@echo "$(BLUE)📱 Contact Generation$(RESET)"
-	@uv run automate contacts --interactive
+	@uv run python -m src.cli contacts --interactive
 
 images:  ## Optimize images interactively
 	@echo "$(BLUE)🖼️  Image Optimization$(RESET)"
-	@uv run automate images --interactive
+	@uv run python -m src.cli images --interactive
 
 blog:  ## Generate blog MDX interactively
 	@echo "$(BLUE)✍️  Blog Generation$(RESET)"
-	@uv run automate blog --interactive
+	@uv run python -m src.cli blog --interactive
 
 all-automations:  ## Show all available automations
 	@echo "$(BLUE)Available Automations:$(RESET)"
@@ -97,18 +97,26 @@ all-automations:  ## Show all available automations
 # ============ QUICK RUN COMMANDS ============
 
 run-email-bulk:  ## Run bulk email with default settings
-	@uv run automate email --config workspace/configs/email.json --input workspace/inputs/email/recipients.csv
+	@uv run python -m src.cli email --config workspace/configs/email.json --recipients workspace/inputs/email/recipients.csv
 
 run-certs-batch:  ## Run certificate generation with default settings
-	@uv run automate certificates --config workspace/configs/certificates.json --input workspace/inputs/certificates/recipients.txt
+	@uv run python -m src.cli certificates --config workspace/configs/certificates.json --recipients workspace/inputs/certificates/recipients.txt
 
 run-contacts-batch:  ## Run contact generation with default settings
-	@uv run automate contacts --input workspace/inputs/contacts/numbers.txt --prefix "Contact"
+	@uv run python -m src.cli contacts --input workspace/inputs/contacts/numbers.txt --prefix "Contact"
 
 run-images-batch:  ## Run image optimization with default settings
-	@uv run automate images --input workspace/inputs/images --output workspace/outputs/images
+	@uv run python -m src.cli images --input workspace/inputs/images --output workspace/outputs/images
 
 # ============ UTILITY COMMANDS ============
+
+migrate:  ## Migrate data from old structure to new workspace
+	@echo "$(BLUE)Running data migration tool...$(RESET)"
+	@uv run python scripts/migrate.py
+
+migrate-dry:  ## Preview migration without making changes
+	@echo "$(BLUE)Running migration preview...$(RESET)"
+	@uv run python scripts/migrate.py --dry-run
 
 check-env:  ## Check if environment is properly configured
 	@echo "$(BLUE)Checking environment configuration...$(RESET)"
