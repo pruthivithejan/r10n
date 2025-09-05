@@ -31,7 +31,11 @@ ENV/
 *.swp
 *.swo
 
-# Data
+# User Workspace (contains sensitive data)
+workspace/
+!workspace/.gitkeep
+
+# Legacy Data Directory
 data/
 
 # Operating System
@@ -40,5 +44,8 @@ Thumbs.db
 
 # Project specific
 *.vcf
+
+# UV lock file (optional - you may want to commit this for reproducibility)
+# uv.lock
 
 

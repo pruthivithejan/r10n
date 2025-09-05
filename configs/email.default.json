@@ -1,0 +1,23 @@
+{
+  "smtp_server": "smtp.gmail.com",
+  "smtp_port": 587,
+  "sender_email": "your-email@example.com",
+  "sender_password": "your-app-password",
+  "sender_name": "Your Name",
+  "organization": "Your Organization",
+  "rate_limit": {
+    "delay_seconds": 3,
+    "batch_size": 5,
+    "batch_delay_seconds": 60
+  },
+  "template": {
+    "subject": "Your Email Subject",
+    "use_html": false,
+    "variables": ["name", "email"]
+  },
+  "headers": {
+    "include_organization": true,
+    "include_unsubscribe": true,
+    "reply_to": "reply@example.com"
+  }
+}

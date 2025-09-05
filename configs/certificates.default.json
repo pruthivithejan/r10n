@@ -1,0 +1,37 @@
+{
+  "template_path": "templates/certificates/template.pdf",
+  "output_dir": "workspace/outputs/certificates",
+  "font": {
+    "name": "Helvetica-Bold",
+    "size": 24,
+    "color": [0, 0, 0]
+  },
+  "fields": {
+    "name": {
+      "x": 300,
+      "y": 400,
+      "font_size": 30,
+      "align": "center"
+    },
+    "course": {
+      "x": 300,
+      "y": 350,
+      "font_size": 20,
+      "align": "center"
+    },
+    "date": {
+      "x": 300,
+      "y": 300,
+      "font_size": 16,
+      "align": "center"
+    },
+    "achievement": {
+      "x": 300,
+      "y": 250,
+      "font_size": 18,
+      "align": "center"
+    }
+  },
+  "page_size": "A4",
+  "orientation": "landscape"
+}
