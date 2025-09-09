@@ -10,7 +10,7 @@ YELLOW := \033[33m
 RESET := \033[0m
 
 help:  ## Show this help message
-	@echo "$(BLUE)Automation Toolkit - Available Commands:$(RESET)"
+	@echo "$(BLUE)r10n - Available Commands:$(RESET)"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(RESET) %s\n", $$1, $$2}'
 	@echo ""
@@ -20,7 +20,7 @@ help:  ## Show this help message
 	@echo "  3. Run any automation (e.g., 'make email', 'make certs')"
 
 setup:  ## One-time project setup (creates workspace, installs deps)
-	@echo "$(BLUE)🚀 Setting up Automation Toolkit...$(RESET)"
+	@echo "$(BLUE)🚀 Setting up r10n...$(RESET)"
 	@if [ ! -d ".venv" ]; then \
 		echo "Creating virtual environment..."; \
 		uv venv; \
@@ -128,6 +128,6 @@ update:  ## Update all dependencies to latest versions
 	@echo "$(GREEN)✅ Dependencies updated!$(RESET)"
 
 version:  ## Show project version
-	@echo "Automation Toolkit v2.0.0"
+	@echo "r10n v2.0.0"
 	@echo "Python: $$(uv run python --version)"
 	@echo "UV: $$(uv --version)"

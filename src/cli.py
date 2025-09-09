@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Enhanced CLI for Automation Toolkit
+Enhanced CLI for r10n (routine automation)
 Interactive command-line interface with beautiful terminal UI
 """
 
@@ -50,23 +50,23 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
 def display_banner():
     """Display a styled ASCII banner at startup (TTY only).
-    Set AUTOMATIONS_NO_BANNER=1 to suppress.
+    Set R10N_NO_BANNER=1 (or legacy AUTOMATIONS_NO_BANNER=1) to suppress.
     """
-    if not sys.stdout.isatty() or os.getenv("AUTOMATIONS_NO_BANNER"):
+    if not sys.stdout.isatty() or os.getenv("R10N_NO_BANNER") or os.getenv("AUTOMATIONS_NO_BANNER"):
         return
     
-    banner = """╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║  █████╗ ██╗   ██╗████████╗ ██████╗ ███╗   ███╗ █████╗ ████████╗██╗ ██████╗ ███╗   ██╗███████╗ ║
-║ ██╔══██╗██║   ██║╚══██╔══╝██╔═══██╗████╗ ████║██╔══██╗╚══██╔══╝██║██╔═══██╗████╗  ██║██╔════╝ ║
-║ ███████║██║   ██║   ██║   ██║   ██║██╔████╔██║███████║   ██║   ██║██║   ██║██╔██╗ ██║███████╗ ║
-║ ██╔══██║██║   ██║   ██║   ██║   ██║██║╚██╔╝██║██╔══██║   ██║   ██║██║   ██║██║╚██╗██║╚════██║ ║
-║ ██║  ██║╚██████╔╝   ██║   ╚██████╔╝██║ ╚═╝ ██║██║  ██║   ██║   ██║╚██████╔╝██║ ╚████║███████║ ║
-║ ╚═╝  ╚═╝ ╚═════╝    ╚═╝    ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝   ╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝ ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝"""
+    banner = """╔═══════════════════════════════════╗
+║                                   ║
+║  ██████╗  ██╗ ██████╗ ███╗   ██╗  ║
+║  ██╔══██╗███║██╔═══██╗████╗  ██║  ║
+║  ██████╔╝╚██║██║   ██║██╔██╗ ██║  ║
+║  ██╔══██╗ ██║██║   ██║██║╚██╗██║  ║
+║  ██║  ██║ ██║╚██████╔╝██║ ╚████║  ║
+║  ╚═╝  ╚═╝ ╚═╝ ╚═════╝ ╚═╝  ╚═══╝  ║
+║                                   ║
+╚═══════════════════════════════════╝"""
     
-    subtitle = f"Automation Toolkit • v{VERSION} by Pruthivi Thejan (pruthivithejan.me)"
+    subtitle = f"r10n • v{VERSION} by Pruthivi Thejan (pruthivithejan.me)"
     console.print(f"[bold cyan]{banner}[/]")
     console.print(f"[dim]{subtitle.center(62)}[/]")
 
@@ -104,7 +104,7 @@ def display_config(config: Dict[str, Any], title: str = "Configuration"):
 @click.version_option(version=VERSION)
 @click.pass_context
 def main(ctx: click.Context):
-    """Automation Toolkit - Simplify your bulk operations"""
+    """r10n (routine automation) - Automate repetitive routines"""
     display_banner()
     # If no subcommand, show help (preserve default Click behavior)
     if ctx.invoked_subcommand is None and not ctx.resilient_parsing:

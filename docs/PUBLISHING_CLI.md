@@ -1,4 +1,4 @@
-# Publishing the Automation Toolkit as a Reusable CLI
+# Publishing r10n as a Reusable CLI
 
 This guide explains how to turn this repository into an installable command-line tool that others can add to their projects and use globally. It covers packaging, building, testing, publishing, and how consumers can install and extend it. No code changes are required by this guide.
 
@@ -6,8 +6,8 @@ This guide explains how to turn this repository into an installable command-line
 
 ## At a glance
 
-- Package name (current): `automation-toolkit`
-- CLI command (current): `automate` (entry point mapped in `pyproject.toml`)
+- Package name (current): `r10n`
+- CLI command (current): `r10n` (entry point mapped in `pyproject.toml`)
 - Build backend: `hatchling`
 - Manager used here: `uv` (you can also use `pip`, `pipx`, or `hatch`)
 - Python: 3.9+
@@ -30,8 +30,8 @@ Optional but recommended:
 
 ## Step 1 — Confirm or choose your public identifiers
 
-- Distribution name (what users install): currently `automation-toolkit`
-- CLI command (what users run): currently `automate`
+- Distribution name (what users install): currently `r10n`
+- CLI command (what users run): currently `r10n`
 - Import package name (what users import in Python): currently this repo ships code under a top-level module named `src` because of the packaging config.
 
 Recommended for the next iteration (not required to publish now):
@@ -90,7 +90,7 @@ source .dist-test/bin/activate
 pip install dist/*.whl
 
 # Verify the command and help
-automate --help
+r10n --help
 python -c 'import importlib; print(bool(importlib.util.find_spec("src")))'
 ```
 
@@ -123,8 +123,8 @@ Verify install from TestPyPI in a clean env:
 ```zsh
 uv venv .testpypi
 source .testpypi/bin/activate
-pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple automation-toolkit
-automate --version
+pip install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple r10n
+r10n --version
 ```
 
 ---
@@ -151,20 +151,20 @@ If you get “File already exists,” bump `version` in `pyproject.toml` and reb
 - With pipx:
 
 ```zsh
-pipx install automation-toolkit
+pipx install r10n
 # If pipx is missing:
 python3 -m pip install --user pipx
 python3 -m pipx ensurepath
-pipx install automation-toolkit
+pipx install r10n
 ```
 
 - With uv tools (pipx alternative):
 
 ```zsh
-uv tool install automation-toolkit
+uv tool install r10n
 ```
 
-This provides the `automate` command in PATH.
+This provides the `r10n` command in PATH.
 
 ### 2) Project dependency (use inside another repo)
 
@@ -173,15 +173,15 @@ Add to the project’s `pyproject.toml` dependencies, then call the CLI from Mak
 ```toml
 [project]
 dependencies = [
-  "automation-toolkit>=2.0.0",
+  "r10n>=2.0.0",
 ]
 ```
 
 Example Make target in the consumer project:
 
 ```makefile
-automate-contacts:
-	automate contacts --input data/contacts.txt --output build/contacts.vcf --prefix "Customer"
+r10n-contacts:
+  r10n contacts --input data/contacts.txt --output build/contacts.vcf --prefix "Customer"
 ```
 
 ### 3) Import as a library (Python API)
@@ -217,7 +217,7 @@ Contract for a plugin command (example):
 - Output: result dict with simple metrics (`processed`, `failed`, etc.)
 - Error handling: raise `click.ClickException` with user-friendly messages
 
-This lets third-party packages add `automate my-tool ...` without changes to your core.
+This lets third-party packages add `r10n my-tool ...` without changes to your core.
 
 ---
 
@@ -284,7 +284,7 @@ These are optional and can be done after your first publish:
 ## What’s already set up in this repo
 
 - `pyproject.toml` with project metadata, dependencies, and CLI entry point:
-  - `[project.scripts] automate = "src.cli:main"`
+  - `[project.scripts] r10n = "src.cli:main"`
 - Click-based CLI with rich TUI in `src/cli.py`
 - Automations modules in `src/automations/`
 - Make targets for local workflows using `uv`
@@ -299,9 +299,9 @@ You can publish with this as-is. Use this document as your checklist.
 - [ ] `README.md` explains install and basic usage
 - [ ] Build succeeds: `uv build`
 - [ ] Twine check passes: `uv run twine check dist/*`
-- [ ] Test install works in a fresh venv and `automate --help` runs
+- [ ] Test install works in a fresh venv and `r10n --help` runs
 - [ ] Upload to TestPyPI, verify install/CLI
 - [ ] Upload to PyPI
-- [ ] Announce usage: `pipx install automation-toolkit` or `uv tool install automation-toolkit`
+- [ ] Announce usage: `pipx install r10n` or `uv tool install r10n`
 
 Happy releasing!

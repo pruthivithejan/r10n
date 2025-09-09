@@ -1,7 +1,7 @@
 [project]
-name = "automation-toolkit"
+name = "r10n"
 version = "2.0.0"
-description = "Bulk automation framework for emails, certificates, contact management, and more"
+description = "r10n (routine automation): Automates repetitive routines like emails, certificates, contacts, images, and more"
 readme = "README.md"
 requires-python = ">=3.9"
 authors = [
@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-automate = "src.cli:main"
+r10n = "src.cli:main"
 
 [project.optional-dependencies]
 dev = [

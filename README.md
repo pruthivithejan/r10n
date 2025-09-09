@@ -1,6 +1,6 @@
-# Automations by Pruthvi Thejan
+# r10n — routine automation
 
-> 🚀 A modern, versatile automation toolkit for bulk operations - emails, certificates, contacts, images, and more. Built with Python, enhanced with UV for blazing-fast performance, and featuring a beautiful CLI interface.
+> 🚀 r10n (routine automation) automates repetitive routines: emails, certificates, contacts, images, and more. Built with Python, powered by UV, and featuring a beautiful CLI.
 
 [![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![UV](https://img.shields.io/badge/UV-Package%20Manager-green.svg)](https://github.com/astral-sh/uv)

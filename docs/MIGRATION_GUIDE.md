@@ -1,8 +1,8 @@
-# Migration Guide to Automation Toolkit 2.0
+# Migration Guide to r10n 2.0
 
 ## 🚀 What's New
 
-The Automation Toolkit has been completely restructured for better usability, faster execution, and modern Python tooling:
+r10n has been completely restructured for better usability, faster execution, and modern Python tooling:
 
 ### Key Improvements
 - **UV Package Manager**: 10-100x faster than pip
@@ -97,13 +97,13 @@ Run a simple test to ensure everything works:
 ```bash
 # Check status
 make version
-uv run automate status
+uv run r10n status
 
 # Try contact generation (simplest test)
 make contacts
 
 # Or run directly
-uv run automate contacts --interactive
+uv run r10n contacts --interactive
 ```
 
 ## 🎯 Quick Command Reference
@@ -125,11 +125,11 @@ All commands now support an interactive mode that guides you through the process
 
 ```bash
 # Interactive mode (recommended for beginners)
-uv run automate email --interactive
-uv run automate certificates --interactive
+uv run r10n email --interactive
+uv run r10n certificates --interactive
 
 # Direct mode (for automation/scripts)
-uv run automate contacts \
+uv run r10n contacts \
   --input workspace/inputs/contacts/numbers.txt \
   --output workspace/outputs/contacts/contacts.vcf \
   --prefix "Customer"
@@ -225,8 +225,8 @@ uv run python scripts/setup.py --init
 ## 📚 Additional Resources
 
 - **Make Help**: `make help` - Shows all available commands
-- **CLI Help**: `uv run automate --help` - Detailed CLI documentation
-- **Status Check**: `uv run automate status` - Check your setup
+- **CLI Help**: `uv run r10n --help` - Detailed CLI documentation
+- **Status Check**: `uv run r10n status` - Check your setup
 - **Interactive Mode**: Add `--interactive` to any command for guided execution
 
 ## 💡 Tips

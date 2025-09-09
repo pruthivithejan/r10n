@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Smart setup script for Automation Toolkit
+Smart setup script for r10n (routine automation)
 One-command initialization of the entire project workspace
 """
 
@@ -175,7 +175,7 @@ def create_default_config(filename: str):
 
 def create_env_file():
     """Create .env file from template"""
-    env_template = """# Automation Toolkit Environment Variables
+    env_template = """# r10n Environment Variables
 # Copy this file to workspace/.env and update with your actual values
 
 # Email Configuration
@@ -271,7 +271,7 @@ def display_setup_summary():
 def interactive_setup():
     """Run an interactive setup wizard"""
     console.print(Panel.fit(
-        "[bold cyan]Automation Toolkit Setup Wizard[/bold cyan]\n"
+    "[bold cyan]r10n Setup Wizard[/bold cyan]\n"
         "This wizard will help you set up your workspace",
         border_style="cyan"
     ))
@@ -314,7 +314,7 @@ def interactive_setup():
 @click.option('--reset', is_flag=True, help='Reset workspace to defaults')
 @click.option('--check', is_flag=True, help='Check setup status')
 def main(init, reset, check):
-    """Automation Toolkit Setup Script"""
+    """r10n Setup Script"""
     
     if check:
         display_setup_summary()
