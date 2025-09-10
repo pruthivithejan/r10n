@@ -56,3 +56,5 @@ Thumbs.db
 # uv.lock
 
 
+# Ruff Cache
+.ruff_cache/
