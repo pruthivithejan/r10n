@@ -295,9 +295,10 @@ def certificates(interactive, config, recipients, template, output):
         if cfg:
             display_config(cfg, "Certificate Configuration")
 
-        # Get template
+        # Get template (default from config if available)
+        default_template = cfg.get("template_pdf", "templates/certificates/template.pdf")
         template = template or Prompt.ask(
-            "\n[cyan]PDF template file[/]", default="templates/certificates/template.pdf"
+            "\n[cyan]PDF template file[/]", default=default_template
         )
 
         if not Path(template).exists():
@@ -305,9 +306,11 @@ def certificates(interactive, config, recipients, template, output):
             console.print("[yellow]Please add your PDF template to this location[/]")
             return
 
-        # Get recipients
+        # Get recipients (default from input_directory/input_file in config if available)
+        default_input_dir = cfg.get("input_directory", "workspace/inputs/certificates")
+        default_recipients = cfg.get("input_file", str(Path(default_input_dir) / "recipients.txt"))
         recipients = recipients or Prompt.ask(
-            "[cyan]Recipients file[/]", default="workspace/inputs/certificates/recipients.txt"
+            "[cyan]Recipients file[/]", default=default_recipients
         )
 
         # Get output directory
@@ -321,17 +324,22 @@ def certificates(interactive, config, recipients, template, output):
 
     else:
         config = config or "workspace/configs/certificates.json"
-        recipients = recipients or "workspace/inputs/certificates/recipients.txt"
+        # Load config to honor input_directory/input_file default for non-interactive
+        cfg = load_config(config)
+        default_input_dir = cfg.get("input_directory", "workspace/inputs/certificates")
+        recipients = recipients or cfg.get("input_file", str(Path(default_input_dir) / "recipients.txt"))
         output = output or "workspace/outputs/certificates"
 
     # Run the automation
     try:
         console.print("\n[cyan]Generating certificates...[/]")
 
-        # Update config with paths
+        # Update config with paths using keys expected by fill_certificates
         cfg = load_config(config)
-        cfg["template_path"] = template if template else cfg.get("template_path")
-        cfg["output_dir"] = output
+        if template:
+            cfg["template_pdf"] = template
+        # Always set output directory explicitly
+        cfg["output_directory"] = output
 
         # Save updated config temporarily
         import tempfile
@@ -340,8 +348,9 @@ def certificates(interactive, config, recipients, template, output):
             json.dump(cfg, f)
             temp_config = f.name
 
+        # Use project root as base when paths are project-relative
         results = fill_certificates.fill_certificates_from_file(
-            recipients, temp_config, Path(output).parent
+            recipients, temp_config, base_dir=str(Path("workspace"))
         )
 
         # Clean up temp file

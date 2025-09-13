@@ -1,4 +1,5 @@
 import json
+import csv
 import os
 import platform
 from io import BytesIO
@@ -47,6 +48,23 @@ def load_recipients(recipients_file):
     """Load recipients from file (supports both single names and tab-separated format)"""
     recipients = []
     try:
+        # CSV support (header-based). Prefer by extension to avoid mis-detection.
+        if recipients_file.lower().endswith(".csv"):
+            with open(recipients_file, encoding="utf-8-sig", newline="") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    # Normalize keys to lowercase and strip
+                    normalized = {str(k).strip().lower(): (v.strip() if isinstance(v, str) else v) for k, v in row.items()}
+                    # Ensure a 'name' key exists; try common variants
+                    name = normalized.get("name") or normalized.get("full_name") or normalized.get("recipient")
+                    if not name:
+                        # Skip rows without a discernible name
+                        continue
+                    normalized["name"] = name
+                    recipients.append(normalized)
+            return recipients
+
+        # TXT/TSV fallback (existing behavior)
         with open(recipients_file, encoding="utf-8") as f:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
@@ -54,19 +72,12 @@ def load_recipients(recipients_file):
                 if not line or line.startswith("#"):
                     continue
 
-                # Split by tab
+                # Split by tab for multiple fields, else treat as single-name line
                 parts = line.split("\t")
                 if len(parts) >= 2:
-                    # Tab-separated format with name and position
                     recipients.append({"name": parts[0].strip(), "position": parts[1].strip()})
                 elif len(parts) == 1:
-                    # Single name per line format
-                    recipients.append(
-                        {
-                            "name": parts[0].strip(),
-                            "position": "",  # Empty position for single-field format
-                        }
-                    )
+                    recipients.append({"name": parts[0].strip(), "position": ""})
                 else:
                     print(
                         f"Warning: Invalid format on line {line_num} in {recipients_file}. Expected format: Name or Name\tPosition"
@@ -241,11 +252,30 @@ def generate_certificates(recipients_file, config_file, base_dir="data/certifica
         dict: Summary of generation results
     """
 
-    # Make paths relative to base_dir if they're not absolute
-    if not os.path.isabs(recipients_file):
-        recipients_file = os.path.join(base_dir, recipients_file)
-    if not os.path.isabs(config_file):
-        config_file = os.path.join(base_dir, config_file)
+    # Helper to resolve file/dir paths sensibly across workspace vs base_dir
+    def _resolve_path(p: str, base: str, is_dir: bool = False) -> str:
+        """Resolve a path without incorrectly prefixing workspace-relative paths.
+
+        Rules:
+        - Absolute paths: return as-is
+        - Paths starting with known project anchors (e.g., "workspace/", "templates/", "configs/")
+          are treated as project-relative and returned as-is
+        - Existing paths (relative to CWD): returned as-is
+        - Otherwise: joined to base
+        """
+        if not p:
+            return p
+        anchors = ("workspace/", "templates/", "configs/", "src/", "docs/", "scripts/")
+        if os.path.isabs(p) or p.startswith(anchors):
+            return p
+        # For directories that may not exist yet, rely on anchor check above and fall through to base join
+        if not is_dir and os.path.exists(p):
+            return p
+        return os.path.join(base, p)
+
+    # Resolve recipients and config paths
+    recipients_file = _resolve_path(recipients_file, base_dir, is_dir=False)
+    config_file = _resolve_path(config_file, base_dir, is_dir=False)
 
     # Load configuration and data
     config = load_config(config_file)
@@ -255,9 +285,9 @@ def generate_certificates(recipients_file, config_file, base_dir="data/certifica
         print("No valid recipients found.")
         return {"total": 0, "generated": 0, "failed": 0, "errors": []}
 
-    # Setup paths
-    template_path = os.path.join(base_dir, config["template_pdf"])
-    output_dir = os.path.join(base_dir, config["output_directory"])
+    # Setup paths (respect project-root paths for template/output)
+    template_path = _resolve_path(config["template_pdf"], base_dir, is_dir=False)
+    output_dir = _resolve_path(config["output_directory"], base_dir, is_dir=True)
 
     # Validate template file
     if not os.path.exists(template_path):
