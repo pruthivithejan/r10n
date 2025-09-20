@@ -1,6 +1,8 @@
 import csv
 import json
 import smtplib
+import time
+from smtplib import SMTPServerDisconnected, SMTPResponseException
 from dataclasses import dataclass
 from email import encoders
 from email.mime.base import MIMEBase
@@ -26,6 +28,9 @@ class SimpleEmailSender:
     def __init__(self, config: SimpleEmailConfig):
         self.config = config
         self.smtp_connection = None
+        # Retry and backoff configuration
+        self.max_retries = 3
+        self.base_backoff = 2.0  # seconds
 
     def connect(self):
         """Establish SMTP connection"""
@@ -43,8 +48,45 @@ class SimpleEmailSender:
     def disconnect(self):
         """Close SMTP connection"""
         if self.smtp_connection:
-            self.smtp_connection.quit()
-            print("📤 Disconnected from SMTP server")
+            try:
+                self.smtp_connection.quit()
+                print("📤 Disconnected from SMTP server")
+            except Exception as e:
+                # Swallow disconnect errors (already disconnected)
+                print(f"ℹ️  SMTP disconnect cleanup: {e!s}")
+
+    def ensure_connected(self) -> bool:
+        """Ensure the SMTP connection is alive; reconnect if needed."""
+        try:
+            if self.smtp_connection is None:
+                return self.connect()
+            # NOOP to check connection health
+            self.smtp_connection.noop()
+            return True
+        except Exception:
+            print("♻️  SMTP connection lost. Reconnecting...")
+            self.disconnect()
+            return self.connect()
+
+    def send_message_with_retry(self, msg) -> None:
+        """Send a message with retry and exponential backoff on transient failures."""
+        attempt = 0
+        last_err = None
+        while attempt < self.max_retries:
+            attempt += 1
+            if not self.ensure_connected():
+                last_err = RuntimeError("Unable to (re)connect to SMTP server")
+            else:
+                try:
+                    self.smtp_connection.send_message(msg)
+                    return
+                except (SMTPServerDisconnected, SMTPResponseException, smtplib.SMTPException) as e:
+                    last_err = e
+                    print(f"⚠️  SMTP send failed on attempt {attempt}/{self.max_retries}: {e!s}")
+            # Backoff before next attempt
+            sleep_for = self.base_backoff * (2 ** (attempt - 1))
+            time.sleep(sleep_for)
+        raise last_err or RuntimeError("Unknown SMTP error during send")
 
     def create_message(
         self, to_email: str, subject: str, body: str, attachments: List[str] = None
@@ -97,13 +139,15 @@ class SimpleEmailSender:
 
             try:
                 msg = self.create_message(email, subject, body, attachments)
-                self.smtp_connection.send_message(msg)
+                self.send_message_with_retry(msg)
                 results["sent"] += 1
                 print("✅ Email sent successfully")
             except Exception as e:
                 results["failed"] += 1
                 results["failed_emails"].append(email)
                 print(f"❌ Failed to send email: {e!s}")
+            # Gentle throttle to avoid rate limiting
+            time.sleep(0.8)
 
         self.disconnect()
         return results
@@ -232,7 +276,7 @@ def send_personalized_emails_with_certificates(
 
                 # Create and send email
                 msg = sender.create_message(email, subject, personalized_body, attachments)
-                sender.smtp_connection.send_message(msg)
+                sender.send_message_with_retry(msg)
 
                 results["sent"] += 1
                 print("✅ Email sent successfully")
@@ -243,6 +287,8 @@ def send_personalized_emails_with_certificates(
                 print(f"❌ Failed to send email: {e!s}")
 
             print()
+            # Gentle throttle to avoid rate limiting
+            time.sleep(0.8)
 
         sender.disconnect()
 

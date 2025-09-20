@@ -54,9 +54,32 @@ def load_recipients(recipients_file):
                 reader = csv.DictReader(f)
                 for row in reader:
                     # Normalize keys to lowercase and strip
-                    normalized = {str(k).strip().lower(): (v.strip() if isinstance(v, str) else v) for k, v in row.items()}
-                    # Ensure a 'name' key exists; try common variants
-                    name = normalized.get("name") or normalized.get("full_name") or normalized.get("recipient")
+                    normalized = {str(k).strip().lower(): (v.strip() if isinstance(v, str) else v) for k, v in row.items() if k is not None}
+
+                    # Handle extra fields (DictReader puts them under key None)
+                    extras = row.get(None) if isinstance(row, dict) else None
+                    if isinstance(extras, list):
+                        extras = [e.strip() for e in extras if isinstance(e, str)]
+
+                    # Determine name with heuristics
+                    raw_name = normalized.get("name") or normalized.get("full_name") or normalized.get("recipient")
+
+                    # If the 'name' cell looks like an index (digits) and there are extras or a shifted layout,
+                    # shift columns: treat current 'position' as name, current 'e-mail' as position (best-effort)
+                    def is_index_like(x: str) -> bool:
+                        return isinstance(x, str) and x.strip().isdigit()
+
+                    if is_index_like(raw_name):
+                        # If Position holds the real name, use it
+                        possible_name = normalized.get("position") or normalized.get("role") or normalized.get("designation")
+                        if possible_name:
+                            raw_name = possible_name
+                            # Shift position from email if present (common in misaligned CSV)
+                            possible_pos = normalized.get("e-mail") or (extras[0] if isinstance(extras, list) and extras else None)
+                            if possible_pos:
+                                normalized["position"] = possible_pos
+
+                    name = raw_name
                     if not name:
                         # Skip rows without a discernible name
                         continue
@@ -305,23 +328,35 @@ def generate_certificates(recipients_file, config_file, base_dir="data/certifica
     failed_count = 0
     errors = []
 
+    used_names = {}
     for i, recipient in enumerate(recipients, 1):
         try:
             print(f"\n[{i}/{len(recipients)}] Processing certificate for {recipient['name']}...")
 
-            # Create safe filename
-            safe_name = "".join(
-                c for c in recipient["name"] if c.isalnum() or c in (" ", "-", "_")
-            ).rstrip()
-            safe_name = safe_name.replace(" ", "_")
-            output_filename = f"{safe_name}_certificate.pdf"
-            output_path = os.path.join(output_dir, output_filename)
+            # Create safe base filename (optionally include position/role to reduce collisions)
+            def _sanitize(s: str) -> str:
+                s = "".join(c for c in s if c.isalnum() or c in (" ", "-", "_"))
+                return s.rstrip().replace(" ", "_")
+
+            safe_name = _sanitize(recipient["name"])
+            position = recipient.get("position") or recipient.get("role") or ""
+            base = f"{safe_name}" if not position else f"{safe_name}_{_sanitize(position)}"
+
+            # Ensure unique filename (avoid overwrites)
+            candidate = f"{base}_certificate.pdf"
+            output_path = os.path.join(output_dir, candidate)
+            idx = used_names.get(candidate, 0)
+            while os.path.exists(output_path):
+                idx += 1
+                candidate = f"{base}_certificate_{idx}.pdf"
+                output_path = os.path.join(output_dir, candidate)
+            used_names[candidate] = idx
 
             # Fill certificate
             fill_certificate(template_path, config, recipient, output_path)
 
             generated_count += 1
-            print(f"  ✓ Certificate generated: {output_filename}")
+            print(f"  ✓ Certificate generated: {os.path.basename(output_path)}")
 
         except Exception as e:
             error_msg = f"Failed to generate certificate for {recipient['name']}: {e!s}"
