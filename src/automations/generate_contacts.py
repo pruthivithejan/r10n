@@ -4,7 +4,9 @@ from pathlib import Path
 
 def clean_number(number):
     number = re.sub(r"\D", "", number)  # remove non-digits
-    if number.startswith("0"):
+    if number.startswith("94") and len(number) == 11:
+        number = "+" + number
+    elif number.startswith("0"):
         number = "+94" + number[1:]
     elif not number.startswith("+94"):
         number = "+94" + number

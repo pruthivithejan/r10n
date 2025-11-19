@@ -344,7 +344,7 @@ def normalize_name_for_matching(name: str) -> str:
     import re
 
     # Remove special characters and normalize spacing
-    normalized = re.sub(r"[^\w\s]", "", name)
+    normalized = re.sub(r"[^\w\s]", "", name).strip()
     # Replace spaces with underscores and convert to lowercase
     normalized = re.sub(r"\s+", "_", normalized).lower()
     return normalized

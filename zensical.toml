@@ -1,0 +1,30 @@
+[project]
+site_name = "r10n"
+site_description = "Minimal documentation"
+site_author = "Pruthvi Thejan"
+
+# Minimal features
+features = [
+    "navigation.instant",
+    "navigation.tracking",
+]
+
+# Light Mode (Default)
+[[project.theme.palette]]
+scheme = "default"
+primary = "white"
+accent = "black"
+toggle.icon = "material/brightness-7"
+toggle.name = "Switch to dark mode"
+
+# Dark Mode
+[[project.theme.palette]]
+scheme = "slate"
+primary = "black"
+accent = "white"
+toggle.icon = "material/brightness-4"
+toggle.name = "Switch to light mode"
+
+[project.theme.font]
+text = "Roboto"
+code = "Roboto Mono"

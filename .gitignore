@@ -19,6 +19,8 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+.cache/
+.pytest_cache/
 
 # Virtual Environment
 .venv/
@@ -57,3 +59,6 @@ Thumbs.db
 
 # Ruff Cache
 .ruff_cache/
+
+# Documentation
+site/

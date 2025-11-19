@@ -1,0 +1,13 @@
+{
+    "input_directory": "tests/fixtures/input_images",
+    "output_directory": "tests/fixtures/output_images", 
+    "prefix": "test_img",
+    "max_size_mb": 0.5,
+    "quality": 80,
+    "max_width": 1200,
+    "max_height": 800,
+    "convert_to_webp": true,
+    "preserve_aspect_ratio": true,
+    "auto_orient": true,
+    "preserve_filename": false
+}

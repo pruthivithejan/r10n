@@ -1,0 +1,6 @@
+[
+    {"name": "John Doe", "email": "john@example.com", "event": "Test Workshop"},
+    {"name": "Jane Smith", "email": "jane@example.com", "event": "Python Training"},
+    {"name": "Bob Johnson", "email": "bob@example.com", "event": "AI Summit 2023"},
+    {"name": "Alice Brown", "email": "alice@example.com", "event": "Developer Conference"}
+]

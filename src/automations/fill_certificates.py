@@ -62,7 +62,10 @@ def load_recipients(recipients_file):
                         extras = [e.strip() for e in extras if isinstance(e, str)]
 
                     # Determine name with heuristics
-                    raw_name = normalized.get("name") or normalized.get("full_name") or normalized.get("recipient")
+                    raw_name = (normalized.get("name") or 
+                              normalized.get("full_name") or 
+                              normalized.get("full name") or  # Handle "Full Name" headers
+                              normalized.get("recipient"))
 
                     # If the 'name' cell looks like an index (digits) and there are extras or a shifted layout,
                     # shift columns: treat current 'position' as name, current 'e-mail' as position (best-effort)
