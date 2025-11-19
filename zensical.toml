@@ -26,5 +26,5 @@ toggle.icon = "material/brightness-4"
 toggle.name = "Switch to light mode"
 
 [project.theme.font]
-text = "Roboto"
-code = "Roboto Mono"
+text = "Inter"
+code = "JetBrains Mono"
