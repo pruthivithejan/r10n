@@ -1,3 +1,7 @@
+---
+icon: material/folder-cog
+---
+
 # Setup Locally
 
 Set up r10n locally for repeated use, custom configurations, and working with templates.

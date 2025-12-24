@@ -52,6 +52,9 @@ toggle.name = "Switch to light mode"
 text = "Inter"
 code = "JetBrains Mono"
 
+[project.extra]
+generator = false
+
 # Footer social links
 [[project.extra.social]]
 icon = "fontawesome/brands/github"

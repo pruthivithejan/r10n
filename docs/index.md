@@ -1,3 +1,7 @@
+---
+icon: material/home
+---
+
 # r10n
 
 **Routine Automation** - Automate repetitive tasks with a beautiful CLI.

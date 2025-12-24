@@ -1,3 +1,7 @@
+---
+icon: material/rocket-launch
+---
+
 # Get Started
 
 r10n can be used in two ways: run instantly with `uvx` or set up locally for repeated use.
