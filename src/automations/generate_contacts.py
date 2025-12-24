@@ -3,6 +3,7 @@ from pathlib import Path
 
 
 def clean_number(number):
+    """Clean and validate phone numbers (Sri Lankan format)"""
     number = re.sub(r"\D", "", number)  # remove non-digits
     if number.startswith("94") and len(number) == 11:
         number = "+" + number
@@ -13,13 +14,13 @@ def clean_number(number):
     return number if re.fullmatch(r"\+94\d{9}", number) else None
 
 
-def generate_vcf_from_file(input_file: str, output_name: str = None, prefix: str = "Contact"):
+def generate_vcf_from_file(input_file: str, output_name: str = "contacts.vcf", prefix: str = "Contact"):
     """
     Generate a VCF file from a text file containing phone numbers.
 
     Args:
         input_file (str): Path to text file containing phone numbers (one per line)
-        output_name (str): Name of the output VCF file (optional, auto-generated if not provided)
+        output_name (str): Path/name of the output VCF file
         prefix (str): Prefix to use for contact names
 
     Returns:
@@ -33,13 +34,19 @@ def generate_vcf_from_file(input_file: str, output_name: str = None, prefix: str
     with open(input_path) as f:
         raw_numbers = f.read()
 
-    numbers = raw_numbers.strip().splitlines()
-    total_numbers = len(numbers)
+    # Filter out comments and empty lines
+    lines = []
+    for line in raw_numbers.strip().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            lines.append(line)
+
+    total_numbers = len(lines)
     cleaned_numbers = set()
     duplicate_count = 0
     invalid_count = 0
 
-    for num in numbers:
+    for num in lines:
         cleaned = clean_number(num)
         if cleaned:
             if cleaned in cleaned_numbers:
@@ -51,25 +58,12 @@ def generate_vcf_from_file(input_file: str, output_name: str = None, prefix: str
 
     cleaned_numbers = sorted(cleaned_numbers)
 
-    # Generate output filename if not provided
-    if output_name is None:
-        base_name = input_path.stem
-        output_name = f"{base_name}_contacts.vcf"
-
-    # Handle output path - support both old and new structure
+    # Handle output path
     output_path = Path(output_name)
 
-    # If it's just a filename, put it in the appropriate directory
+    # If it's just a filename, put it in local/outputs/contacts
     if not output_path.is_absolute() and len(output_path.parts) == 1:
-        # Check if workspace exists (new structure)
-        if Path("workspace/outputs/contacts").exists():
-            output_path = Path("workspace/outputs/contacts") / output_name
-        # Fall back to old structure
-        elif Path("data/phone_numbers").exists():
-            output_path = Path("data/phone_numbers") / output_name
-        else:
-            # Default to workspace structure
-            output_path = Path("workspace/outputs/contacts") / output_name
+        output_path = Path("local/outputs/contacts") / output_name
 
     # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -94,7 +88,6 @@ def generate_vcf_from_file(input_file: str, output_name: str = None, prefix: str
 
 def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: str = "Contact"):
     """
-    Legacy function for backward compatibility.
     Generate a VCF file from a string containing phone numbers.
 
     Args:
@@ -105,13 +98,19 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
     Returns:
         dict: Results dictionary with statistics and output file path
     """
-    numbers = raw_numbers.strip().splitlines()
-    total_numbers = len(numbers)
+    # Filter out comments and empty lines
+    lines = []
+    for line in raw_numbers.strip().splitlines():
+        line = line.strip()
+        if line and not line.startswith("#"):
+            lines.append(line)
+
+    total_numbers = len(lines)
     cleaned_numbers = set()
     duplicate_count = 0
     invalid_count = 0
 
-    for num in numbers:
+    for num in lines:
         cleaned = clean_number(num)
         if cleaned:
             if cleaned in cleaned_numbers:
@@ -123,20 +122,12 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
 
     cleaned_numbers = sorted(cleaned_numbers)
 
-    # Handle output path - support both old and new structure
+    # Handle output path
     output_path = Path(output_name)
 
-    # If it's just a filename, put it in the appropriate directory
+    # If it's just a filename, put it in local/outputs/contacts
     if not output_path.is_absolute() and len(output_path.parts) == 1:
-        # Check if workspace exists (new structure)
-        if Path("workspace/outputs/contacts").exists():
-            output_path = Path("workspace/outputs/contacts") / output_name
-        # Fall back to old structure
-        elif Path("data/phone_numbers").exists():
-            output_path = Path("data/phone_numbers") / output_name
-        else:
-            # Default to workspace structure
-            output_path = Path("workspace/outputs/contacts") / output_name
+        output_path = Path("local/outputs/contacts") / output_name
 
     # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
