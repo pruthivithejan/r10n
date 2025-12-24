@@ -1,8 +1,0 @@
-{
-    "smtp_server": "smtp.gmail.com",
-    "smtp_port": 587,
-    "email": "test@example.com",
-    "password": "test-password",
-    "default_subject": "Test Email",
-    "signature": "Best regards,\nTest Automation System"
-}

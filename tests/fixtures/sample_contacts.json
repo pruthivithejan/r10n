@@ -1,6 +1,0 @@
-[
-    {"name": "John Doe", "phone": "123-456-7890", "email": "john@example.com"},
-    {"name": "Jane Smith", "phone": "(555) 123-4567", "email": "jane@example.com"},
-    {"name": "Bob Johnson", "phone": "555.987.6543", "email": "bob@example.com"},
-    {"name": "Alice Brown", "phone": "5551234567", "email": "alice@example.com"}
-]

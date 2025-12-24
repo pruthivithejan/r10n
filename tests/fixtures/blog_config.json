@@ -1,9 +1,0 @@
-{
-    "openai_api_key": "test-api-key",
-    "model": "gpt-4",
-    "temperature": 0.3,
-    "max_tokens": 4000,
-    "output_directory": "tests/fixtures/output",
-    "author": "Test Author",
-    "default_tags": ["test", "blog", "automation"]
-}

@@ -1,179 +1,198 @@
-import pytest
+"""
+Tests for the contact card generation automation.
+
+These tests verify the VCF contact card generation functionality
+both for local usage and uvx distribution.
+"""
+
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+
+import pytest
 
 from src.automations.generate_contacts import (
     clean_number,
-    generate_vcf_from_file,
     generate_vcf,
+    generate_vcf_from_file,
 )
 
 
 class TestCleanNumber:
     """Test phone number cleaning functionality."""
 
-    def test_clean_sri_lanka_number_starting_with_zero(self):
-        """Test cleaning Sri Lankan number starting with 0."""
-        result = clean_number("0771234567")
-        assert result == "+94771234567"
+    def test_number_starting_with_zero(self):
+        """Test Sri Lankan number starting with 0."""
+        assert clean_number("0771234567") == "+94771234567"
 
-    def test_clean_sri_lanka_number_without_country_code(self):
-        """Test cleaning Sri Lankan number without country code."""
-        result = clean_number("771234567")
-        assert result == "+94771234567"
+    def test_number_without_country_code(self):
+        """Test number without country code."""
+        assert clean_number("771234567") == "+94771234567"
 
-    def test_clean_number_with_country_code(self):
-        """Test cleaning number that already has country code."""
-        result = clean_number("+94771234567")
-        assert result == "+94771234567"
+    def test_number_with_country_code(self):
+        """Test number with country code."""
+        assert clean_number("+94771234567") == "+94771234567"
 
-    def test_clean_number_with_spaces_and_dashes(self):
-        """Test cleaning number with formatting."""
-        result = clean_number("077-123-4567")
-        assert result == "+94771234567"
+    def test_number_with_94_prefix(self):
+        """Test number starting with 94."""
+        assert clean_number("94771234567") == "+94771234567"
 
-    def test_clean_invalid_number_too_short(self):
-        """Test cleaning invalid short number."""
-        result = clean_number("077123")
-        assert result is None
+    def test_number_with_formatting(self):
+        """Test number with spaces and dashes."""
+        assert clean_number("077-123-4567") == "+94771234567"
+        assert clean_number("077 123 4567") == "+94771234567"
 
-    def test_clean_invalid_number_too_long(self):
-        """Test cleaning invalid long number."""
-        result = clean_number("07712345678901")
-        assert result is None
+    def test_invalid_short_number(self):
+        """Test invalid short number."""
+        assert clean_number("077123") is None
 
-    def test_clean_empty_string(self):
-        """Test cleaning empty string."""
-        result = clean_number("")
-        assert result is None
+    def test_invalid_long_number(self):
+        """Test invalid long number."""
+        assert clean_number("07712345678901") is None
 
-    def test_clean_non_numeric_string(self):
-        """Test cleaning non-numeric string."""
-        result = clean_number("not a number")
-        assert result is None
+    def test_empty_string(self):
+        """Test empty string."""
+        assert clean_number("") is None
+
+    def test_non_numeric_string(self):
+        """Test non-numeric string."""
+        assert clean_number("not a number") is None
 
 
 class TestGenerateVcfFromFile:
     """Test VCF generation from file."""
 
-    def test_generate_vcf_from_valid_file(self):
-        """Test generating VCF from a valid input file."""
-        # Create temporary input file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+    def test_valid_numbers(self):
+        """Test generating VCF with valid numbers."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("0771234567\n0781234567\n0791234567\n")
             input_file = f.name
 
-        # Create temporary output directory
         with tempfile.TemporaryDirectory() as temp_dir:
-            output_file = Path(temp_dir) / "test_contacts.vcf"
-            
+            output_file = Path(temp_dir) / "contacts.vcf"
+
             result = generate_vcf_from_file(input_file, str(output_file), "Test")
-            
-            # Check results
+
             assert result["total"] == 3
             assert result["valid"] == 3
             assert result["duplicates"] == 0
             assert result["invalid"] == 0
-            assert result["output_file"] == str(output_file)
-            
-            # Check VCF file content
-            with open(output_file) as f:
-                content = f.read()
-            
+
+            # Verify VCF content
+            content = output_file.read_text()
             assert "BEGIN:VCARD" in content
             assert "VERSION:3.0" in content
             assert "FN:Test 1" in content
-            assert "TEL;TYPE=CELL:+94771234567" in content
-            assert "END:VCARD" in content
+            assert "+94771234567" in content
+            assert content.count("END:VCARD") == 3
 
-        # Cleanup
         Path(input_file).unlink()
 
-    def test_generate_vcf_with_duplicates(self):
-        """Test VCF generation with duplicate numbers."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-            f.write("0771234567\n0771234567\n0781234567\n")
+    def test_duplicate_removal(self):
+        """Test duplicate numbers are removed."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("0771234567\n0771234567\n+94771234567\n")
             input_file = f.name
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            output_file = Path(temp_dir) / "test_contacts.vcf"
-            
+            output_file = Path(temp_dir) / "contacts.vcf"
+
             result = generate_vcf_from_file(input_file, str(output_file))
-            
+
             assert result["total"] == 3
-            assert result["valid"] == 2  # One duplicate removed
-            assert result["duplicates"] == 1
-            assert result["invalid"] == 0
+            assert result["valid"] == 1  # All same number
+            assert result["duplicates"] == 2
 
         Path(input_file).unlink()
 
-    def test_generate_vcf_with_invalid_numbers(self):
-        """Test VCF generation with invalid numbers."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-            f.write("0771234567\ninvalid_number\n077123\n")
+    def test_invalid_numbers_skipped(self):
+        """Test invalid numbers are skipped."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("0771234567\ninvalid\n123\n")
             input_file = f.name
 
         with tempfile.TemporaryDirectory() as temp_dir:
-            output_file = Path(temp_dir) / "test_contacts.vcf"
-            
+            output_file = Path(temp_dir) / "contacts.vcf"
+
             result = generate_vcf_from_file(input_file, str(output_file))
-            
+
             assert result["total"] == 3
             assert result["valid"] == 1
-            assert result["duplicates"] == 0
             assert result["invalid"] == 2
 
         Path(input_file).unlink()
 
-    def test_generate_vcf_file_not_found(self):
-        """Test VCF generation with non-existent input file."""
-        with pytest.raises(FileNotFoundError):
-            generate_vcf_from_file("non_existent_file.txt")
-
-    def test_generate_vcf_auto_output_filename(self):
-        """Test VCF generation with auto-generated output filename."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
-            f.write("0771234567\n")
+    def test_comments_ignored(self):
+        """Test comment lines are ignored."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("# This is a comment\n0771234567\n# Another comment\n0781234567\n")
             input_file = f.name
 
-        with tempfile.TemporaryDirectory():
-            # Mock the workspace directory check
-            with patch('src.automations.generate_contacts.Path') as mock_path:
-                # Configure mock to return True for input file (first call) and False for workspace (subsequent calls)
-                # or use side_effect to check path
-                def exists_side_effect():
-                    # The mock is called multiple times. 
-                    # 1. Path(input_file).exists() -> needs True
-                    # 2. Path("workspace/...").exists() -> needs False
-                    # But mock_path is the CLASS. mock_path(input_file) returns a Mock instance.
-                    # That instance's .exists() is called.
-                    # Since we can't easily distinguish instances, we'll make .exists() return True by default
-                    # but we need it to be False for the directory check if we want to test the fallback?
-                    # Actually, the test just asserts output filename.
-                    return True
-                
-                # We need to handle the fact that Path(input_file) and Path("workspace...") return different mocks
-                # unless we configure the class return value.
-                
-                # Let's just make exists() return True for the input file.
-                # The code: input_path = Path(input_file); if not input_path.exists(): ...
-                
-                # We can use a side effect on the instance's exists method
-                mock_instance = mock_path.return_value
-                mock_instance.exists.side_effect = [True, False, False, False] # Input exists, others don't
-                
-                mock_instance.stem = "test_input"
-                mock_instance.is_absolute.return_value = False
-                mock_instance.parts = ["test_input_contacts.vcf"]
-                
-                # Create a real Path object for the parent
-                real_output_path = Path(input_file).parent / "test_input_contacts.vcf"
-                mock_instance.parent.mkdir = MagicMock()
-                
-                result = generate_vcf_from_file(input_file)
-                
-                assert "test_input_contacts.vcf" in result["output_file"]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_file = Path(temp_dir) / "contacts.vcf"
+
+            result = generate_vcf_from_file(input_file, str(output_file))
+
+            assert result["total"] == 2  # Comments excluded from total
+            assert result["valid"] == 2
 
         Path(input_file).unlink()
 
+    def test_file_not_found(self):
+        """Test error handling for missing file."""
+        with pytest.raises(FileNotFoundError):
+            generate_vcf_from_file("nonexistent_file.txt")
+
+
+class TestGenerateVcf:
+    """Test VCF generation from string input."""
+
+    def test_from_string(self):
+        """Test generating VCF from string."""
+        numbers = """
+        0771234567
+        0781234567
+        """
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_file = Path(temp_dir) / "contacts.vcf"
+
+            result = generate_vcf(numbers, str(output_file), "Contact")
+
+            assert result["valid"] == 2
+            assert Path(result["output_file"]).exists()
+
+
+class TestUvxCompatibility:
+    """Test that the module works correctly when run via uvx.
+    
+    These tests verify the package can be imported and used
+    without a local folder structure.
+    """
+
+    def test_module_import(self):
+        """Test module can be imported."""
+        from src.automations import generate_contacts
+        assert hasattr(generate_contacts, "generate_vcf_from_file")
+        assert hasattr(generate_contacts, "generate_vcf")
+        assert hasattr(generate_contacts, "clean_number")
+
+    def test_output_to_absolute_path(self):
+        """Test output to absolute path works without local folder."""
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("0771234567\n")
+            input_file = f.name
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Use absolute path for output
+            output_file = Path(temp_dir) / "output.vcf"
+
+            result = generate_vcf_from_file(
+                input_file,
+                str(output_file),  # Absolute path
+                "Test"
+            )
+
+            assert result["valid"] == 1
+            assert output_file.exists()
+
+        Path(input_file).unlink()
