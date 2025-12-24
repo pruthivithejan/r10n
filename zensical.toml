@@ -1,27 +1,40 @@
 [project]
 site_name = "r10n"
-site_description = "Minimal documentation"
-site_author = "Pruthvi Thejan"
+site_description = "Automate repetitive routines: contacts, certificates, images, and email"
+site_author = "Pruthivi Thejan"
+site_url = "https://pruthivithejan.github.io/r10n/"
+repo_url = "https://github.com/pruthivithejan/r10n"
+repo_name = "pruthivithejan/r10n"
 
-# Minimal features
+# Navigation
+nav = [
+    { "Home" = "index.md" },
+    { "Get Started" = "get-started.md" },
+    { "Run on Terminal" = "run-on-terminal.md" },
+    { "Setup Locally" = "setup-locally.md" },
+]
+
+# Features
 features = [
     "navigation.instant",
     "navigation.tracking",
+    "navigation.tabs",
+    "content.code.copy",
 ]
 
 # Light Mode (Default)
 [[project.theme.palette]]
 scheme = "default"
-primary = "white"
-accent = "black"
+primary = "indigo"
+accent = "indigo"
 toggle.icon = "material/brightness-7"
 toggle.name = "Switch to dark mode"
 
 # Dark Mode
 [[project.theme.palette]]
 scheme = "slate"
-primary = "black"
-accent = "white"
+primary = "indigo"
+accent = "indigo"
 toggle.icon = "material/brightness-4"
 toggle.name = "Switch to light mode"
 

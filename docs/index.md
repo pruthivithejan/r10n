@@ -1,45 +1,79 @@
-# Welcome to r10n
+# r10n
 
-This is a minimal documentation site for r10n.
+**Routine Automation** - Automate repetitive tasks with a beautiful CLI.
 
-## Getting Started
+r10n helps you automate common tasks like generating contact cards, creating certificates, optimizing images, and sending emails. Run it instantly with `uvx` or set it up locally for repeated use.
 
-Simple, fast, and effective automation.
+## Quick Start
 
-[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![UV](https://img.shields.io/badge/UV-Package%20Manager-green.svg)](https://github.com/astral-sh/uv)
-[![Rich CLI](https://img.shields.io/badge/CLI-Rich%20Interface-purple.svg)](https://github.com/Textualize/rich)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+=== "Run Instantly (uvx)"
 
-## ✨ Features
+    No installation needed. Just run:
 
-- **📧 Bulk Email Automation** - Send personalized emails with templates and attachments
-- **📜 Certificate Generation** - Create PDF certificates from templates with custom data
-- **📱 Contact Management** - Generate VCF contact cards from phone numbers
-- **🖼️ Image Optimization** - Batch convert and optimize images to WebP format
-- **✍️ Blog MDX Generation** - Create SEO-optimized blog posts with AI proofreading
-- **⚡ Lightning Fast** - 10-100x faster than traditional pip with UV package manager
-- **🎨 Beautiful CLI** - Interactive mode with rich terminal UI
-- **🔧 One-Command Setup** - Get started in seconds
+    ```bash
+    uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
+    ```
 
-## 🚀 Quick Start
+=== "Setup Locally"
 
-### Prerequisites
+    Clone and install for repeated use:
 
-- Python 3.9 or higher
-- macOS, Linux, or Windows
-- UV package manager (installed automatically)
+    ```bash
+    git clone https://github.com/pruthivithejan/r10n.git
+    cd r10n
+    uv sync
+    uv run r10n --help
+    ```
 
-### Installation
+## What's Included
 
-```bash
-# 1. Clone the repository
-git clone https://github.com/pruthivithejan/automations.git
-cd automations
+| Automation | Description |
+|------------|-------------|
+| **contacts** | Generate VCF contact cards from phone numbers |
+| **certificates** | Create personalized PDF certificates from templates |
+| **images** | Optimize and convert images to WebP format |
+| **email** | Send bulk personalized emails with attachments |
 
-# 2. Install UV (if not already installed)
-curl -LsSf https://astral.sh/uv/install.sh | sh
+## How It Works
 
-# 3. Run the one-command setup
-make setup
+Each automation is interactive - just run the command and follow the prompts:
+
 ```
+$ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
+
+  ██████╗  ██╗ ██████╗ ███╗   ██╗
+  ██╔══██╗███║██╔═══██╗████╗  ██║
+  ██████╔╝╚██║██║   ██║██╔██╗ ██║
+  ██╔══██╗ ██║██║   ██║██║╚██╗██║
+  ██║  ██║ ██║╚██████╔╝██║ ╚████║
+  ╚═╝  ╚═╝ ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+
+Step 1/3: Select input file
+  Enter path to file with phone numbers: numbers.txt
+Step 2/3: Set contact name prefix
+  Enter prefix for contact names: Customer
+Step 3/3: Set output file
+  Enter output VCF file path: customers.vcf
+
+Proceed with contact generation? [y/n]: y
+
+Generating contacts...
+
+Done!
+┌─────────────────────┬──────────────┐
+│ Total numbers       │ 150          │
+│ Valid contacts      │ 145          │
+│ Duplicates removed  │ 3            │
+│ Invalid numbers     │ 2            │
+│ Output file         │ customers.vcf│
+└─────────────────────┴──────────────┘
+```
+
+## Requirements
+
+- Python 3.10 or higher
+- [uv](https://docs.astral.sh/uv/) package manager
+
+## License
+
+MIT License - see [LICENSE](https://github.com/pruthivithejan/r10n/blob/main/LICENSE) for details.
