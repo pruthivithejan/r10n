@@ -5,22 +5,32 @@ site_author = "Pruthivi Thejan"
 site_url = "https://pruthivithejan.github.io/r10n/"
 repo_url = "https://github.com/pruthivithejan/r10n"
 repo_name = "pruthivithejan/r10n"
+copyright = "Copyright &copy; 2025 r10n"
 
-# Navigation
+# Navigation - Home as page, Get Started as section with sub-pages
 nav = [
     { "Home" = "index.md" },
-    { "Get Started" = "get-started.md" },
-    { "Run on Terminal" = "run-on-terminal.md" },
-    { "Setup Locally" = "setup-locally.md" },
+    { "Get Started" = [
+        "get-started.md",
+        "run-on-terminal.md",
+        "setup-locally.md",
+    ]},
 ]
 
-# Features
+[project.theme]
 features = [
     "navigation.instant",
     "navigation.tracking",
     "navigation.tabs",
+    "navigation.sections",
+    "navigation.indexes",
+    "navigation.footer",
     "content.code.copy",
 ]
+
+# Tab icons
+[project.theme.icon]
+repo = "fontawesome/brands/github"
 
 # Light Mode (Default)
 [[project.theme.palette]]
@@ -41,3 +51,19 @@ toggle.name = "Switch to light mode"
 [project.theme.font]
 text = "Inter"
 code = "JetBrains Mono"
+
+# Footer social links
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/pruthivithejan"
+name = "GitHub"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/x-twitter"
+link = "https://x.com/pruthivithejan"
+name = "X"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/linkedin"
+link = "https://lk.linkedin.com/in/pruthivithejan"
+name = "LinkedIn"

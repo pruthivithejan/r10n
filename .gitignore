@@ -62,3 +62,6 @@ Thumbs.db
 
 # Documentation
 site/
+
+# Test coverage
+.coverage
