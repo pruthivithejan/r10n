@@ -8,15 +8,6 @@ icon: material/home
 
 r10n helps you automate common tasks like generating contact cards, creating certificates, optimizing images, and sending emails. Run it instantly with `uvx` or set it up locally for repeated use.
 
----
-
-## Navigation
-
-| [Home](index.md) | [Get Started](get-started.md) | [Automations](automations/index.md) |
-|------------------|-------------------------------|-------------------------------------|
-
----
-
 ## Quick Start
 
 === "Run Instantly (uvx)"
@@ -38,20 +29,18 @@ r10n helps you automate common tasks like generating contact cards, creating cer
     uv run r10n --help
     ```
 
-
 ## Automations
 
 See full guides for each feature:
 
-| Automation      | Description                                         |
-|----------------|-----------------------------------------------------|
-| [Contacts](automations/contacts.md)      | Generate VCF contact cards from phone numbers         |
+| Automation | Description |
+|------------|-------------|
+| [Contacts](automations/contacts.md) | Generate VCF contact cards from phone numbers |
 | [Certificates](automations/certificates.md) | Create personalized PDF certificates from templates |
-| [Images](automations/images.md)          | Optimize and convert images to WebP format           |
-| [Email](automations/email.md)            | Send bulk personalized emails with attachments       |
+| [Images](automations/images.md) | Optimize and convert images to WebP format |
+| [Email](automations/email.md) | Send bulk personalized emails with attachments |
 
 You can also see all automations at a glance: [Automations Index](automations/index.md)
-
 
 ## How It Works
 

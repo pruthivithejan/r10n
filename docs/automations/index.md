@@ -1,22 +1,11 @@
 ---
-title: Automations
+title: Automations Index
 icon: material/robot
 ---
 
-# Automations
+# r10n Automations
 
-Select an automation tab below to view detailed docs, usage, and options for each CLI automation in r10n!
-
----
-
-## Automations Navigation
-
-| [Contacts](contacts.md) | [Certificates](certificates.md) | [Images](images.md) | [Email](email.md) |
-|------------------------|----------------------------------|--------------------|------------------|
-
----
-
-### Automations Overview
+Explore the available automations. Click an icon to see detailed, step-by-step docs for each feature.
 
 | Automation        | Icon                                   | Description                               |
 |-------------------|----------------------------------------|-------------------------------------------|
@@ -27,4 +16,4 @@ Select an automation tab below to view detailed docs, usage, and options for eac
 
 ---
 
-Pick a tab above or from the sidebar to get started!
+**Pick an automation on the left or click above to get started!**
