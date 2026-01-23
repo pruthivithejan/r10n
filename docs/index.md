@@ -4,23 +4,40 @@ icon: material/home
 
 # r10n
 
-**Routine Automation** - Automate repetitive tasks with a beautiful CLI.
+Automate repetitive data and workflow tasks on your terms — with a beautiful CLI and full transparency.
 
-r10n helps you automate common tasks like generating contact cards, creating certificates, optimizing images, and sending emails. Run it instantly with `uvx` or set it up locally for repeated use.
+---
 
-## Quick Start
+<div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem">
+  <a href="get-started/index.md" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-primary-fg-color--lightest)"><span class="md-icon" aria-hidden="true">rocket_launch</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Get Started</span></a>
+  <a href="automations/index.md" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-accent-fg-color--lightest)"><span class="md-icon" aria-hidden="true">auto_awesome</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Automations</span></a>
+</div>
+
+---
+
+**r10n lets you instantly automate contact card generation, certificates, image conversion, bulk email, and more!**
+
+---
+
+## 👋 What is r10n?
+
+A Python CLI toolkit to automate day-to-day tasks without code. Each automation is interactive, safe, and auditable. Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
+
+---
+
+## 🚀 Quick Start
 
 === "Run Instantly (uvx)"
 
-    No installation needed. Just run:
+    Run any automation from the repo (no installation!):
 
     ```bash
     uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
     ```
 
-=== "Setup Locally"
+=== "Install Locally"
 
-    Clone and install for repeated use:
+    Clone and use offline for repeated workflows:
 
     ```bash
     git clone https://github.com/pruthivithejan/r10n.git
@@ -29,39 +46,41 @@ r10n helps you automate common tasks like generating contact cards, creating cer
     uv run r10n --help
     ```
 
-## Automations
+---
 
-See full guides for each feature:
+## 💡 Explore Automations
 
-| Automation | Description |
-|------------|-------------|
-| [Contacts](automations/contacts.md) | Generate VCF contact cards from phone numbers |
-| [Certificates](automations/certificates.md) | Create personalized PDF certificates from templates |
-| [Images](automations/images.md) | Optimize and convert images to WebP format |
-| [Email](automations/email.md) | Send bulk personalized emails with attachments |
+See guides for every feature:
 
-You can also see all automations at a glance: [Automations Index](automations/index.md)
+- [Contacts](automations/contacts.md): Generate VCF contact cards.
+- [Certificates](automations/certificates.md): Build branded PDF certificates.
+- [Images](automations/images.md): Optimize and convert images.
+- [Email](automations/email.md): Send bulk emails with attachments.
 
-## How It Works
+Or browse all at once ➡️ [Automations Index](automations/index.md)
 
-Each automation is interactive - just run the command and follow the prompts:
+---
 
-```
+## 🆘 Get Help | Join Community
+
+- [Get Started](get-started/index.md) — Step-by-step tutorial for new users.
+- [Automations](automations/index.md) — All automation docs.
+- [GitHub Issues](https://github.com/pruthivithejan/r10n/issues) — Ask & report bugs.
+- Coming soon: [Discussions](https://github.com/pruthivithejan/r10n/discussions)
+
+---
+
+## ⚡ Example: Run an Automation
+
+```bash
 $ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
 
-  ██████╗  ██╗ ██████╗ ███╗   ██╗
-  ██╔══██╗███║██╔═══██╗████╗  ██║
-  ██████╔╝╚██║██║   ██║██╔██╗ ██║
-  ██╔══██╗ ██║██║   ██║██║╚██╗██║
-  ██║  ██║ ██║╚██████╔╝██║ ╚████║
-  ╚═╝  ╚═╝ ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
-
 Step 1/3: Select input file
-  Enter path to file with phone numbers: numbers.txt
+Enter path to file with phone numbers: numbers.txt
 Step 2/3: Set contact name prefix
-  Enter prefix for contact names: Customer
+Enter prefix for contact names: Customer
 Step 3/3: Set output file
-  Enter output VCF file path: customers.vcf
+Enter output VCF file path: customers.vcf
 
 Proceed with contact generation? [y/n]: y
 
@@ -77,11 +96,14 @@ Done!
 └─────────────────────┴──────────────┘
 ```
 
-## Requirements
+---
 
-- Python 3.10 or higher
+## 📦 Requirements
+
+- Python 3.10+
 - [uv](https://docs.astral.sh/uv/) package manager
 
-## License
+---
 
-MIT License - see [LICENSE](https://github.com/pruthivithejan/r10n/blob/main/LICENSE) for details.
+## 🛡 License
+MIT — see [LICENSE](https://github.com/pruthivithejan/r10n/blob/main/LICENSE) for details.
