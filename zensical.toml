@@ -11,9 +11,16 @@ copyright = "Copyright &copy; 2025 r10n"
 nav = [
     { "Home" = "index.md" },
     { "Get Started" = [
-        "get-started.md",
-        "run-on-terminal.md",
-        "setup-locally.md",
+        "get-started/index.md",
+        "get-started/run-on-terminal.md",
+        "get-started/setup-locally.md",
+    ]},
+    { "Automations" = [
+        "automations/index.md",
+        "automations/contacts.md",
+        "automations/certificates.md",
+        "automations/images.md",
+        "automations/email.md",
     ]},
 ]
 
