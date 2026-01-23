@@ -38,16 +38,20 @@ Use `uvx` to run any r10n automation:
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n <command>
 ```
 
-### Available Commands
+### Available Automations
 
-| Command | Description |
-|---------|-------------|
-| `contacts` | Generate VCF contact cards |
-| `certificates` | Create PDF certificates |
-| `images` | Optimize images to WebP |
-| `email` | Send bulk emails |
-| `init` | Create local folder structure |
-| `status` | Check local setup |
+All feature guides linked below:
+
+| Automation | Command | Description |
+|------------|---------|-------------|
+| [Contacts](automations/contacts.md) | `contacts` | Generate VCF contact cards |
+| [Certificates](automations/certificates.md) | `certificates` | Create PDF certificates |
+| [Images](automations/images.md) | `images` | Optimize images to WebP |
+| [Email](automations/email.md) | `email` | Send bulk emails |
+
+Additional commands: `init` (setup folders), `status` (check setup)
+
+See [Automations Index](automations/index.md) for a visual summary.
 
 ## Contacts
 

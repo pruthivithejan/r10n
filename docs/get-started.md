@@ -31,45 +31,18 @@ uv run r10n contacts
 
 [Learn more about local setup](setup-locally.md){ .md-button }
 
-## What's Included
+## Automations
 
-r10n includes 4 automation tools:
+r10n includes these automation tools:
 
-### Contacts
+| Automation | Description |
+|------------|-------------|
+| [Contacts](automations/contacts.md) | Generate VCF contact cards from phone numbers. |
+| [Certificates](automations/certificates.md) | Create personalized PDF certificates from templates. |
+| [Images](automations/images.md) | Optimize and convert images to WebP format. |
+| [Email](automations/email.md) | Send bulk personalized emails with attachments. |
 
-Generate VCF contact cards from a list of phone numbers.
-
-- Supports Sri Lankan phone number formats
-- Automatically removes duplicates
-- Validates number formats
-- Outputs standard VCF files
-
-### Certificates
-
-Create personalized PDF certificates from a template.
-
-- Uses any PDF as a template
-- Customizable text placement
-- Supports CSV or TXT input
-- Batch generation
-
-### Images
-
-Optimize and convert images to WebP format.
-
-- Reduces file sizes significantly
-- Maintains quality
-- Batch processing
-- Configurable compression
-
-### Email
-
-Send bulk personalized emails with attachments.
-
-- SMTP support (Gmail, etc.)
-- Personal name replacement
-- Attach certificates automatically
-- Retry on failures
+See [Automations Index](automations/index.md) for an overview and links to detailed pages.
 
 ## Prerequisites
 

@@ -29,14 +29,18 @@ r10n helps you automate common tasks like generating contact cards, creating cer
     uv run r10n --help
     ```
 
-## What's Included
+## Automations
+
+See full guides for each feature:
 
 | Automation | Description |
 |------------|-------------|
-| **contacts** | Generate VCF contact cards from phone numbers |
-| **certificates** | Create personalized PDF certificates from templates |
-| **images** | Optimize and convert images to WebP format |
-| **email** | Send bulk personalized emails with attachments |
+| [Contacts](automations/contacts.md) | Generate VCF contact cards from phone numbers |
+| [Certificates](automations/certificates.md) | Create personalized PDF certificates from templates |
+| [Images](automations/images.md) | Optimize and convert images to WebP format |
+| [Email](automations/email.md) | Send bulk personalized emails with attachments |
+
+You can also see all automations at a glance: [Automations Index](automations/index.md)
 
 ## How It Works
 
