@@ -390,10 +390,37 @@ def process_file(path: str) -> tuple[int, int, str, list]:
 
 
 def find_css_files(root: str):
+    # kept for backward compatibility; prefer find_css_files_with_excludes
     for dirpath, _dirnames, filenames in os.walk(root):
         for fn in filenames:
             if fn.lower().endswith('.css'):
                 yield os.path.join(dirpath, fn)
+
+
+def find_css_files_with_excludes(root: str, excludes: list[str]):
+    # Walk the tree but prune directories in 'excludes'. Excludes may be
+    # file/directory names (e.g. '.venv', 'node_modules') or path fragments.
+    exclude_set = set(excludes or [])
+    for dirpath, dirnames, filenames in os.walk(root):
+        # prune dirnames in-place so os.walk won't traverse them
+        pruned = []
+        for d in list(dirnames):
+            if d in exclude_set:
+                dirnames.remove(d)
+            else:
+                # also prune common virtual env dirs by prefix
+                if any(d == ex or d.startswith(ex) for ex in exclude_set):
+                    try:
+                        dirnames.remove(d)
+                    except ValueError:
+                        pass
+        for fn in filenames:
+            if fn.lower().endswith('.css'):
+                full = os.path.join(dirpath, fn)
+                # skip if any exclude fragment is in the full path
+                if any(ex in full for ex in exclude_set):
+                    continue
+                yield full
 
 
 def main():
@@ -402,9 +429,14 @@ def main():
     p.add_argument('--dry-run', action='store_true', help='show changes but do not write')
     p.add_argument('--no-backup', action='store_true', help='do not create .bak files')
     p.add_argument('--all', action='store_true', help='process all found .css files without prompting')
+    p.add_argument('--exclude', action='append', help='glob or path fragment to exclude (can be passed multiple times)')
     args = p.parse_args()
 
-    css_files = list(find_css_files(args.path))
+    # default excludes for common generated or third-party folders
+    default_excludes = ['.venv', 'venv', 'node_modules', '.git', 'dist', 'build']
+    if args.exclude:
+        default_excludes.extend(args.exclude)
+    css_files = list(find_css_files_with_excludes(args.path, default_excludes))
     if not css_files:
         print('No .css files found under', args.path)
         return
