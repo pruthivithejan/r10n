@@ -9,8 +9,8 @@ Automate repetitive data and workflow tasks on your terms — with a beautiful C
 ---
 
 <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem">
-  <a href="get-started/index.md" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-primary-fg-color--lightest)"><span class="md-icon" aria-hidden="true">rocket_launch</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Get Started</span></a>
-  <a href="automations/index.md" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-accent-fg-color--lightest)"><span class="md-icon" aria-hidden="true">robot</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Automations</span></a>
+  <a href="get-started/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-primary-fg-color--lightest)"><span class="md-icon" aria-hidden="true">rocket_launch</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Get Started</span></a>
+  <a href="automations/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-accent-fg-color--lightest)"><span class="md-icon" aria-hidden="true">robot</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Automations</span></a>
 </div>
 
 ---
@@ -52,19 +52,19 @@ A Python CLI toolkit to automate day-to-day tasks without code. Each automation 
 
 See guides for every feature:
 
-- [Contacts](automations/contacts.md): Generate VCF contact cards.
-- [Certificates](automations/certificates.md): Build branded PDF certificates.
-- [Images](automations/images.md): Optimize and convert images.
-- [Email](automations/email.md): Send bulk emails with attachments.
+- [Contacts](automations/contacts/): Generate VCF contact cards.
+- [Certificates](automations/certificates/): Build branded PDF certificates.
+- [Images](automations/images/): Optimize and convert images.
+- [Email](automations/email/): Send bulk emails with attachments.
 
-Or browse all at once ➡️ [Automations Index](automations/index.md)
+Or browse all at once ➡️ [Automations Index](automations/)
 
 ---
 
 ## 🆘 Get Help | Join Community
 
-- [Get Started](get-started/index.md) — Step-by-step tutorial for new users.
-- [Automations](automations/index.md) — All automation docs.
+-- [Get Started](get-started/) — Step-by-step tutorial for new users.
+-- [Automations](automations/) — All automation docs.
 - [GitHub Issues](https://github.com/pruthivithejan/r10n/issues) — Ask & report bugs.
 - Coming soon: [Discussions](https://github.com/pruthivithejan/r10n/discussions)
 
