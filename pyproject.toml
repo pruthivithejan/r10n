@@ -108,5 +108,8 @@ packages = ["src"]
 
 [dependency-groups]
 dev = [
+    "lefthook>=2.0.15",
+    "pytest>=9.0.2",
+    "pytest-cov>=7.0.0",
     "ruff>=0.12.12",
 ]

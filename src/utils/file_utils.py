@@ -1,8 +1,7 @@
 from pathlib import Path
-from typing import List, Union
 
 
-def ensure_directory(path: Union[str, Path]) -> Path:
+def ensure_directory(path: str | Path) -> Path:
     """
     Ensure a directory exists, create it if it doesn't.
 
@@ -17,7 +16,7 @@ def ensure_directory(path: Union[str, Path]) -> Path:
     return path
 
 
-def get_files_by_extension(directory: Union[str, Path], extension: str) -> List[Path]:
+def get_files_by_extension(directory: str | Path, extension: str) -> list[Path]:
     """
     Get all files with a specific extension in a directory.
 

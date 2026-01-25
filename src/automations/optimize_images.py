@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from PIL import Image, ImageOps
 
@@ -57,7 +57,7 @@ class ImageOptimizer:
 
         return new_width, new_height
 
-    def optimize_image(self, input_path: Path, output_path: Path) -> Dict[str, Any]:
+    def optimize_image(self, input_path: Path, output_path: Path) -> dict[str, Any]:
         """Optimize a single image"""
         try:
             print(f"🖼️  Processing: {input_path.name}")
@@ -148,7 +148,7 @@ class ImageOptimizer:
             print(f"  ❌ Error: {e!s}")
             return error_result
 
-    def get_image_files(self, directory: Path) -> List[Path]:
+    def get_image_files(self, directory: Path) -> list[Path]:
         """Get all supported image files from directory"""
         image_files = []
 
@@ -182,7 +182,7 @@ class ImageOptimizer:
 
             return f"{self.config.prefix}{index}{extension}"
 
-    def process_directory(self) -> Dict[str, Any]:
+    def process_directory(self) -> dict[str, Any]:
         """Process all images in the input directory"""
         try:
             input_path = Path(self.config.input_directory)
@@ -293,7 +293,7 @@ def optimize_images(
     max_height: int = 1080,
     preserve_filename: bool = False,
     config_file: str = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Main function to optimize images"""
     try:
         if config_file:

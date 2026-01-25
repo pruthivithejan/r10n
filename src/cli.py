@@ -8,7 +8,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import click
 from dotenv import load_dotenv
@@ -34,7 +34,7 @@ if env_path.exists():
     load_dotenv(env_path)
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
+def load_config(config_path: str) -> dict[str, Any]:
     """Load configuration from JSON file"""
     path = Path(config_path)
     if not path.exists():
@@ -81,7 +81,7 @@ def display_step(step_num: int, total: int, description: str):
     console.print(f"[cyan]Step {step_num}/{total}:[/] {description}")
 
 
-def display_config(config: Dict[str, Any], title: str = "Configuration"):
+def display_config(config: dict[str, Any], title: str = "Configuration"):
     """Display configuration in a table"""
     table = Table(title=title, show_header=True, header_style="bold cyan")
     table.add_column("Setting", style="cyan")
@@ -506,7 +506,7 @@ def images(input_dir, output, quality, max_size, prefix, preserve_names):
             preserve_names = True
         else:
             prefix = Prompt.ask("  Enter filename prefix", default="img")
-    
+
     if preserve_names:
         console.print("[green]  Keeping original filenames[/]")
     else:
@@ -519,7 +519,7 @@ def images(input_dir, output, quality, max_size, prefix, preserve_names):
     console.print(f"  Output:   {output}")
     console.print(f"  Quality:  {quality}%")
     console.print(f"  Max size: {max_size}MB")
-    console.print(f"  Format:   WebP")
+    console.print("  Format:   WebP")
     console.print()
 
     if not Confirm.ask("Proceed with optimization?"):

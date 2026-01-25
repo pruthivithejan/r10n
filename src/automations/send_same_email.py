@@ -2,14 +2,13 @@ import csv
 import json
 import smtplib
 import time
-from smtplib import SMTPServerDisconnected, SMTPResponseException
 from dataclasses import dataclass
 from email import encoders
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import List
+from smtplib import SMTPResponseException, SMTPServerDisconnected
 
 
 @dataclass
@@ -89,7 +88,7 @@ class SimpleEmailSender:
         raise last_err or RuntimeError("Unknown SMTP error during send")
 
     def create_message(
-        self, to_email: str, subject: str, body: str, attachments: List[str] = None
+        self, to_email: str, subject: str, body: str, attachments: list[str] = None
     ) -> MIMEMultipart:
         """Create email message"""
         msg = MIMEMultipart()
@@ -121,7 +120,7 @@ class SimpleEmailSender:
         msg.attach(part)
 
     def send_same_email_to_multiple(
-        self, email_list: List[str], subject: str, body: str, attachments: List[str] = None
+        self, email_list: list[str], subject: str, body: str, attachments: list[str] = None
     ) -> dict:
         """Send the same email to multiple recipients"""
         results = {"sent": 0, "failed": 0, "total": len(email_list), "failed_emails": []}
@@ -169,10 +168,10 @@ def load_simple_config(config_path: str) -> SimpleEmailConfig:
 
 
 def send_same_email_to_all(
-    email_list: List[str],
+    email_list: list[str],
     body: str,
     config_file: str = "data/email_config.json",
-    attachments: List[str] = None,
+    attachments: list[str] = None,
 ):
     """Send the same email to all recipients in the list"""
     try:

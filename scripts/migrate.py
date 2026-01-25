@@ -5,7 +5,6 @@ Migration script to help users migrate from old data structure to new workspace 
 
 import shutil
 from pathlib import Path
-from typing import List, Tuple
 
 import click
 from rich.console import Console
@@ -17,7 +16,7 @@ from rich.table import Table
 console = Console()
 
 
-def find_data_files() -> List[Tuple[Path, Path]]:
+def find_data_files() -> list[tuple[Path, Path]]:
     """
     Find files in old data structure and suggest new locations.
 
@@ -133,7 +132,7 @@ def migrate_file(old_path: Path, new_path: Path, dry_run: bool = False) -> bool:
         return False
 
 
-def display_migration_plan(migrations: List[Tuple[Path, Path]]):
+def display_migration_plan(migrations: list[tuple[Path, Path]]):
     """Display the migration plan in a table."""
     table = Table(title="Migration Plan", show_header=True, header_style="bold cyan")
     table.add_column("Old Location", style="yellow")

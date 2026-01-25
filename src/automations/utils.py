@@ -6,7 +6,7 @@ Handles configuration loading and path resolution for both old and new structure
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 def get_workspace_path(category: str, subfolder: str = "") -> Path:
@@ -49,10 +49,10 @@ def get_workspace_path(category: str, subfolder: str = "") -> Path:
 
 
 def load_config(
-    config_path: Optional[str] = None,
-    default_config: Optional[Dict[str, Any]] = None,
+    config_path: str | None = None,
+    default_config: dict[str, Any] | None = None,
     category: str = "",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Load configuration from file, with fallback to defaults.
 
@@ -96,7 +96,7 @@ def load_config(
 
 
 def resolve_path(
-    path: str, base_dir: Optional[Path] = None, category: str = "", subfolder: str = ""
+    path: str, base_dir: Path | None = None, category: str = "", subfolder: str = ""
 ) -> Path:
     """
     Resolve a path, handling both absolute and relative paths.
@@ -146,7 +146,7 @@ def ensure_directory(path: Path) -> Path:
     return path
 
 
-def get_env_var(key: str, default: Optional[str] = None) -> Optional[str]:
+def get_env_var(key: str, default: str | None = None) -> str | None:
     """
     Get environment variable, checking both system env and workspace .env.
 
@@ -182,9 +182,9 @@ def get_env_var(key: str, default: Optional[str] = None) -> Optional[str]:
 def format_results(
     success: bool,
     message: str = "",
-    data: Optional[Dict[str, Any]] = None,
-    error: Optional[str] = None,
-) -> Dict[str, Any]:
+    data: dict[str, Any] | None = None,
+    error: str | None = None,
+) -> dict[str, Any]:
     """
     Format automation results in a consistent way.
 
@@ -209,7 +209,7 @@ def format_results(
 
 
 def migrate_config(
-    old_path: Path, new_path: Path, mappings: Optional[Dict[str, str]] = None
+    old_path: Path, new_path: Path, mappings: dict[str, str] | None = None
 ) -> bool:
     """
     Migrate configuration from old structure to new structure.
