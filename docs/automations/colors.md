@@ -1,5 +1,5 @@
 ---
-icon: material/color_lens
+icon: material/auto_awesome
 ---
 
 # Colors — CSS to OKLCH
