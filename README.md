@@ -13,6 +13,7 @@
 - **Images** - Optimize and convert images to WebP format
 - **Email** - Send bulk personalized emails with attachments
 - **Interactive CLI** - Step-by-step prompts guide you through each automation
+- **Colors** - Convert CSS color codes (hex, hsl/hsla) to `oklch()` for perceptual color consistency
 - **Fast** - Powered by [uv](https://docs.astral.sh/uv/) for lightning-fast dependency management
 
 ## Quick Start
