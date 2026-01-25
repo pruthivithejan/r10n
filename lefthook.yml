@@ -1,0 +1,21 @@
+# Lefthook configuration: run ruff, pytest, and build docs before commits/pushes
+pre-commit:
+  commands:
+    ruff:
+      run: |
+        uv run ruff check . || exit 1
+    tests:
+      run: |
+        uv run pytest || exit 1
+    docs:
+      run: |
+        uv run zensical build --clean || exit 1
+
+pre-push:
+  commands:
+    ruff:
+      run: |
+        uv run ruff check . || exit 1
+    tests:
+      run: |
+        uv run pytest || exit 1

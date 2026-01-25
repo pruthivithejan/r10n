@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Helper file for lefthook to run project commands in repo root
+set -euo pipefail
+ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
+exec uv "$@"
