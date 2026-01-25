@@ -198,48 +198,75 @@ def format_oklch(L: float, C: float, h: float, alpha: float) -> str:
     return f"oklch({Lp}% {Cp} {hp}deg / {a})"
 
 
-def replace_hex_match(m: re.Match) -> str:
-    token = m.group(0)
-    hexpart = m.group(1)
-    try:
-        r, g, b, a = expand_hex(hexpart)
-    except Exception:
-        return token
-    L, C, h, alpha = rgba_to_oklch(r, g, b, a)
-    return format_oklch(L, C, h, alpha)
 
 
-def replace_hsl_match(m: re.Match) -> str:
-    whole = m.group(0)
-    inner = m.group(1)
-    try:
-        r, g, b, a = parse_hsl_params(inner)
-    except Exception:
-        return whole
-    L, C, h, alpha = rgba_to_oklch(r, g, b, a)
-    return format_oklch(L, C, h, alpha)
+def is_within_oklch(src: str, start: int, end: int) -> bool:
+    # Determine if the match at [start:end] is inside an oklch(...) call
+    # by searching backwards for 'oklch(' and seeing if a closing ')' occurs after end.
+    idx = src.rfind('oklch(', 0, start)
+    if idx == -1:
+        return False
+    # find the next ')' after idx
+    close = src.find(')', idx)
+    if close == -1:
+        return False
+    return end <= close
 
 
-def process_file(path: str, dry_run: bool = False, backup: bool = True) -> Tuple[int, int]:
+def make_replacement_for_match(token: str) -> str:
+    # Decide if token is hex or hsl and produce replacement, or return original on failure
+    if token.lower().startswith('hsl'):
+        inner = token[token.find('(') + 1: token.rfind(')')]
+        try:
+            r, g, b, a = parse_hsl_params(inner)
+        except Exception:
+            return token
+        L, C, h, alpha = rgba_to_oklch(r, g, b, a)
+        return format_oklch(L, C, h, alpha)
+    else:
+        # hex
+        m = re.match(r"#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b", token)
+        if not m:
+            return token
+        hexpart = m.group(1)
+        try:
+            r, g, b, a = expand_hex(hexpart)
+        except Exception:
+            return token
+        L, C, h, alpha = rgba_to_oklch(r, g, b, a)
+        return format_oklch(L, C, h, alpha)
+
+
+def process_file(path: str) -> Tuple[int, int, str, list]:
     with open(path, 'r', encoding='utf-8') as f:
         src = f.read()
 
-    new = HEX_RE.sub(replace_hex_match, src)
-    new = HSL_FUNC_RE.sub(replace_hsl_match, new)
+    pattern = re.compile(r"(#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\b|hsla?\([^)]*\))",
+                         re.IGNORECASE)
 
-    changed = 0
-    if new != src:
-        changed = 1
-        if dry_run:
-            debug(f"[dry-run] would change: {path}")
-        else:
-            if backup:
-                bak = path + '.bak'
-                shutil.copy2(path, bak)
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(new)
-            debug(f"updated: {path}")
-    return (changed, 1)
+    out_parts = []
+    last = 0
+    changes = []
+    for m in pattern.finditer(src):
+        s, e = m.span()
+        token = m.group(0)
+        if is_within_oklch(src, s, e):
+            continue
+        repl = make_replacement_for_match(token)
+        if repl != token:
+            # record change
+            # capture a small snippet around the token for preview
+            start_line = src.count('\n', 0, s) + 1
+            snippet = src[max(0, s - 30): min(len(src), e + 30)].replace('\n', ' ')
+            changes.append({'orig': token, 'repl': repl, 'line': start_line, 'snippet': snippet})
+            out_parts.append(src[last:s])
+            out_parts.append(repl)
+            last = e
+    out_parts.append(src[last:])
+    new = ''.join(out_parts)
+
+    changed = 1 if changes else 0
+    return (changed, 1, new, changes)
 
 
 def find_css_files(root: str):
@@ -254,6 +281,7 @@ def main():
     p.add_argument('path', nargs='?', default='.', help='path to search (default: .)')
     p.add_argument('--dry-run', action='store_true', help='show changes but do not write')
     p.add_argument('--no-backup', action='store_true', help='do not create .bak files')
+    p.add_argument('--all', action='store_true', help='process all found .css files without prompting')
     args = p.parse_args()
 
     css_files = list(find_css_files(args.path))
@@ -261,12 +289,81 @@ def main():
         print('No .css files found under', args.path)
         return
 
+    # Interactive selection when multiple files found and --all not passed
+    selected = css_files
+    if not args.all and sys.stdin.isatty() and len(css_files) > 1:
+        print(f"Found {len(css_files)} .css files under {args.path}:")
+        for i, pth in enumerate(css_files, start=1):
+            print(f"  {i}. {pth}")
+        print("\nEnter a number to process a single file, a comma-separated list (e.g. 1,3), 'a' for all, or 'q' to cancel:")
+        resp = input('> ').strip()
+        if not resp:
+            print('No selection, aborting.')
+            return
+        if resp.lower() == 'q':
+            print('Cancelled')
+            return
+        if resp.lower() == 'a':
+            selected = css_files
+        else:
+            parts = [s.strip() for s in resp.split(',') if s.strip()]
+            picks = []
+            try:
+                for p in parts:
+                    idx = int(p)
+                    if 1 <= idx <= len(css_files):
+                        picks.append(css_files[idx - 1])
+                if not picks:
+                    print('No valid selections made, aborting.')
+                    return
+                selected = picks
+            except ValueError:
+                print('Invalid selection, aborting.')
+                return
+
+    results = []
+    for fpath in selected:
+        ch, tot, new, changes = process_file(fpath)
+        results.append({'path': fpath, 'changed': ch, 'new': new, 'changes': changes})
+
+    files_with_changes = [r for r in results if r['changed']]
+    if not files_with_changes:
+        print('No color tokens to convert in the selected files.')
+        return
+
+    if args.dry_run:
+        print('Dry run — the following changes would be made:')
+        for r in files_with_changes:
+            print(f"\nFile: {r['path']}")
+            for c in r['changes']:
+                print(f"  Line {c['line']}: {c['orig']} -> {c['repl']}")
+                print(f"    ...{c['snippet']}...")
+        print('\nNo files were modified (dry-run).')
+        return
+
+    # Confirm before applying if multiple files and interactive
+    if not args.all and sys.stdin.isatty() and len(files_with_changes) > 1:
+        print('The following files will be updated:')
+        for r in files_with_changes:
+            print(f"  {r['path']} ({len(r['changes'])} change(s))")
+        resp = input('\nProceed to apply these changes? [y/N]: ').strip().lower()
+        if resp != 'y':
+            print('Aborted — no files changed.')
+            return
+
     total_changed = 0
     total_files = 0
-    for fpath in css_files:
-        ch, tot = process_file(fpath, dry_run=args.dry_run, backup=not args.no_backup)
-        total_changed += ch
-        total_files += tot
+    for r in results:
+        total_files += 1
+        if not r['changed']:
+            continue
+        if not args.no_backup:
+            bak = r['path'] + '.bak'
+            shutil.copy2(r['path'], bak)
+        with open(r['path'], 'w', encoding='utf-8') as f:
+            f.write(r['new'])
+        print(f"updated: {r['path']} ({len(r['changes'])} change(s))")
+        total_changed += 1
 
     print(f"Processed {total_files} files, modified {total_changed} files")
 
