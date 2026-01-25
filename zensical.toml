@@ -21,6 +21,7 @@ nav = [
         "automations/certificates.md",
         "automations/images.md",
         "automations/email.md",
+        "automations/colors.md",
     ]},
 ]
 
