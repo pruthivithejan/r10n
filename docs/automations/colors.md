@@ -1,5 +1,5 @@
 ---
-icon: material/auto_awesome
+icon: material/robot
 ---
 
 # Colors — CSS to OKLCH
