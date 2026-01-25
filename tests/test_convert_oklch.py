@@ -63,3 +63,14 @@ def test_output_format_regex():
     sample = mod.make_replacement_for_match('#123456')
     pat = re.compile(r"^oklch\(\d{1,3}(?:\.\d+)?% \d+(?:\.\d+)? \d+deg(?: / \d+(?:\.\d+)?)?\)$")
     assert pat.match(sample)
+
+
+def test_process_file_fixture(tmp_path):
+    mod = load_module()
+    fixture = os.path.join(os.path.dirname(__file__), 'fixtures', 'colors_fixture.css')
+    # read fixture and run process_file
+    changed, tot, new, changes = mod.process_file(fixture)
+    assert changed == 1
+    assert isinstance(new, str)
+    # must have replaced tokens
+    assert 'oklch(' in new
