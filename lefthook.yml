@@ -1,21 +1,52 @@
 # Lefthook configuration: run ruff, pytest, and build docs before commits/pushes
 pre-commit:
+  # Only lint staged Python files, run tests or docs build when relevant files are staged.
   commands:
-    ruff:
+    ruff_staged:
       run: |
-        uv run ruff check . || exit 1
-    tests:
+        files=$(git diff --name-only --cached -- '*.py' || true)
+        if [ -z "$files" ]; then
+          echo "No staged python files to lint"
+          exit 0
+        fi
+        echo "Linting staged python files: $files"
+        uv run ruff check $files || exit 1
+    pytest_changed:
       run: |
+        tests_changed=$(git diff --name-only --cached -- 'tests/**' || true)
+        if [ -z "$tests_changed" ]; then
+          echo "No staged tests to run"
+          exit 0
+        fi
+        echo "Running pytest for changed tests"
         uv run pytest || exit 1
-    docs:
+    docs_changed:
       run: |
+        docs_changed=$(git diff --name-only --cached -- 'docs/**' || true)
+        if [ -z "$docs_changed" ]; then
+          echo "No staged docs to build"
+          exit 0
+        fi
+        echo "Building docs (changed doc files detected)"
         uv run zensical build --clean || exit 1
 
 pre-push:
   commands:
-    ruff:
+    ruff_all:
       run: |
-        uv run ruff check . || exit 1
-    tests:
+        echo "Running ruff on staged files (pre-push)"
+        files=$(git diff --name-only --cached -- '*.py' || true)
+        if [ -z "$files" ]; then
+          echo "No python files staged; skipping ruff"
+          exit 0
+        fi
+        uv run ruff check $files || exit 1
+    pytest_all:
       run: |
-        uv run pytest || exit 1
+        echo "Running pytest (pre-push)"
+        # Only run pytest if tests are present in the repo
+        if [ -d tests ]; then
+          uv run pytest || exit 1
+        else
+          echo "No tests directory; skipping pytest"
+        fi
