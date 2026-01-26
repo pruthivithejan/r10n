@@ -77,6 +77,7 @@ class SimpleEmailSender:
                 last_err = RuntimeError("Unable to (re)connect to SMTP server")
             else:
                 try:
+                    assert self.smtp_connection is not None  # Type narrowing
                     self.smtp_connection.send_message(msg)
                     return
                 except (SMTPServerDisconnected, SMTPResponseException, smtplib.SMTPException) as e:
@@ -88,7 +89,7 @@ class SimpleEmailSender:
         raise last_err or RuntimeError("Unknown SMTP error during send")
 
     def create_message(
-        self, to_email: str, subject: str, body: str, attachments: list[str] = None
+        self, to_email: str, subject: str, body: str, attachments: list[str] | None = None
     ) -> MIMEMultipart:
         """Create email message"""
         msg = MIMEMultipart()
@@ -120,7 +121,7 @@ class SimpleEmailSender:
         msg.attach(part)
 
     def send_same_email_to_multiple(
-        self, email_list: list[str], subject: str, body: str, attachments: list[str] = None
+        self, email_list: list[str], subject: str, body: str, attachments: list[str] | None = None
     ) -> dict:
         """Send the same email to multiple recipients"""
         results = {"sent": 0, "failed": 0, "total": len(email_list), "failed_emails": []}
@@ -171,7 +172,7 @@ def send_same_email_to_all(
     email_list: list[str],
     body: str,
     config_file: str = "data/email_config.json",
-    attachments: list[str] = None,
+    attachments: list[str] | None = None,
 ):
     """Send the same email to all recipients in the list"""
     try:
@@ -316,7 +317,7 @@ def send_personalized_emails_with_certificates(
         return {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
 
 
-def find_matching_certificate(name: str, certificate_files: dict) -> str:
+def find_matching_certificate(name: str, certificate_files: dict) -> str | None:
     """Find matching certificate file for a given name"""
     # Normalize name for matching
     normalized_name = normalize_name_for_matching(name)

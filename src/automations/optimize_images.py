@@ -161,7 +161,7 @@ class ImageOptimizer:
         return image_files
 
     def generate_output_filename(
-        self, index: int, original_name: str, original_extension: str = None
+        self, index: int, original_name: str, original_extension: str | None = None
     ) -> str:
         """Generate output filename with prefix and number or preserve original name"""
         if self.config.preserve_filename:
@@ -285,14 +285,14 @@ def load_config(config_path: str) -> ImageOptimizationConfig:
 
 def optimize_images(
     input_dir: str,
-    output_dir: str = None,
+    output_dir: str | None = None,
     prefix: str = "img",
     max_size_mb: float = 1.0,
     quality: int = 85,
     max_width: int = 1920,
     max_height: int = 1080,
     preserve_filename: bool = False,
-    config_file: str = None,
+    config_file: str | None = None,
 ) -> dict[str, Any]:
     """Main function to optimize images"""
     try:

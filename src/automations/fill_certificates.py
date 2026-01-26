@@ -69,7 +69,7 @@ def load_recipients(recipients_file):
 
                     # If the 'name' cell looks like an index (digits) and there are extras or a shifted layout,
                     # shift columns: treat current 'position' as name, current 'e-mail' as position (best-effort)
-                    def is_index_like(x: str) -> bool:
+                    def is_index_like(x: str | None) -> bool:
                         return isinstance(x, str) and x.strip().isdigit()
 
                     if is_index_like(raw_name):
