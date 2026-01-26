@@ -20,8 +20,7 @@ The Colors automation finds CSS files and converts hex colors, HSL/HSLA, RGB/RGB
 - Process single files or entire directories
 - Preserves alpha transparency
 - Interactive file selection
-- Dry-run preview before changes
-- Automatic backup file creation
+- Automatic backup file creation (.bak)
 
 ---
 
@@ -30,11 +29,11 @@ The Colors automation finds CSS files and converts hex colors, HSL/HSLA, RGB/RGB
 ### Run Instantly (No Installation)
 
 ```bash
-# Preview changes on a directory
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --path ./src --dry-run
-
 # Convert a single file
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file styles.css --dry-run
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file styles.css
+
+# Convert all CSS files in a directory
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --path ./src
 ```
 
 ### Run Locally
@@ -43,7 +42,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file sty
 git clone https://github.com/pruthivithejan/r10n.git
 cd r10n
 uv sync
-uv run r10n colors --path ./src --dry-run
+uv run r10n colors --file styles.css
 ```
 
 ---
@@ -67,36 +66,37 @@ Example session:
 ╰───────────────────────────────────────────────────────────────╯
 
 Step 1/2: Select CSS file or directory
-  Process a single file or directory? [file/directory]: directory
-  Enter path to directory with CSS files [.]: ./src/styles
+  Process a single file or directory? [file/directory]: file
+  Enter path to CSS file [styles.css]: ./src/app.css
 
-Step 2/2: Set options
-  Preview changes first (dry run)? [Y/n]: y
+Step 2/2: Backup option
+  Backup: Enabled (.bak files will be created)
 
 Summary:
-  Directory: ./src/styles
-  Mode:     Dry run (preview only)
-  Backup:   Enabled
+  File:   ./src/app.css
+  Backup: Enabled
 
 Proceed with color conversion? [y/n]: y
 
-Processing CSS files...
+Converting CSS colors to oklch()...
 
-Dry run complete (no files modified)
+Done!
 
 ┌─────────────────────┬──────────────────────────────┐
-│ Files found         │ 5                            │
-│ Files modified      │ 0                            │
-│ Total color changes │ 42                           │
+│ Files found         │ 1                            │
+│ Files modified      │ 1                            │
+│ Total color changes │ 15                           │
 └─────────────────────┴──────────────────────────────┘
 
-Changes:
+Changes made:
 
-./src/styles/main.css (15 changes)
+./src/app.css (15 changes)
   Line 12: #3b82f6 → oklch(63.3% 0.213 255deg)
   Line 15: hsl(270, 60%, 50%) → oklch(48.4% 0.187 303deg)
   Line 18: #22c55e → oklch(72.3% 0.195 143deg)
   ... and 12 more
+
+Backup files created with .bak extension
 ```
 
 ### Single File Mode
@@ -115,14 +115,12 @@ Process all CSS files in a directory:
 uv run r10n colors --path ./src/styles
 ```
 
-### Command Line Mode
+### Non-Interactive Mode
 
-Pass all options directly:
+Skip confirmation prompts with `-a`:
 
 ```bash
-uv run r10n colors \
-  --path ./src/styles \
-  --dry-run
+uv run r10n colors --file styles.css --all
 ```
 
 ---
@@ -133,9 +131,8 @@ uv run r10n colors \
 |-----------|-------|------|----------|---------|-------------|
 | `--path` | `-p` | string | No* | `.` | Directory containing CSS files |
 | `--file` | `-f` | string | No* | - | Single CSS file to process |
-| `--dry-run` | `-d` | flag | No | `false` | Preview changes without writing |
 | `--no-backup` | | flag | No | `false` | Don't create `.bak` backup files |
-| `--all` | `-a` | flag | No | `false` | Process all files without prompting |
+| `--all` | `-a` | flag | No | `false` | Process without confirmation prompt |
 
 *Either `--path` or `--file` should be provided. If neither is given, interactive mode prompts for input.
 
@@ -143,37 +140,21 @@ uv run r10n colors \
 
 ## Examples
 
-### Example 1: Preview Changes on Single File
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
-  --file ./src/app.css \
-  --dry-run
-```
-
-### Example 2: Convert Single File
+### Example 1: Convert Single File
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
   --file ./src/app.css
 ```
 
-### Example 3: Preview Changes on Directory
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
-  --path ./src/styles \
-  --dry-run
-```
-
-### Example 4: Convert All Files in Directory
+### Example 2: Convert Directory
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
   --path ./src/styles
 ```
 
-### Example 5: Convert Without Backup
+### Example 3: Convert Without Backup
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
@@ -181,18 +162,18 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
   --no-backup
 ```
 
-### Example 6: Interactive Mode
+### Example 4: Non-Interactive (CI/Scripts)
+
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
+  --path ./src \
+  --all
+```
+
+### Example 5: Interactive Mode
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors
-```
-
-### Example 7: Local Installation
-
-```bash
-uv run r10n colors \
-  --path ./website/css \
-  --dry-run
 ```
 
 ---
@@ -263,7 +244,7 @@ oklch(L C H / A)
 
 ## Output
 
-The automation modifies CSS files in place (unless using `--dry-run`):
+The automation modifies CSS files in place:
 
 **Before:**
 ```css

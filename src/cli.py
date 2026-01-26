@@ -741,13 +741,13 @@ The Team"""
 @main.command()
 @click.option("--path", "-p", "dir_path", help="Directory containing CSS files")
 @click.option("--file", "-f", "file_path", help="Single CSS file to process")
-@click.option("--dry-run", "-d", is_flag=True, help="Preview changes without writing")
 @click.option("--no-backup", is_flag=True, help="Don't create backup files")
 @click.option("--all", "-a", "process_all", is_flag=True, help="Process all files without prompting")
-def colors(dir_path, file_path, dry_run, no_backup, process_all):
+def colors(dir_path, file_path, no_backup, process_all):
     """Convert CSS colors to oklch() format
 
-    Step-by-step interactive process to convert hex, hsl, rgb colors to oklch().
+    Converts hex, hsl, rgb, and named colors to modern oklch() notation.
+    Backup files (.bak) are created by default.
     """
     display_header("CSS Color Converter", "Convert colors to perceptual oklch() format")
 
@@ -779,7 +779,7 @@ def colors(dir_path, file_path, dry_run, no_backup, process_all):
         choice = Prompt.ask(
             "  Process a single file or directory?",
             choices=["file", "directory"],
-            default="directory"
+            default="file"
         )
 
         if choice == "file":
@@ -806,50 +806,44 @@ def colors(dir_path, file_path, dry_run, no_backup, process_all):
 
     console.print()
 
-    # Step 2: Options
-    display_step(2, total_steps, "Set options")
+    # Step 2: Backup option
+    display_step(2, total_steps, "Backup option")
 
-    if not dry_run:
-        dry_run = Confirm.ask("  Preview changes first (dry run)?", default=True)
+    if not no_backup:
+        console.print("[green]  Backup: Enabled (.bak files will be created)[/]")
+    else:
+        console.print("[yellow]  Backup: Disabled[/]")
 
-    console.print(f"[green]  Dry run: {'Yes' if dry_run else 'No'}[/]")
-    console.print(f"[green]  Backup files: {'No' if no_backup else 'Yes'}[/]")
     console.print()
 
     # Summary
     console.print("[bold]Summary:[/]")
     if target_file:
-        console.print(f"  File:     {target_file}")
+        console.print(f"  File:   {target_file}")
     else:
         console.print(f"  Directory: {target_path}")
-    console.print(f"  Mode:     {'Dry run (preview only)' if dry_run else 'Apply changes'}")
-    console.print(f"  Backup:   {'Disabled' if no_backup else 'Enabled'}")
+    console.print(f"  Backup: {'Disabled' if no_backup else 'Enabled'}")
     console.print()
 
-    if not Confirm.ask("Proceed with color conversion?"):
+    if not process_all and not Confirm.ask("Proceed with color conversion?"):
         console.print("[yellow]Cancelled.[/]")
         return
 
     # Run the automation
     console.print()
-    console.print("[cyan]Processing CSS files...[/]")
+    console.print("[cyan]Converting CSS colors to oklch()...[/]")
     console.print()
 
     try:
         results = convert_colors.convert_colors(
             path=target_path or ".",
             file=target_file,
-            dry_run=dry_run,
+            dry_run=False,
             no_backup=no_backup,
         )
 
         console.print()
-
-        if dry_run:
-            console.print("[bold yellow]Dry run complete (no files modified)[/]")
-        else:
-            console.print("[bold green]Done![/]")
-
+        console.print("[bold green]Done![/]")
         console.print()
 
         # Results table
@@ -864,7 +858,7 @@ def colors(dir_path, file_path, dry_run, no_backup, process_all):
         # Show changes if any
         if results.get("total_changes", 0) > 0:
             console.print()
-            console.print("[bold]Changes:[/]")
+            console.print("[bold]Changes made:[/]")
             for file_result in results.get("files", []):
                 if file_result.get("changes", 0) > 0:
                     console.print(f"\n[cyan]{file_result['file']}[/] ({file_result['changes']} changes)")
@@ -872,6 +866,10 @@ def colors(dir_path, file_path, dry_run, no_backup, process_all):
                         console.print(f"  Line {change['line']}: [red]{change['orig']}[/] → [green]{change['repl']}[/]")
                     if file_result.get("changes", 0) > 5:
                         console.print(f"  ... and {file_result['changes'] - 5} more")
+
+            if not no_backup:
+                console.print()
+                console.print("[dim]Backup files created with .bak extension[/]")
 
     except FileNotFoundError as e:
         console.print(f"[red]Error: {e}[/]")
