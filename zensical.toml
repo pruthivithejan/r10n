@@ -27,7 +27,6 @@ nav = [
 
 [project.theme]
 custom_dir = "docs/.overrides"
-icon.custom = "docs/.icons"
 features = [
     "navigation.instant",
     "navigation.tracking",
@@ -38,8 +37,9 @@ features = [
     "content.code.copy",
 ]
 
-# Tab icons
+# Icons
 [project.theme.icon]
+custom = "docs/.icons"
 repo = "fontawesome/brands/github"
 
 # Light Mode (Default)
