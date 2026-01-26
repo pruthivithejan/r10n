@@ -1,5 +1,5 @@
 ---
-icon: material/desktop-tower-monitor
+icon: lucide/laptop
 ---
 
 # Setup Locally

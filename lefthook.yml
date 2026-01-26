@@ -34,19 +34,17 @@ pre-push:
   commands:
     ruff_all:
       run: |
-        echo "Running ruff on staged files (pre-push)"
-        files=$(git diff --name-only --cached -- '*.py' || true)
-        if [ -z "$files" ]; then
-          echo "No python files staged; skipping ruff"
-          exit 0
-        fi
-        uv run ruff check $files || exit 1
+        echo "Running ruff on all Python files (pre-push)"
+        uv run ruff check src tests || exit 1
     pytest_all:
       run: |
         echo "Running pytest (pre-push)"
-        # Only run pytest if tests are present in the repo
         if [ -d tests ]; then
           uv run pytest || exit 1
         else
           echo "No tests directory; skipping pytest"
         fi
+    docs_build:
+      run: |
+        echo "Building docs (pre-push)"
+        uv run zensical build --clean || exit 1

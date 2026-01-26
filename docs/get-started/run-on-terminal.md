@@ -1,5 +1,5 @@
 ---
-icon: material/console
+icon: lucide/square-terminal
 ---
 
 # Run on Terminal
