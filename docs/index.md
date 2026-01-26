@@ -1,5 +1,5 @@
 ---
-icon: material/home
+icon: lucide/house
 ---
 
 # r10n
@@ -10,11 +10,11 @@ Automate repetitive data and workflow tasks on your terms — with a beautiful C
 
 <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem">
   <a href="get-started/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-primary-fg-color--lightest)">
-    <span class="twemoji" style="font-size:1.5rem;">:material-rocket-launch:</span>
+    <span class="twemoji" style="font-size:1.5rem;">:lucide-rocket:</span>
     <span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Get Started</span>
   </a>
   <a href="automations/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-accent-fg-color--lightest)">
-    <span class="twemoji" style="font-size:1.5rem;">:material-robot:</span>
+    <span class="twemoji" style="font-size:1.5rem;">:lucide-wand-sparkles:</span>
     <span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Automations</span>
   </a>
 </div>

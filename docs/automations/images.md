@@ -1,5 +1,5 @@
 ---
-icon: material/image
+icon: lucide/image
 ---
 
 # Images

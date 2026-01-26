@@ -1,5 +1,5 @@
 ---
-icon: material/palette
+icon: lucide/palette
 ---
 
 # Colors
@@ -10,15 +10,18 @@ Convert CSS color codes to the perceptual `oklch()` format. Makes color editing 
 
 ## Overview
 
-The Colors automation finds CSS files and converts hex colors and HSL/HSLA values to the modern `oklch()` color function.
+The Colors automation finds CSS files and converts hex colors, HSL/HSLA, RGB/RGBA, and named colors to the modern `oklch()` color function.
 
 **Key Features:**
 
 - Convert `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` formats
-- Convert `hsl()` and `hsla()` functions
+- Convert `hsl()`, `hsla()`, `rgb()`, `rgba()` functions
+- Convert named CSS colors (e.g., `red`, `rebeccapurple`)
+- Process single files or entire directories
 - Preserves alpha transparency
 - Interactive file selection
 - Dry-run preview before changes
+- Automatic backup file creation
 
 ---
 
@@ -27,7 +30,11 @@ The Colors automation finds CSS files and converts hex colors and HSL/HSLA value
 ### Run Instantly (No Installation)
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors path/to/project --dry-run
+# Preview changes on a directory
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --path ./src --dry-run
+
+# Convert a single file
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file styles.css --dry-run
 ```
 
 ### Run Locally
@@ -36,73 +43,156 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors path/to/pr
 git clone https://github.com/pruthivithejan/r10n.git
 cd r10n
 uv sync
-uv run r10n colors path/to/project --dry-run
+uv run r10n colors --path ./src --dry-run
 ```
 
 ---
 
 ## Usage
 
-### Dry Run (Preview Only)
-
-Preview changes without modifying files:
-
-```bash
-python3 scripts/convert_css_colors_to_oklch.py path/to/project --dry-run
-```
-
-### Process All CSS Files
-
-Convert all CSS files non-interactively:
-
-```bash
-python3 scripts/convert_css_colors_to_oklch.py path/to/project --all
-```
-
 ### Interactive Mode
 
-Select files to process one by one:
+Run without arguments for step-by-step prompts:
 
 ```bash
-python3 scripts/convert_css_colors_to_oklch.py path/to/project
+uv run r10n colors
+```
+
+Example session:
+
+```
+╭───────────────────────────────────────────────────────────────╮
+│                  CSS Color Converter                           │
+│       Convert colors to perceptual oklch() format              │
+╰───────────────────────────────────────────────────────────────╯
+
+Step 1/2: Select CSS file or directory
+  Process a single file or directory? [file/directory]: directory
+  Enter path to directory with CSS files [.]: ./src/styles
+
+Step 2/2: Set options
+  Preview changes first (dry run)? [Y/n]: y
+
+Summary:
+  Directory: ./src/styles
+  Mode:     Dry run (preview only)
+  Backup:   Enabled
+
+Proceed with color conversion? [y/n]: y
+
+Processing CSS files...
+
+Dry run complete (no files modified)
+
+┌─────────────────────┬──────────────────────────────┐
+│ Files found         │ 5                            │
+│ Files modified      │ 0                            │
+│ Total color changes │ 42                           │
+└─────────────────────┴──────────────────────────────┘
+
+Changes:
+
+./src/styles/main.css (15 changes)
+  Line 12: #3b82f6 → oklch(63.3% 0.213 255deg)
+  Line 15: hsl(270, 60%, 50%) → oklch(48.4% 0.187 303deg)
+  Line 18: #22c55e → oklch(72.3% 0.195 143deg)
+  ... and 12 more
+```
+
+### Single File Mode
+
+Process a single CSS file:
+
+```bash
+uv run r10n colors --file styles.css
+```
+
+### Directory Mode
+
+Process all CSS files in a directory:
+
+```bash
+uv run r10n colors --path ./src/styles
+```
+
+### Command Line Mode
+
+Pass all options directly:
+
+```bash
+uv run r10n colors \
+  --path ./src/styles \
+  --dry-run
 ```
 
 ---
 
 ## Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `path` | string | Yes | - | Directory containing CSS files |
-| `--dry-run` | flag | No | `false` | Preview changes without writing |
-| `--all` | flag | No | `false` | Process all files without prompting |
+| Parameter | Short | Type | Required | Default | Description |
+|-----------|-------|------|----------|---------|-------------|
+| `--path` | `-p` | string | No* | `.` | Directory containing CSS files |
+| `--file` | `-f` | string | No* | - | Single CSS file to process |
+| `--dry-run` | `-d` | flag | No | `false` | Preview changes without writing |
+| `--no-backup` | | flag | No | `false` | Don't create `.bak` backup files |
+| `--all` | `-a` | flag | No | `false` | Process all files without prompting |
+
+*Either `--path` or `--file` should be provided. If neither is given, interactive mode prompts for input.
 
 ---
 
 ## Examples
 
-### Example 1: Preview Changes
+### Example 1: Preview Changes on Single File
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors ./src/styles --dry-run
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
+  --file ./src/app.css \
+  --dry-run
 ```
 
-### Example 2: Convert All Files
+### Example 2: Convert Single File
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors ./src/styles --all
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
+  --file ./src/app.css
 ```
 
-### Example 3: Interactive Selection
+### Example 3: Preview Changes on Directory
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors ./my-project
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
+  --path ./src/styles \
+  --dry-run
 ```
 
-### Example 4: Using the Script Directly
+### Example 4: Convert All Files in Directory
 
 ```bash
-python3 scripts/convert_css_colors_to_oklch.py ./website/css --dry-run
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
+  --path ./src/styles
+```
+
+### Example 5: Convert Without Backup
+
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
+  --file styles.css \
+  --no-backup
+```
+
+### Example 6: Interactive Mode
+
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors
+```
+
+### Example 7: Local Installation
+
+```bash
+uv run r10n colors \
+  --path ./website/css \
+  --dry-run
 ```
 
 ---
@@ -119,6 +209,9 @@ python3 scripts/convert_css_colors_to_oklch.py ./website/css --dry-run
 | Hex 8-digit | `#ff0000aa` | Full hex with alpha |
 | HSL | `hsl(0, 100%, 50%)` | Hue, saturation, lightness |
 | HSLA | `hsla(0, 100%, 50%, 0.5)` | HSL with alpha |
+| RGB | `rgb(255, 0, 0)` | Red, green, blue |
+| RGBA | `rgba(255, 0, 0, 0.5)` | RGB with alpha |
+| Named | `red`, `rebeccapurple` | CSS color keywords |
 
 ### Output Format
 
@@ -130,13 +223,15 @@ All colors are converted to `oklch()`:
   color: #ff0000;
   background: hsl(240, 100%, 50%);
   border-color: #00ff0080;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* Output */
 .button {
-  color: oklch(62.8% 0.258 29.23);
-  background: oklch(45.2% 0.313 264.05);
-  border-color: oklch(86.6% 0.295 142.5 / 0.502);
+  color: oklch(62.8% 0.258 29deg);
+  background: oklch(45.2% 0.313 264deg);
+  border-color: oklch(86.6% 0.295 143deg / 0.502);
+  box-shadow: 0 2px 4px oklch(0% 0 0deg / 0.2);
 }
 ```
 
@@ -181,24 +276,47 @@ The automation modifies CSS files in place (unless using `--dry-run`):
 .card {
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  box-shadow: 0 1px 3px #00000026;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 ```
 
 **After:**
 ```css
 :root {
-  --primary: oklch(63.3% 0.213 255.1);
-  --secondary: oklch(48.4% 0.187 303.4);
-  --accent: oklch(72.3% 0.195 142.5);
+  --primary: oklch(63.3% 0.213 255deg);
+  --secondary: oklch(48.4% 0.187 303deg);
+  --accent: oklch(72.3% 0.195 143deg);
 }
 
 .card {
-  background: oklch(100% 0 0);
-  border: 1px solid oklch(91.5% 0.006 264.5);
-  box-shadow: 0 1px 3px oklch(0% 0 0 / 0.149);
+  background: oklch(100% 0 0deg);
+  border: 1px solid oklch(91.5% 0.006 265deg);
+  box-shadow: 0 1px 3px oklch(0% 0 0deg / 0.15);
 }
 ```
+
+### Backup Files
+
+By default, a `.bak` backup file is created for each modified file:
+
+```
+styles.css      # Modified file
+styles.css.bak  # Original backup
+```
+
+Use `--no-backup` to disable backup creation.
+
+---
+
+## Excluded Directories
+
+The following directories are automatically excluded:
+
+- `.venv`, `venv` — Python virtual environments
+- `node_modules` — Node.js dependencies
+- `.git` — Git directory
+- `dist`, `build` — Build output directories
+- `__pycache__` — Python cache
 
 ---
 
@@ -212,17 +330,17 @@ Ensure your path contains `.css` files:
 find ./src -name "*.css"
 ```
 
+### "File not found"
+
+Check the file path is correct:
+
+```bash
+ls -la styles.css
+```
+
 ### Colors Not Converting
 
-Currently, these formats are **not** converted:
-
-- `rgb()` and `rgba()` functions
-- Named CSS colors (e.g., `red`, `blue`)
-- CSS variables referencing colors
-
-### Running Twice Produces Different Results
-
-The script may re-convert already converted tokens. This will be fixed in a future update to make the operation idempotent.
+The script skips colors that are already in `oklch()` format to prevent double-conversion.
 
 ### File Permissions
 
@@ -232,13 +350,13 @@ Ensure you have write access to the CSS files:
 chmod 644 ./styles/*.css
 ```
 
----
+### Restoring from Backup
 
-## Limitations
+If you need to restore the original file:
 
-1. **Not converted:** `rgb()`, `rgba()`, named colors
-2. **Not idempotent:** Running twice may alter values slightly
-3. **No CSS-in-JS:** Only works with `.css` files
+```bash
+mv styles.css.bak styles.css
+```
 
 ---
 

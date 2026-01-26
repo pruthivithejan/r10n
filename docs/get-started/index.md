@@ -1,5 +1,5 @@
 ---
-icon: material/rocket-launch
+icon: lucide/rocket
 ---
 
 # Get Started

@@ -1,5 +1,5 @@
 ---
-icon: material/email
+icon: lucide/mail
 ---
 
 # Email

@@ -5,7 +5,7 @@ site_author = "Pruthivi Thejan"
 site_url = "https://pruthivithejan.github.io/r10n/"
 repo_url = "https://github.com/pruthivithejan/r10n"
 repo_name = "pruthivithejan/r10n"
-copyright = "Copyright &copy; 2025 r10n"
+copyright = "Copyright &copy; 2026 r10n"
 
 # Navigation - Home as page, Get Started as section with sub-pages
 nav = [
@@ -26,6 +26,8 @@ nav = [
 ]
 
 [project.theme]
+custom_dir = "docs/.overrides"
+icon.custom = "docs/.icons"
 features = [
     "navigation.instant",
     "navigation.tracking",
@@ -57,7 +59,7 @@ toggle.icon = "material/brightness-4"
 toggle.name = "Switch to light mode"
 
 [project.theme.font]
-text = "Inter"
+text = "Google Sans"
 code = "JetBrains Mono"
 
 [project.extra]

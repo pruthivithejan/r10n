@@ -1,5 +1,5 @@
 ---
-icon: material/account-box
+icon: lucide/book-user
 ---
 
 # Contacts

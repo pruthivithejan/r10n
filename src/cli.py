@@ -19,6 +19,7 @@ from rich.table import Table
 
 # Import automation modules
 from src.automations import (
+    convert_colors,
     fill_certificates,
     generate_contacts,
     optimize_images,
@@ -119,6 +120,7 @@ def main(ctx: click.Context):
     - certificates: Generate personalized PDF certificates
     - images: Optimize and convert images to WebP
     - email: Send bulk emails with attachments
+    - colors: Convert CSS colors to oklch() format
     """
     display_banner()
     if ctx.invoked_subcommand is None and not ctx.resilient_parsing:
@@ -726,6 +728,157 @@ The Team"""
         table.add_row("Failed", str(results.get("failed", 0)))
         console.print(table)
 
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+
+
+# =============================================================================
+# COLORS AUTOMATION
+# =============================================================================
+
+
+@main.command()
+@click.option("--path", "-p", "dir_path", help="Directory containing CSS files")
+@click.option("--file", "-f", "file_path", help="Single CSS file to process")
+@click.option("--dry-run", "-d", is_flag=True, help="Preview changes without writing")
+@click.option("--no-backup", is_flag=True, help="Don't create backup files")
+@click.option("--all", "-a", "process_all", is_flag=True, help="Process all files without prompting")
+def colors(dir_path, file_path, dry_run, no_backup, process_all):
+    """Convert CSS colors to oklch() format
+
+    Step-by-step interactive process to convert hex, hsl, rgb colors to oklch().
+    """
+    display_header("CSS Color Converter", "Convert colors to perceptual oklch() format")
+
+    total_steps = 2
+
+    # Step 1: Select file or directory
+    display_step(1, total_steps, "Select CSS file or directory")
+
+    if file_path:
+        # Single file mode
+        if not Path(file_path).exists():
+            console.print(f"[red]File not found: {file_path}[/]")
+            return
+        if not file_path.endswith('.css'):
+            console.print(f"[yellow]Warning: {file_path} may not be a CSS file[/]")
+        console.print(f"[green]  Using file: {file_path}[/]")
+        target_path = None
+        target_file = file_path
+    elif dir_path:
+        # Directory mode
+        if not Path(dir_path).exists():
+            console.print(f"[red]Directory not found: {dir_path}[/]")
+            return
+        console.print(f"[green]  Using directory: {dir_path}[/]")
+        target_path = dir_path
+        target_file = None
+    else:
+        # Interactive mode
+        choice = Prompt.ask(
+            "  Process a single file or directory?",
+            choices=["file", "directory"],
+            default="directory"
+        )
+
+        if choice == "file":
+            target_file = Prompt.ask(
+                "  Enter path to CSS file",
+                default="styles.css"
+            )
+            if not Path(target_file).exists():
+                console.print(f"[red]File not found: {target_file}[/]")
+                return
+            target_path = None
+            console.print(f"[green]  Using file: {target_file}[/]")
+        else:
+            default_path = "." if not Path("local/inputs/colors").exists() else "local/inputs/colors"
+            target_path = Prompt.ask(
+                "  Enter path to directory with CSS files",
+                default=default_path
+            )
+            if not Path(target_path).exists():
+                console.print(f"[red]Directory not found: {target_path}[/]")
+                return
+            target_file = None
+            console.print(f"[green]  Using directory: {target_path}[/]")
+
+    console.print()
+
+    # Step 2: Options
+    display_step(2, total_steps, "Set options")
+
+    if not dry_run:
+        dry_run = Confirm.ask("  Preview changes first (dry run)?", default=True)
+
+    console.print(f"[green]  Dry run: {'Yes' if dry_run else 'No'}[/]")
+    console.print(f"[green]  Backup files: {'No' if no_backup else 'Yes'}[/]")
+    console.print()
+
+    # Summary
+    console.print("[bold]Summary:[/]")
+    if target_file:
+        console.print(f"  File:     {target_file}")
+    else:
+        console.print(f"  Directory: {target_path}")
+    console.print(f"  Mode:     {'Dry run (preview only)' if dry_run else 'Apply changes'}")
+    console.print(f"  Backup:   {'Disabled' if no_backup else 'Enabled'}")
+    console.print()
+
+    if not Confirm.ask("Proceed with color conversion?"):
+        console.print("[yellow]Cancelled.[/]")
+        return
+
+    # Run the automation
+    console.print()
+    console.print("[cyan]Processing CSS files...[/]")
+    console.print()
+
+    try:
+        results = convert_colors.convert_colors(
+            path=target_path or ".",
+            file=target_file,
+            dry_run=dry_run,
+            no_backup=no_backup,
+        )
+
+        console.print()
+
+        if dry_run:
+            console.print("[bold yellow]Dry run complete (no files modified)[/]")
+        else:
+            console.print("[bold green]Done![/]")
+
+        console.print()
+
+        # Results table
+        table = Table(show_header=False)
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        table.add_row("Files found", str(results.get("files_found", 0)))
+        table.add_row("Files modified", str(results.get("files_modified", 0)))
+        table.add_row("Total color changes", str(results.get("total_changes", 0)))
+        console.print(table)
+
+        # Show changes if any
+        if results.get("total_changes", 0) > 0:
+            console.print()
+            console.print("[bold]Changes:[/]")
+            for file_result in results.get("files", []):
+                if file_result.get("changes", 0) > 0:
+                    console.print(f"\n[cyan]{file_result['file']}[/] ({file_result['changes']} changes)")
+                    for change in file_result.get("change_details", [])[:5]:
+                        console.print(f"  Line {change['line']}: [red]{change['orig']}[/] → [green]{change['repl']}[/]")
+                    if file_result.get("changes", 0) > 5:
+                        console.print(f"  ... and {file_result['changes'] - 5} more")
+
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+    except ValueError as e:
+        console.print(f"[yellow]{e}[/]")
+        sys.exit(0)
     except Exception as e:
         console.print(f"[red]Error: {e}[/]")
         sys.exit(1)

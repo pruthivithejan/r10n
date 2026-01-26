@@ -1,5 +1,5 @@
 ---
-icon: material/school
+icon: lucide/file-text
 ---
 
 # Certificates
