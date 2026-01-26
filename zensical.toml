@@ -26,7 +26,6 @@ nav = [
 ]
 
 [project.theme]
-custom_dir = "docs/.overrides"
 features = [
     "navigation.instant",
     "navigation.tracking",
