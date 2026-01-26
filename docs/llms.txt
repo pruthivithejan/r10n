@@ -1,0 +1,80 @@
+# r10n
+
+> CLI toolkit for automating repetitive data and workflow tasks: contacts, certificates, images, and email.
+
+r10n is a Python CLI tool that automates everyday tasks with a beautiful interactive terminal UI. It supports two execution modes: instant execution via `uvx` (no installation required) and local installation for repeated use.
+
+## Quick Start
+
+Run any automation instantly without installation:
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
+```
+
+Or install locally:
+```bash
+git clone https://github.com/pruthivithejan/r10n.git
+cd r10n
+uv sync
+uv run r10n --help
+```
+
+## Available Automations
+
+### Contacts
+Generate VCF contact cards from phone numbers.
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts --input numbers.txt --prefix Customer --output contacts.vcf
+```
+
+### Certificates
+Create personalized PDF certificates from templates.
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates --template template.pdf --data names.csv --output-dir ./certificates
+```
+
+### Images
+Optimize and convert images to WebP format.
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images --input ./photos --output ./optimized --quality 85
+```
+
+### Email
+Send bulk personalized emails with attachments.
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email --recipients emails.txt --subject "Hello" --body body.txt
+```
+
+### Colors
+Convert CSS color codes to oklch() format.
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --input styles.css --output styles-oklch.css
+```
+
+## Documentation
+
+- [Home](index.md): Overview and quick start guide
+- [Get Started](get-started/index.md): Step-by-step setup instructions
+  - [Run on Terminal](get-started/run-on-terminal.md): Instant execution with uvx
+  - [Setup Locally](get-started/setup-locally.md): Local installation guide
+- [Automations](automations/index.md): All available automations
+  - [Contacts](automations/contacts.md): VCF contact card generation
+  - [Certificates](automations/certificates.md): PDF certificate creation
+  - [Images](automations/images.md): Image optimization and WebP conversion
+  - [Email](automations/email.md): Bulk email sending
+  - [Colors](automations/colors.md): CSS color conversion to oklch()
+
+## Requirements
+
+- Python 3.10+
+- [uv](https://docs.astral.sh/uv/) package manager
+
+## Repository
+
+- GitHub: https://github.com/pruthivithejan/r10n
+- Issues: https://github.com/pruthivithejan/r10n/issues
+- License: MIT
+
+## Optional
+
+- [llms-full.txt](llms-full.txt): Extended documentation with all automation parameters and examples
