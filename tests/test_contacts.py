@@ -164,7 +164,7 @@ class TestGenerateVcf:
 
 class TestUvxCompatibility:
     """Test that the module works correctly when run via uvx.
-    
+
     These tests verify the package can be imported and used
     without a local folder structure.
     """
