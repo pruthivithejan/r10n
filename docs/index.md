@@ -9,27 +9,38 @@ Automate repetitive data and workflow tasks on your terms — with a beautiful C
 ---
 
 <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 2rem">
-  <a href="get-started/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-primary-fg-color--lightest)"><span class="md-icon" aria-hidden="true">rocket_launch</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Get Started</span></a>
-  <a href="automations/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-accent-fg-color--lightest)"><span class="md-icon" aria-hidden="true">robot</span><span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Automations</span></a>
+  <a href="get-started/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-primary-fg-color--lightest)">
+    <span class="twemoji" style="font-size:1.5rem;">:material-rocket-launch:</span>
+    <span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Get Started</span>
+  </a>
+  <a href="automations/" style="flex:1; min-width:250px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.2rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-accent-fg-color--lightest)">
+    <span class="twemoji" style="font-size:1.5rem;">:material-robot:</span>
+    <span style="font-size:1.2rem; font-weight:600; margin-left:.7rem;">Automations</span>
+  </a>
 </div>
 
 ---
 
-**r10n lets you instantly automate contact card generation, certificates, image conversion, bulk email, and more!**
+## What is r10n?
+
+**r10n** (routine automation) is a Python CLI toolkit to automate day-to-day tasks without code. Each automation is interactive, safe, and auditable.
+
+Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
+
+**Features:**
+
+- Beautiful Rich-powered terminal UI
+- Step-by-step interactive prompts
+- Run instantly with `uvx` or install locally
+- Generate contacts, certificates, optimize images, send emails, and more
 
 ---
 
-## 👋 What is r10n?
-
-A Python CLI toolkit to automate day-to-day tasks without code. Each automation is interactive, safe, and auditable. Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 === "Run Instantly (uvx)"
 
-    Run any automation from the repo (no installation!):
+    Run any automation without installation:
 
     ```bash
     uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
@@ -37,7 +48,7 @@ A Python CLI toolkit to automate day-to-day tasks without code. Each automation 
 
 === "Install Locally"
 
-    Clone and use offline for repeated workflows:
+    Clone for repeated use:
 
     ```bash
     git clone https://github.com/pruthivithejan/r10n.git
@@ -48,39 +59,43 @@ A Python CLI toolkit to automate day-to-day tasks without code. Each automation 
 
 ---
 
-## 💡 Explore Automations
+## Available Automations
 
-See guides for every feature:
+| Automation | Command | Description |
+|------------|---------|-------------|
+| [Contacts](automations/contacts/) | `r10n contacts` | Generate VCF contact cards from phone numbers |
+| [Certificates](automations/certificates/) | `r10n certificates` | Create personalized PDF certificates |
+| [Images](automations/images/) | `r10n images` | Optimize and convert images to WebP |
+| [Email](automations/email/) | `r10n email` | Send bulk emails with attachments |
+| [Colors](automations/colors/) | `r10n colors` | Convert CSS colors to oklch() |
 
-- [Contacts](automations/contacts/): Generate VCF contact cards.
-- [Certificates](automations/certificates/): Build branded PDF certificates.
-- [Images](automations/images/): Optimize and convert images.
-- [Email](automations/email/): Send bulk emails with attachments.
-
-Or browse all at once ➡️ [Automations Index](automations/)
-
----
-
-## 🆘 Get Help | Join Community
-
--- [Get Started](get-started/) — Step-by-step tutorial for new users.
--- [Automations](automations/) — All automation docs.
-- [GitHub Issues](https://github.com/pruthivithejan/r10n/issues) — Ask & report bugs.
-- Coming soon: [Discussions](https://github.com/pruthivithejan/r10n/discussions)
+Browse all: [Automations](automations/)
 
 ---
 
-## ⚡ Example: Run an Automation
+## Example: Generate Contacts
 
 ```bash
 $ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
 
+╭───────────────────────────────────────────────────────────────╮
+│               Contact Card Generator                           │
+│        Convert phone numbers to VCF contact cards              │
+╰───────────────────────────────────────────────────────────────╯
+
 Step 1/3: Select input file
-Enter path to file with phone numbers: numbers.txt
+  Enter path to file with phone numbers: numbers.txt
+
 Step 2/3: Set contact name prefix
-Enter prefix for contact names: Customer
+  Enter prefix for contact names [Contact]: Customer
+
 Step 3/3: Set output file
-Enter output VCF file path: customers.vcf
+  Enter output VCF file path: customers.vcf
+
+Summary:
+  Input file:  numbers.txt
+  Prefix:      Customer
+  Output file: customers.vcf
 
 Proceed with contact generation? [y/n]: y
 
@@ -98,12 +113,27 @@ Done!
 
 ---
 
-## 📦 Requirements
+## Requirements
 
 - Python 3.10+
 - [uv](https://docs.astral.sh/uv/) package manager
 
+**Install uv:**
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ---
 
-## 🛡 License
+## Get Help
+
+- [Get Started Guide](get-started/) — Step-by-step setup
+- [Automations](automations/) — All automation docs
+- [GitHub Issues](https://github.com/pruthivithejan/r10n/issues) — Ask questions & report bugs
+
+---
+
+## License
+
 MIT — see [LICENSE](https://github.com/pruthivithejan/r10n/blob/main/LICENSE) for details.
