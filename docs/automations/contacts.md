@@ -26,6 +26,23 @@ uv run r10n contacts \
   --output local/outputs/contacts/customers.vcf
 ```
 
+Run with uv / uvx
+
+Run instantly (no install):
+
+```
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
+```
+
+Install locally and run:
+
+```
+git clone https://github.com/pruthivithejan/r10n.git
+cd r10n
+uv sync
+uv run r10n contacts
+```
+
 ## Input File Format
 Create `local/inputs/contacts/numbers.txt`:
 

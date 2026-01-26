@@ -23,6 +23,23 @@ Command-line:
 uv run r10n images --quality 85 --max-width 1920 --max-height 1080
 ```
 
+Run with uv / uvx
+
+Run instantly (no install):
+
+```
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images
+```
+
+Install locally and run:
+
+```
+git clone https://github.com/pruthivithejan/r10n.git
+cd r10n
+uv sync
+uv run r10n images
+```
+
 ## Quick Start Steps
 1. Place source images in `local/inputs/images/`
 2. Run the automation as above

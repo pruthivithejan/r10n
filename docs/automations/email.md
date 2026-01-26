@@ -24,6 +24,23 @@ Command-line:
 uv run r10n email --config local/configs/email.json --recipients local/inputs/email/recipients.csv --template local/inputs/email/template.txt
 ```
 
+Run with uv / uvx
+
+Run instantly (no install):
+
+```
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email
+```
+
+Install locally and run:
+
+```
+git clone https://github.com/pruthivithejan/r10n.git
+cd r10n
+uv sync
+uv run r10n email --config local/configs/email.json --recipients local/inputs/email/recipients.csv --template local/inputs/email/template.txt
+```
+
 ## Quick Start Steps
 1. Set up `local/configs/email.json` with SMTP and credentials:
    ```json
