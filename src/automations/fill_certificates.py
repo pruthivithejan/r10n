@@ -4,7 +4,7 @@ import os
 import platform
 from io import BytesIO
 
-from PyPDF2 import PdfReader, PdfWriter
+from pypdf import PdfReader, PdfWriter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -54,7 +54,11 @@ def load_recipients(recipients_file):
                 reader = csv.DictReader(f)
                 for row in reader:
                     # Normalize keys to lowercase and strip
-                    normalized = {str(k).strip().lower(): (v.strip() if isinstance(v, str) else v) for k, v in row.items() if k is not None}
+                    normalized = {
+                        str(k).strip().lower(): (v.strip() if isinstance(v, str) else v)
+                        for k, v in row.items()
+                        if k is not None
+                    }
 
                     # Handle extra fields (DictReader puts them under key None)
                     extras = row.get(None) if isinstance(row, dict) else None
@@ -62,10 +66,12 @@ def load_recipients(recipients_file):
                         extras = [e.strip() for e in extras if isinstance(e, str)]
 
                     # Determine name with heuristics
-                    raw_name = (normalized.get("name") or
-                              normalized.get("full_name") or
-                              normalized.get("full name") or  # Handle "Full Name" headers
-                              normalized.get("recipient"))
+                    raw_name = (
+                        normalized.get("name")
+                        or normalized.get("full_name")
+                        or normalized.get("full name")  # Handle "Full Name" headers
+                        or normalized.get("recipient")
+                    )
 
                     # If the 'name' cell looks like an index (digits) and there are extras or a shifted layout,
                     # shift columns: treat current 'position' as name, current 'e-mail' as position (best-effort)
@@ -74,11 +80,17 @@ def load_recipients(recipients_file):
 
                     if is_index_like(raw_name):
                         # If Position holds the real name, use it
-                        possible_name = normalized.get("position") or normalized.get("role") or normalized.get("designation")
+                        possible_name = (
+                            normalized.get("position")
+                            or normalized.get("role")
+                            or normalized.get("designation")
+                        )
                         if possible_name:
                             raw_name = possible_name
                             # Shift position from email if present (common in misaligned CSV)
-                            possible_pos = normalized.get("e-mail") or (extras[0] if isinstance(extras, list) and extras else None)
+                            possible_pos = normalized.get("e-mail") or (
+                                extras[0] if isinstance(extras, list) and extras else None
+                            )
                             if possible_pos:
                                 normalized["position"] = possible_pos
 
