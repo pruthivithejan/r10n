@@ -31,6 +31,7 @@ pre-commit:
         uv run zensical build --clean || exit 1
 
 pre-push:
+  # Always run the full test suite before pushing
   commands:
     ruff_all:
       run: |
@@ -39,11 +40,7 @@ pre-push:
     pytest_all:
       run: |
         echo "Running pytest (pre-push)"
-        if [ -d tests ]; then
-          uv run pytest || exit 1
-        else
-          echo "No tests directory; skipping pytest"
-        fi
+        uv run pytest || exit 1
     docs_build:
       run: |
         echo "Building docs (pre-push)"
