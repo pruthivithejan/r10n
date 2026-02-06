@@ -102,8 +102,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images \
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
-  --input styles.css \
-  --output styles-oklch.css
+  --file styles.css
 ```
 
 ### Generate Certificates
@@ -111,16 +110,16 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates \
   --template template.pdf \
-  --data participants.csv \
-  --output-dir ./certificates
+  --recipients participants.csv \
+  --output ./certificates
 ```
 
 ### Send Bulk Emails
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email \
-  --recipients emails.txt \
-  --subject "Important Update" \
+  --config email-config.json \
+  --recipients recipients.csv \
   --body message.txt
 ```
 
@@ -178,12 +177,13 @@ Create `numbers.txt`:
 
 ### Recipient List (for email)
 
-Create `emails.txt`:
+Create `recipients.csv`:
 
-```text
-john@example.com
-jane@example.com
-support@company.org
+```csv
+Name,Email
+John Doe,john@example.com
+Jane Smith,jane@example.com
+Support Team,support@company.org
 ```
 
 ### CSV Data (for certificates)

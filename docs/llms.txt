@@ -30,7 +30,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts --input 
 ### Certificates
 Create personalized PDF certificates from templates.
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates --template template.pdf --data names.csv --output-dir ./certificates
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates --template template.pdf --recipients names.csv --output ./certificates
 ```
 
 ### Images
@@ -42,13 +42,13 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images --input ./
 ### Email
 Send bulk personalized emails with attachments.
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email --recipients emails.txt --subject "Hello" --body body.txt
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email --config email-config.json --recipients recipients.csv --body body.txt
 ```
 
 ### Colors
 Convert CSS color codes to oklch() format.
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --input styles.css --output styles-oklch.css
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file styles.css
 ```
 
 ## Documentation
@@ -74,7 +74,3 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --input st
 - GitHub: https://github.com/pruthivithejan/r10n
 - Issues: https://github.com/pruthivithejan/r10n/issues
 - License: MIT
-
-## Optional
-
-- [llms-full.txt](llms-full.txt): Extended documentation with all automation parameters and examples

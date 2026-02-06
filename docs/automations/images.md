@@ -165,7 +165,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images \
   --quality 85
 ```
 
-Output filenames: `product_001.webp`, `product_002.webp`, etc.
+Output filenames: `product1.webp`, `product2.webp`, etc.
 
 ### Example 5: Local Installation
 
@@ -234,15 +234,23 @@ local/outputs/images/
 
 ## Configuration
 
-For advanced settings, create `local/configs/images.json`:
+Advanced configuration is supported programmatically via `ImageOptimizationConfig`.
+The CLI currently does not load a config file, so these values are for reference or
+for calling the module directly.
 
 ```json
 {
-  "default_quality": 85,
-  "default_format": "webp",
+  "input_directory": "local/inputs/images",
+  "output_directory": "local/outputs/images",
+  "prefix": "img",
+  "max_size_mb": 1.0,
+  "quality": 85,
   "max_width": 1920,
   "max_height": 1080,
-  "preserve_aspect_ratio": true
+  "convert_to_webp": true,
+  "preserve_aspect_ratio": true,
+  "auto_orient": true,
+  "preserve_filename": false
 }
 ```
 

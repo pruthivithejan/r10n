@@ -40,6 +40,7 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "openpyxl>=3.0.0",
     "zensical>=0.0.8",
+    "markdown>=3.10.1",
 ]
 
 [project.urls]

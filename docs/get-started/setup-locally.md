@@ -201,8 +201,8 @@ uv run python scripts/setup.py
    ```bash
    uv run r10n certificates \
      --template local/inputs/certificates/template.pdf \
-     --data local/inputs/certificates/participants.csv \
-     --output-dir local/outputs/certificates/
+     --recipients local/inputs/certificates/participants.csv \
+     --output local/outputs/certificates/
    ```
 
 ### Example: Images Workflow
@@ -236,7 +236,10 @@ Create `local/configs/email.json`:
 {
   "smtp_server": "smtp.gmail.com",
   "smtp_port": 587,
-  "sender_email": "your-email@gmail.com"
+  "email": "your-email@gmail.com",
+  "password": "your-app-password",
+  "subject": "Your Certificate",
+  "use_tls": true
 }
 ```
 
@@ -244,12 +247,22 @@ Create `local/configs/email.json`:
 
 Create `local/configs/images.json`:
 
+Note: The current CLI does not load this file directly. This format is provided
+for programmatic use or future CLI support.
+
 ```json
 {
-  "default_quality": 85,
-  "default_format": "webp",
+  "input_directory": "local/inputs/images",
+  "output_directory": "local/outputs/images",
+  "prefix": "img",
+  "max_size_mb": 1.0,
+  "quality": 85,
   "max_width": 1920,
-  "max_height": 1080
+  "max_height": 1080,
+  "convert_to_webp": true,
+  "preserve_aspect_ratio": true,
+  "auto_orient": true,
+  "preserve_filename": false
 }
 ```
 

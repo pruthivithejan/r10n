@@ -14,7 +14,7 @@ The Contacts automation reads phone numbers from a text file and generates a VCF
 
 **Key Features:**
 
-- Supports Sri Lankan and international phone formats
+- Supports Sri Lankan phone formats (`+94` and `0xxxxxxxxx`)
 - Adds custom prefix to contact names (e.g., "Customer 1", "Customer 2")
 - Removes duplicate numbers automatically
 - Validates phone number formats
@@ -164,7 +164,7 @@ Create a text file with one phone number per line. Comments start with `#`.
 | Format | Example | Description |
 |--------|---------|-------------|
 | Local 10-digit | `0771234567` | Sri Lankan mobile |
-| With country code | `+94771234567` | International format |
+| With country code | `+94771234567` | Sri Lankan mobile with country code |
 | Without plus | `94771234567` | Country code without + |
 
 ---
@@ -209,10 +209,10 @@ The automation will offer to create an example file if it doesn't exist.
 
 ### "Invalid number" Warnings
 
-Numbers must be valid mobile formats:
+Numbers must be valid Sri Lankan mobile formats:
 
-- 10-12 digits
-- Optionally starting with `+94` or `94`
+- `0xxxxxxxxx` (10 digits)
+- `+94xxxxxxxxx` or `94xxxxxxxxx`
 - No spaces or special characters
 
 ### "Output directory does not exist"
