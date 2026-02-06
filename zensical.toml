@@ -22,6 +22,9 @@ nav = [
         "automations/images.md",
         "automations/email.md",
         "automations/colors.md",
+        "automations/rename-files.md",
+        "automations/validate-csv.md",
+        "automations/markdown-to-pdf.md",
     ]},
 ]
 

@@ -40,6 +40,24 @@ All r10n automations are listed below. Click any card to view the full guide wit
   <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Convert CSS color codes to oklch() format</span>
 </a>
 
+<a href="rename-files/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-primary-fg-color--lightest)">
+  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7h-7V4"/><path d="M7 20a2 2 0 0 1-2-2V4"/><path d="M7 4h5l5 5v11a2 2 0 0 1-2 2H7"/><path d="M13 3v5h5"/></svg>
+  <span style="font-weight:600; margin-top:.5em;">Rename Files</span>
+  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Batch rename files with patterns and transformations</span>
+</a>
+
+<a href="validate-csv/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-accent-fg-color--lightest)">
+  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="6" height="4" x="9" y="2" rx="1"/><path d="M9 4H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2v-5"/><path d="m16 12 2 2 4-4"/></svg>
+  <span style="font-weight:600; margin-top:.5em;">Validate CSV</span>
+  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Validate CSV files against schemas</span>
+</a>
+
+<a href="markdown-to-pdf/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-primary-fg-color--lightest)">
+  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>
+  <span style="font-weight:600; margin-top:.5em;">Markdown to PDF</span>
+  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Convert Markdown files to PDF</span>
+</a>
+
 </div>
 
 ---
@@ -53,6 +71,9 @@ All r10n automations are listed below. Click any card to view the full guide wit
 | [Images](images/) | `r10n images` | Optimize images to WebP |
 | [Email](email/) | `r10n email` | Send bulk emails |
 | [Colors](colors/) | `r10n colors` | Convert CSS to oklch() |
+| [Rename Files](rename-files/) | `r10n rename` | Batch rename files |
+| [Validate CSV](validate-csv/) | `r10n validate` | Validate CSV files |
+| [Markdown to PDF](markdown-to-pdf/) | `r10n md2pdf` | Convert Markdown to PDF |
 
 ---
 
