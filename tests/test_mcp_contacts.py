@@ -1,7 +1,6 @@
 """Tests for the MCP contacts tool."""
 
 import asyncio
-from pathlib import Path
 
 from src.mcp.server import mcp
 from src.mcp.tools.contacts import generate_contacts
