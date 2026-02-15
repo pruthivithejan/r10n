@@ -1503,6 +1503,23 @@ Markdown to PDF conversion is easy with r10n!
 
 
 # =============================================================================
+# MCP SERVER
+# =============================================================================
+
+
+@main.command()
+def mcp():
+    """Start the MCP server for AI assistant integration
+
+    Exposes all r10n automations as MCP tools via stdio transport.
+    Use with Claude Desktop or any MCP-compatible client.
+    """
+    from src.mcp.server import main as mcp_main
+
+    mcp_main()
+
+
+# =============================================================================
 # STATUS COMMAND
 # =============================================================================
 
