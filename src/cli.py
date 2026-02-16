@@ -259,7 +259,40 @@ def certificates(config, recipients, template, output):
     # Load config or create example
     if not Path(config).exists():
         console.print(f"\n[yellow]Config not found: {config}[/]")
-        if Confirm.ask("  Create example configuration?"):
+        choice = Prompt.ask(
+            "  How would you like to create a configuration?",
+            choices=["visual", "example", "cancel"],
+            default="visual",
+        )
+        if choice == "visual":
+            console.print()
+            template_path = Prompt.ask(
+                "  Enter path to PDF template",
+                default="local/inputs/certificates/template.pdf",
+            )
+            if not Path(template_path).exists():
+                console.print(f"[red]  Template not found: {template_path}[/]")
+                console.print("[dim]  Add your PDF template and try again.[/]")
+                return
+            recipients_path = Prompt.ask(
+                "  Enter path to recipients CSV (optional, for field names)",
+                default="",
+            )
+            from src.configure import launch_picker
+
+            console.print()
+            console.print("[cyan]Opening visual picker in your browser...[/]")
+            try:
+                launch_picker(
+                    template_pdf=template_path,
+                    recipients_file=recipients_path or None,
+                    output_config=config,
+                )
+                console.print(f"[green]  Config saved: {config}[/]")
+            except Exception as e:
+                console.print(f"[red]  Visual picker error: {e}[/]")
+                return
+        elif choice == "example":
             config_path = Path(config)
             config_path.parent.mkdir(parents=True, exist_ok=True)
             example_config = {
@@ -1517,6 +1550,62 @@ def mcp():
     from src.mcp.server import main as mcp_main
 
     mcp_main()
+
+
+# =============================================================================
+# CONFIGURE (VISUAL FIELD PICKER)
+# =============================================================================
+
+
+@main.command()
+@click.option("--template", "-t", required=True, help="PDF template file")
+@click.option("--recipients", "-r", help="CSV file (for column headers)")
+@click.option(
+    "--output", "-o", default="local/configs/certificates.json", help="Output config path"
+)
+def configure(template, recipients, output):
+    """Launch visual field picker for certificate configuration
+
+    Opens a browser-based tool where you can click on a PDF template
+    to place fields, configure styling, preview results, and save the config.
+    """
+    from src.configure import launch_picker
+
+    display_header("Visual Field Picker", "Click on the template to place certificate fields")
+
+    if not Path(template).exists():
+        console.print(f"[red]Template not found: {template}[/]")
+        return
+
+    if recipients and not Path(recipients).exists():
+        console.print(f"[yellow]Recipients file not found: {recipients}[/]")
+        console.print("[dim]  Continuing without CSV headers.[/]")
+        recipients = None
+
+    console.print(f"[green]  Template: {template}[/]")
+    if recipients:
+        console.print(f"[green]  Recipients: {recipients}[/]")
+    console.print(f"[green]  Output config: {output}[/]")
+    console.print()
+    console.print("[cyan]Opening visual picker in your browser...[/]")
+    console.print("[dim]  Place fields by clicking, then click Save Config when done.[/]")
+    console.print()
+
+    try:
+        saved_path = launch_picker(
+            template_pdf=template,
+            recipients_file=recipients,
+            output_config=output,
+        )
+        console.print()
+        console.print(f"[bold green]Configuration saved to: {saved_path}[/]")
+        console.print(
+            "[dim]  Run [cyan]r10n certificates --config "
+            f"{saved_path}[/cyan] to generate certificates.[/]"
+        )
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
 
 
 # =============================================================================

@@ -403,6 +403,11 @@ def generate_certificates(recipients_file, config_file, base_dir="data/certifica
     }
 
 
+def font_mappings_keys():
+    """Return the list of available font family names for the picker UI."""
+    return ["Helvetica", "Times", "Times-Roman", "Courier", "Arial", "Futura", "sans-serif", "serif", "monospace"]
+
+
 def fill_certificates_from_file(
     recipients_file="recipients.txt", config_file="config.json", base_dir="data/certificates"
 ):
