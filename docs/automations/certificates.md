@@ -153,6 +153,34 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates
 
 ---
 
+## Visual Field Picker
+
+Instead of manually writing coordinates in JSON, use the visual picker to place fields by clicking on your PDF template:
+
+```bash
+uv run r10n configure --template local/inputs/certificates/template.pdf --recipients local/inputs/certificates/recipients.csv
+```
+
+This opens a browser-based tool where you can:
+
+1. **Click on the template** to place fields at exact positions
+2. **Drag markers** to reposition fields
+3. **Configure each field** — font size, weight, alignment, and color
+4. **Preview** the result with sample data
+5. **Save** the configuration JSON
+
+### Parameters
+
+| Parameter | Short | Type | Required | Default | Description |
+|-----------|-------|------|----------|---------|-------------|
+| `--template` | `-t` | string | Yes | — | PDF template file |
+| `--recipients` | `-r` | string | No | — | CSV file (used to populate field name dropdown) |
+| `--output` | `-o` | string | No | `local/configs/certificates.json` | Output config path |
+
+The visual picker is also offered automatically when you run `r10n certificates` without an existing configuration file.
+
+---
+
 ## Input Files
 
 ### Recipients File (TXT Format)
@@ -263,7 +291,7 @@ ls -la local/inputs/certificates/template.pdf
 
 ### Text Appears in Wrong Position
 
-Adjust the `x` and `y` values in your configuration. PDF coordinates start from the bottom-left corner:
+Use `r10n configure --template your-template.pdf` to visually reposition fields instead of guessing coordinates. If editing manually, PDF coordinates start from the bottom-left corner:
 
 - `x`: Distance from left edge (in points, 72 points = 1 inch)
 - `y`: Distance from bottom edge
