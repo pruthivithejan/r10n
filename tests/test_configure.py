@@ -134,12 +134,13 @@ class TestTemplateInfoRoute:
 class TestCsvHeadersRoute:
     """Test /api/csv-headers endpoint."""
 
-    def test_returns_headers(self, app_client):
+    def test_returns_headers_without_email(self, app_client):
         client, _ = app_client
         resp = client.get("/api/csv-headers")
         assert resp.status_code == 200
         headers = resp.get_json()
-        assert headers == ["name", "position", "email"]
+        assert headers == ["name", "position"]
+        assert "email" not in headers
 
     def test_no_csv_returns_empty(self, test_pdf, tmp_path):
         """When no CSV is provided, returns empty list."""

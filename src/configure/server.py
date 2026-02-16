@@ -53,12 +53,16 @@ def _find_free_port():
         return s.getsockname()[1]
 
 
+# Column names that should not appear as placeable certificate fields
+_IGNORED_HEADERS = {"email", "e-mail", "email_address", "email address", "mail"}
+
+
 def _read_csv_headers(csv_path):
-    """Read column headers from a CSV file."""
+    """Read column headers from a CSV file, excluding email columns."""
     with open(csv_path, encoding="utf-8-sig", newline="") as f:
         reader = csv.reader(f)
         headers = next(reader, [])
-    return [h.strip() for h in headers if h.strip()]
+    return [h.strip() for h in headers if h.strip() and h.strip().lower() not in _IGNORED_HEADERS]
 
 
 def create_app(template_pdf, recipients_file=None, output_config=None, done_event=None):
