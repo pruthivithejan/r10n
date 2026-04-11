@@ -14,7 +14,7 @@ src/
 │   ├── tools/
 │   │   ├── __init__.py
 │   │   ├── contacts.py       # generate_contacts tool
-│   │   ├── certificates.py   # generate_certificates tool
+│   │   ├── fill_pdfs.py      # fill_pdfs tool
 │   │   ├── images.py         # optimize_images tool
 │   │   ├── email.py          # send_email tool
 │   │   ├── colors.py         # convert_colors tool
@@ -35,7 +35,7 @@ Each tool file imports the underlying automation function from `src/automations/
 | Tool Name | Wraps | Required Params | Optional Params |
 |-----------|-------|-----------------|-----------------|
 | `generate_contacts` | `generate_vcf_from_file()` | `input_file` | `output_name`, `prefix` |
-| `generate_certificates` | `generate_certificates()` | `recipients_file`, `config_file` | `base_dir` |
+| `fill_pdfs` | `fill_certificates_from_file()` | `recipients_file`, `config_file` | `base_dir` |
 | `optimize_images` | `optimize_images()` | `input_dir` | `output_dir`, `prefix`, `max_size_mb`, `quality`, `max_width`, `max_height`, `preserve_filename` |
 | `send_email` | `send_personalized_emails_with_certificates()` | `email_list_file`, `subject`, `body_template`, `config_file` | `certificates_dir` |
 | `convert_colors` | `convert_colors()` | `path` | `file`, `dry_run`, `no_backup`, `excludes` |
@@ -49,7 +49,7 @@ Each tool returns the automation's result dict as JSON. Errors are caught and re
 
 | Resource URI | Description |
 |-------------|-------------|
-| `r10n://configs/certificates` | Default certificates config template |
+| `r10n://configs/fill-pdfs` | Default fill-pdfs config template |
 | `r10n://configs/email` | Default email config template |
 | `r10n://configs/images` | Default images config template |
 | `r10n://configs/blog` | Default blog config template |

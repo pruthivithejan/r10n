@@ -152,5 +152,5 @@ No configuration file is required. Optional CSS files can be passed using `--css
 
 ## See Also
 
-- [Certificates](./certificates.md)
+- [Fill PDFs](./fill-pdfs.md)
 - [Rename Files](./rename-files.md)

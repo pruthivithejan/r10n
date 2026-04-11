@@ -39,4 +39,4 @@ r10n lets you automate everyday tasks instantly, with no installation required â
 
 ---
 
-Looking for details on what r10n can automate? Explore the [Automations](../automations/) section for walkthroughs of all features (contacts, certificates, image, and email tools).
+Looking for details on what r10n can automate? Explore the [Automations](../automations/) section for walkthroughs of all features (contacts, fill-pdfs, image, and email tools).

@@ -32,7 +32,7 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 - Beautiful Rich-powered terminal UI
 - Step-by-step interactive prompts
 - Run instantly with `uvx` or install locally
-- Generate contacts, certificates, optimize images, send emails, and more
+- Generate contacts, fill PDFs, optimize images, send emails, and more
 
 ---
 
@@ -64,7 +64,7 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 | Automation | Command | Description |
 |------------|---------|-------------|
 | [Contacts](automations/contacts/) | `r10n contacts` | Generate VCF contact cards from phone numbers |
-| [Certificates](automations/certificates/) | `r10n certificates` | Create personalized PDF certificates |
+| [Fill PDFs](automations/fill-pdfs/) | `r10n fill-pdfs` | Fill PDF templates with data |
 | [Images](automations/images/) | `r10n images` | Optimize and convert images to WebP |
 | [Email](automations/email/) | `r10n email` | Send bulk emails with attachments |
 | [Colors](automations/colors/) | `r10n colors` | Convert CSS colors to oklch() |

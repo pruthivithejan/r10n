@@ -69,7 +69,7 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  certificates  Generate personalized PDF certificates
+  fill-pdfs     Fill PDF templates with data
   colors        Convert CSS colors to oklch() format
   contacts      Generate VCF contact cards from phone numbers
   email         Send bulk personalized emails
@@ -105,13 +105,12 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
   --file styles.css
 ```
 
-### Generate Certificates
+### Fill PDFs
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates \
-  --template template.pdf \
-  --recipients participants.csv \
-  --output ./certificates
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs \
+  --config config.json \
+  --recipients participants.csv
 ```
 
 ### Send Bulk Emails
@@ -186,7 +185,7 @@ Jane Smith,jane@example.com
 Support Team,support@company.org
 ```
 
-### CSV Data (for certificates)
+### CSV Data (for fill-pdfs)
 
 Create `participants.csv`:
 

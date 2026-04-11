@@ -74,19 +74,19 @@ Generate VCF contact cards from a file of phone numbers.
 
 ---
 
-### generate_certificates
+### fill_pdfs
 
-Create personalized PDF certificates from a template.
+Fill PDF templates with data from CSV/TXT files.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
-| `recipients_file` | string | Yes | — | Path to CSV/TXT with recipient data |
-| `config_file` | string | Yes | — | Path to JSON configuration file |
-| `base_dir` | string | No | `data/certificates` | Base directory for relative paths |
+| `recipients_file` | string | Yes | -- | Path to CSV/TXT with row data |
+| `config_file` | string | Yes | -- | Path to JSON configuration file |
+| `base_dir` | string | No | `data/fill-pdfs` | Base directory for relative paths |
 
-**Returns:** Total recipients, generated count, failed count, errors, output directory.
+**Returns:** Total entries, generated count, failed count, errors, output directory.
 
-See the [certificates config template](#config-templates) for the expected JSON format.
+See the [fill-pdfs config template](#config-templates) for the expected JSON format.
 
 ---
 
@@ -119,9 +119,9 @@ Send bulk personalized emails with optional certificate attachments.
 | `subject` | string | Yes | — | Email subject line |
 | `body_template` | string | Yes | — | Path to email body template file |
 | `config_file` | string | Yes | — | Path to SMTP configuration JSON |
-| `certificates_dir` | string | No | — | Directory with PDF attachments |
+| `certificates_dir` | string | No | -- | Directory with PDF attachments |
 
-**Returns:** Sent count, failed count, total, failed emails list, missing certificates list.
+**Returns:** Sent count, failed count, total, failed emails list, missing PDFs list.
 
 See the [email config template](#config-templates) for SMTP configuration format.
 
@@ -206,7 +206,7 @@ The MCP server exposes config templates and automation metadata as resources.
 
 | Resource URI | Description |
 |-------------|-------------|
-| `r10n://configs/certificates` | Default certificate generation config |
+| `r10n://configs/fill-pdfs` | Default PDF fill config |
 | `r10n://configs/email` | Default SMTP and email config |
 | `r10n://configs/images` | Default image optimization config |
 | `r10n://configs/blog` | Default blog generation config |
@@ -218,7 +218,7 @@ Use the `r10n://configs/*` resources to see the expected JSON format before crea
 
 ## Config Templates
 
-### Certificates Config
+### Fill PDFs Config
 
 ```json
 {
@@ -281,7 +281,7 @@ Use the `r10n://configs/*` resources to see the expected JSON format before crea
 The server returns structured error messages. Common causes:
 
 - **File not found**: Check that file paths are absolute or relative to the working directory
-- **Missing config**: Some tools (certificates, email) require a config file — use the resources to see the expected format
+- **Missing config**: Some tools (fill-pdfs, email) require a config file -- use the resources to see the expected format
 - **Permission denied**: Ensure the server process has read/write access to the specified directories
 
 ### Testing the Server

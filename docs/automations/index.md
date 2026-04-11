@@ -16,10 +16,10 @@ All r10n automations are listed below. Click any card to view the full guide wit
   <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Generate VCF contact cards from phone numbers</span>
 </a>
 
-<a href="certificates/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-primary-fg-color--lightest)">
+<a href="fill-pdfs/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-primary-fg-color--lightest)">
   <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>
-  <span style="font-weight:600; margin-top:.5em;">Certificates</span>
-  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Create personalized PDF certificates from templates</span>
+  <span style="font-weight:600; margin-top:.5em;">Fill PDFs</span>
+  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Fill PDF templates with data from CSV/TXT files</span>
 </a>
 
 <a href="images/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-accent-fg-color--lightest)">
@@ -67,7 +67,7 @@ All r10n automations are listed below. Click any card to view the full guide wit
 | Automation | Command | Description |
 |------------|---------|-------------|
 | [Contacts](contacts/) | `r10n contacts` | Generate VCF from phone numbers |
-| [Certificates](certificates/) | `r10n certificates` | Create PDF certificates |
+| [Fill PDFs](fill-pdfs/) | `r10n fill-pdfs` | Fill PDF templates with data |
 | [Images](images/) | `r10n images` | Optimize images to WebP |
 | [Email](email/) | `r10n email` | Send bulk emails |
 | [Colors](colors/) | `r10n colors` | Convert CSS to oklch() |

@@ -9,7 +9,7 @@
 ## Features
 
 - **Contacts** - Generate VCF contact cards from phone numbers
-- **Certificates** - Create personalized PDF certificates from templates
+- **Fill PDFs** - Fill PDF templates with data from CSV/TXT files
 - **Images** - Optimize and convert images to WebP format
 - **Email** - Send bulk personalized emails with attachments
 - **Interactive CLI** - Step-by-step prompts guide you through each automation
@@ -41,8 +41,8 @@ Each command is interactive - just run it and follow the prompts:
 # Generate contact cards
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
 
-# Create certificates
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates
+# Fill PDFs
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs
 
 # Optimize images
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images
@@ -110,7 +110,7 @@ uv run r10n init
 
 # Run automations
 uv run r10n contacts
-uv run r10n certificates
+uv run r10n fill-pdfs
 uv run r10n images
 uv run r10n email
 

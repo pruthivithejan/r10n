@@ -4,19 +4,19 @@ icon: lucide/mail
 
 # Email
 
-Send bulk personalized emails with optional PDF attachments. Perfect for sending certificates, newsletters, or notifications.
+Send bulk personalized emails with optional PDF attachments. Perfect for sending filled PDFs, newsletters, or notifications.
 
 ---
 
 ## Overview
 
-The Email automation reads a list of recipients from a CSV file, personalizes each email using a template, and optionally attaches PDF files (like certificates).
+The Email automation reads a list of recipients from a CSV file, personalizes each email using a template, and optionally attaches PDF files (like filled PDFs from `r10n fill-pdfs`).
 
 **Key Features:**
 
 - Send to multiple recipients from CSV
 - Personalize emails with template variables
-- Attach PDF certificates automatically
+- Attach PDF files automatically
 - Secure SMTP with TLS support
 - Gmail App Password support
 
@@ -68,15 +68,15 @@ Step 2/4: Select recipients file
 Step 3/4: Select email body template
   Enter path to email body template [local/inputs/email/template.txt]: 
 
-Step 4/4: Select certificates directory
-  Enter path to directory with PDF certificates [local/outputs/certificates]: 
-  Found 25 certificates in: local/outputs/certificates
+Step 4/4: Select attachments directory
+  Enter path to directory with PDF attachments [local/outputs/fill-pdfs]:
+  Found 25 PDFs in: local/outputs/fill-pdfs
 
 Summary:
   Config:       local/configs/email.json
   Recipients:   local/inputs/email/recipients.csv
   Body:         local/inputs/email/template.txt
-  Certificates: local/outputs/certificates
+  Attachments:  local/outputs/fill-pdfs
 
 Warning: This will send real emails!
 Proceed with sending emails? [y/n]: y
@@ -100,7 +100,7 @@ uv run r10n email \
   --config local/configs/email.json \
   --recipients local/inputs/email/recipients.csv \
   --body local/inputs/email/template.txt \
-  --certificates-dir local/outputs/certificates
+  --attachments-dir local/outputs/fill-pdfs
 ```
 
 ---
@@ -112,7 +112,7 @@ uv run r10n email \
 | `--config` | `-c` | string | Yes | `local/configs/email.json` | Email configuration file |
 | `--recipients` | `-r` | string | Yes | `local/inputs/email/recipients.csv` | Recipients CSV file |
 | `--body` | `-b` | string | Yes | `local/inputs/email/template.txt` | Email body template |
-| `--certificates-dir` | `-d` | string | No | `local/outputs/certificates` | Directory with PDF attachments |
+| `--attachments-dir` | `-d` | string | No | `local/outputs/fill-pdfs` | Directory with PDF attachments |
 
 ---
 
@@ -134,7 +134,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email \
   --config local/configs/email.json \
   --recipients local/inputs/email/recipients.csv \
   --body local/inputs/email/template.txt \
-  --certificates-dir local/outputs/certificates
+  --attachments-dir local/outputs/fill-pdfs
 ```
 
 ### Example 3: Local Installation
@@ -144,7 +144,7 @@ uv run r10n email \
   --config local/configs/email.json \
   --recipients local/inputs/email/recipients.csv \
   --body local/inputs/email/template.txt \
-  --certificates-dir local/outputs/certificates
+  --attachments-dir local/outputs/fill-pdfs
 ```
 
 ### Example 4: Interactive Mode
@@ -170,7 +170,7 @@ Bob Johnson,bob@example.com
 
 **Required columns:**
 
-- `Name`: Recipient's name (used for personalization and finding certificates)
+- `Name`: Recipient's name (used for personalization and matching PDF attachments)
 - `Email`: Recipient's email address
 
 ### Email Template
@@ -271,21 +271,21 @@ To use Gmail, you need an App Password:
 
 ---
 
-## Certificate Attachments
+## PDF Attachments
 
-The automation matches certificates to recipients by name:
+The automation matches PDFs to recipients by name:
 
-1. Certificate files should be named like: `John_Doe.pdf`
+1. PDF files should be named like: `John_Doe.pdf`
 2. The automation looks for a PDF matching each recipient's name
 3. If found, it attaches the PDF to that recipient's email
 
 **Example structure:**
 
 ```
-local/outputs/certificates/
-├── John_Doe.pdf
-├── Jane_Smith.pdf
-└── Bob_Johnson.pdf
+local/outputs/fill-pdfs/
++-- John_Doe.pdf
++-- Jane_Smith.pdf
++-- Bob_Johnson.pdf
 ```
 
 ---
@@ -325,9 +325,9 @@ Done!
 - Ensure your firewall allows outgoing connections on port 587
 - Try port 465 with SSL if TLS doesn't work
 
-### "Certificate not found for recipient"
+### "PDF not found for recipient"
 
-- Ensure certificate filenames match recipient names exactly
+- Ensure PDF filenames match recipient names exactly
 - Check for spaces vs underscores: `John Doe` should have `John_Doe.pdf`
 
 ### Emails Going to Spam
@@ -356,6 +356,6 @@ Done!
 
 ## See Also
 
-- [Certificates Automation](certificates.md) — Generate certificates to attach
+- [Fill PDFs Automation](fill-pdfs.md) -- Generate filled PDFs to attach
 - [Contacts Automation](contacts.md) — Generate contact cards
 - [Get Started Guide](../get-started/index.md) — Setup instructions

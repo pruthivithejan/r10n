@@ -72,7 +72,7 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  certificates  Generate personalized PDF certificates
+  fill-pdfs     Fill PDF templates with data
   colors        Convert CSS colors to oklch() format
   contacts      Generate VCF contact cards from phone numbers
   email         Send bulk personalized emails
@@ -93,12 +93,12 @@ r10n/
 ├── local/                        # Your working directory (gitignored)
 │   ├── inputs/                   # Place your input files here
 │   │   ├── contacts/
-│   │   ├── certificates/
+│   │   ├── fill-pdfs/
 │   │   ├── images/
 │   │   └── email/
 │   ├── outputs/                  # Generated files appear here
 │   │   ├── contacts/
-│   │   ├── certificates/
+│   │   ├── fill-pdfs/
 │   │   ├── images/
 │   │   └── email/
 │   └── configs/                  # Configuration files
@@ -138,11 +138,11 @@ uv run r10n contacts \
 
 ```bash
 mkdir -p local/inputs/contacts
-mkdir -p local/inputs/certificates
+mkdir -p local/inputs/fill-pdfs
 mkdir -p local/inputs/images
 mkdir -p local/inputs/email
 mkdir -p local/outputs/contacts
-mkdir -p local/outputs/certificates
+mkdir -p local/outputs/fill-pdfs
 mkdir -p local/outputs/images
 mkdir -p local/outputs/email
 mkdir -p local/configs
@@ -182,14 +182,14 @@ uv run python scripts/setup.py
    ls -la local/outputs/contacts/
    ```
 
-### Example: Certificates Workflow
+### Example: Fill PDFs Workflow
 
-1. Place your template PDF in `local/inputs/certificates/`
+1. Place your template PDF in `local/inputs/fill-pdfs/`
 
 2. Create your data file:
 
    ```bash
-   cat > local/inputs/certificates/participants.csv << 'EOF'
+   cat > local/inputs/fill-pdfs/participants.csv << 'EOF'
    name,course,date
    John Doe,Web Development,2025-01-15
    Jane Smith,Data Science,2025-01-15
@@ -199,10 +199,8 @@ uv run python scripts/setup.py
 3. Run the automation:
 
    ```bash
-   uv run r10n certificates \
-     --template local/inputs/certificates/template.pdf \
-     --recipients local/inputs/certificates/participants.csv \
-     --output local/outputs/certificates/
+   uv run r10n fill-pdfs \
+     --recipients local/inputs/fill-pdfs/participants.csv
    ```
 
 ### Example: Images Workflow

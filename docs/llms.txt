@@ -1,6 +1,6 @@
 # r10n
 
-> CLI toolkit for automating repetitive data and workflow tasks: contacts, certificates, images, and email.
+> CLI toolkit for automating repetitive data and workflow tasks: contacts, fill-pdfs, images, and email.
 
 r10n is a Python CLI tool that automates everyday tasks with a beautiful interactive terminal UI. It supports two execution modes: instant execution via `uvx` (no installation required) and local installation for repeated use.
 
@@ -27,10 +27,10 @@ Generate VCF contact cards from phone numbers.
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts --input numbers.txt --prefix Customer --output contacts.vcf
 ```
 
-### Certificates
-Create personalized PDF certificates from templates.
+### Fill PDFs
+Fill PDF templates with data from CSV/TXT files. Features a visual field picker and preview-approve loop.
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n certificates --template template.pdf --recipients names.csv --output ./certificates
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs --recipients data.csv
 ```
 
 ### Images
@@ -59,7 +59,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file sty
   - [Setup Locally](get-started/setup-locally.md): Local installation guide
 - [Automations](automations/index.md): All available automations
   - [Contacts](automations/contacts.md): VCF contact card generation
-  - [Certificates](automations/certificates.md): PDF certificate creation
+  - [Fill PDFs](automations/fill-pdfs.md): PDF template filling
   - [Images](automations/images.md): Image optimization and WebP conversion
   - [Email](automations/email.md): Bulk email sending
   - [Colors](automations/colors.md): CSS color conversion to oklch()
