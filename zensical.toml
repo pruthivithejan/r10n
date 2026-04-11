@@ -14,6 +14,7 @@ nav = [
         "get-started/index.md",
         "get-started/run-on-terminal.md",
         "get-started/setup-locally.md",
+        "get-started/mcp-server.md",
     ]},
     { "Automations" = [
         "automations/index.md",
