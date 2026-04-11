@@ -1,19 +1,19 @@
-"""MCP tool for certificate generation."""
+"""MCP tool for PDF filling."""
 
-from src.automations.fill_certificates import fill_certificates_from_file
+from src.automations.fill_pdfs import fill_certificates_from_file
 from src.mcp.server import mcp
 
 
 @mcp.tool()
-def generate_certificates(
+def fill_pdfs(
     recipients_file: str,
     config_file: str,
-    base_dir: str = "data/certificates",
+    base_dir: str = "data/fill-pdfs",
 ) -> dict:
-    """Generate personalized PDF certificates from a template.
+    """Fill PDF templates with data from a CSV/TXT file.
 
     Args:
-        recipients_file: Path to CSV/TXT file with recipient data.
+        recipients_file: Path to CSV/TXT file with row data.
         config_file: Path to JSON configuration file with template, font, and field positions.
         base_dir: Base directory for resolving relative paths in config.
     """

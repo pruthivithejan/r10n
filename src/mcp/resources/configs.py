@@ -19,8 +19,8 @@ def list_automations() -> str:
             "required_params": ["input_file"],
         },
         {
-            "name": "generate_certificates",
-            "description": "Create personalized PDF certificates from templates",
+            "name": "fill_pdfs",
+            "description": "Fill PDF templates with data from CSV/TXT files",
             "required_params": ["recipients_file", "config_file"],
         },
         {
@@ -65,10 +65,10 @@ def _read_config(name: str) -> str:
     return json.dumps({"error": f"Config template not found: {name}"})
 
 
-@mcp.resource("r10n://configs/certificates")
-def certificates_config() -> str:
-    """Default configuration template for certificate generation."""
-    return _read_config("certificates")
+@mcp.resource("r10n://configs/fill-pdfs")
+def fill_pdfs_config() -> str:
+    """Default configuration template for PDF filling."""
+    return _read_config("fill-pdfs")
 
 
 @mcp.resource("r10n://configs/email")

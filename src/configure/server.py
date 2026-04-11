@@ -1,4 +1,4 @@
-"""Flask server for the visual certificate field picker."""
+"""Flask server for the visual PDF field picker."""
 
 import csv
 import io
@@ -11,7 +11,7 @@ from pathlib import Path
 import pypdfium2 as pdfium
 from flask import Flask, jsonify, render_template, request, send_file
 
-from src.automations.fill_certificates import (
+from src.automations.fill_pdfs import (
     create_text_overlay,
     fill_certificate,
     font_mappings_keys,
@@ -137,12 +137,12 @@ def create_app(template_pdf, recipients_file=None, output_config=None, done_even
 
         config = {
             "template_pdf": str(template_pdf),
-            "output_directory": data.get("output_directory", "local/outputs/certificates"),
+            "output_directory": data.get("output_directory", "local/outputs/fill-pdfs"),
             "font_family": data.get("font_family", "Helvetica"),
             "fields": data.get("fields", {}),
         }
 
-        save_path = Path(output_config or "local/configs/certificates.json")
+        save_path = Path(output_config or "local/configs/fill-pdfs.json")
         save_path.parent.mkdir(parents=True, exist_ok=True)
         save_path.write_text(json.dumps(config, indent=2))
 
@@ -171,7 +171,7 @@ def launch_picker(template_pdf, recipients_file=None, output_config=None):
 
     done_event = threading.Event()
     port = _find_free_port()
-    config_path = output_config or "local/configs/certificates.json"
+    config_path = output_config or "local/configs/fill-pdfs.json"
 
     app = create_app(
         template_pdf=template_pdf,

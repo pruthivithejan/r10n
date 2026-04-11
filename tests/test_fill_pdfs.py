@@ -1,5 +1,5 @@
 """
-Tests for the Certificate PDF generation automation.
+Tests for the PDF filling automation.
 
 These tests verify the certificate generation functionality for both
 local usage and uvx distribution.
@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.automations.fill_certificates import (
+from src.automations.fill_pdfs import (
     create_text_overlay,
     fill_certificate,
     generate_certificates,
@@ -285,7 +285,7 @@ class TestRegisterFuturaFont:
 
         # This may fail due to actual font loading, but we test the flow
         # In real tests, we'd mock pdfmetrics.registerFont
-        with patch("src.automations.fill_certificates.pdfmetrics.registerFont"):
+        with patch("src.automations.fill_pdfs.pdfmetrics.registerFont"):
             result = register_futura_font()
             # Result depends on whether the font file is actually valid
             assert isinstance(result, bool)
@@ -641,7 +641,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import fill_certificates as mod
+        from src.automations import fill_pdfs as mod
 
         assert hasattr(mod, "load_recipients")
         assert hasattr(mod, "load_config")
@@ -652,7 +652,7 @@ class TestUvxCompatibility:
 
     def test_fill_certificates_from_file_function_exists(self):
         """Test convenience function exists."""
-        from src.automations.fill_certificates import fill_certificates_from_file
+        from src.automations.fill_pdfs import fill_certificates_from_file
 
         assert callable(fill_certificates_from_file)
 

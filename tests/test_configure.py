@@ -194,7 +194,7 @@ class TestSaveRoute:
             "/api/save",
             json={
                 "font_family": "Helvetica",
-                "output_directory": "local/outputs/certificates",
+                "output_directory": "local/outputs/fill-pdfs",
                 "fields": fields,
             },
         )

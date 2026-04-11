@@ -19,7 +19,7 @@ class TestMcpResources:
         """Verify config resources are registered."""
         resources = asyncio.run(mcp.list_resources())
         uris = [str(r.uri) for r in resources]
-        assert "r10n://configs/certificates" in uris
+        assert "r10n://configs/fill-pdfs" in uris
         assert "r10n://configs/email" in uris
         assert "r10n://configs/images" in uris
         assert "r10n://configs/blog" in uris
@@ -35,10 +35,10 @@ class TestMcpResources:
         assert "generate_contacts" in names
         assert "validate_csv" in names
 
-    def test_certificates_config_content(self):
-        """Verify certificates config resource returns valid JSON."""
-        from src.mcp.resources.configs import certificates_config
+    def test_fill_pdfs_config_content(self):
+        """Verify fill-pdfs config resource returns valid JSON."""
+        from src.mcp.resources.configs import fill_pdfs_config
 
-        content = certificates_config()
+        content = fill_pdfs_config()
         config = json.loads(content)
         assert "fields" in config

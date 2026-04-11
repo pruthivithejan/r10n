@@ -34,10 +34,10 @@ def get_workspace_path(category: str, subfolder: str = "") -> Path:
     old_mappings = {
         "inputs/email": "data/emails",
         "inputs/contacts": "data/phone_numbers",
-        "inputs/certificates": "data/certificates",
+        "inputs/fill-pdfs": "data/certificates",
         "outputs/email": "data/emails/sent",
         "outputs/contacts": "data/phone_numbers",
-        "outputs/certificates": "data/certificates/output",
+        "outputs/fill-pdfs": "data/certificates/output",
         "outputs/images": "data/images/optimized",
         "configs": "data",
     }

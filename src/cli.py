@@ -20,7 +20,7 @@ from rich.table import Table
 # Import automation modules
 from src.automations import (
     convert_colors,
-    fill_certificates,
+    fill_pdfs,
     generate_contacts,
     markdown_to_pdf,
     optimize_images,
@@ -120,7 +120,7 @@ def main(ctx: click.Context):
 
     Available automations:
     - contacts: Generate VCF contact cards from phone numbers
-    - certificates: Generate personalized PDF certificates
+    - fill-pdfs: Fill PDF templates with data from CSV/TXT files
     - images: Optimize and convert images to WebP
     - email: Send bulk emails with attachments
     - colors: Convert CSS colors to oklch() format
@@ -232,31 +232,31 @@ def contacts(input_file, output, prefix):
 
 
 # =============================================================================
-# CERTIFICATES AUTOMATION
+# FILL PDFS AUTOMATION
 # =============================================================================
 
 
-@main.command()
-@click.option("--config", "-c", help="Certificate configuration file")
-@click.option("--recipients", "-r", help="Recipients data file (CSV or TXT)")
+@main.command("fill-pdfs")
+@click.option("--config", "-c", help="PDF fill configuration file")
+@click.option("--recipients", "-r", help="Data file (CSV or TXT)")
 @click.option("--template", "-t", help="PDF template file (for initial setup)")
-def certificates(config, recipients, template):
-    """Generate personalized PDF certificates
+def fill_pdfs_cmd(config, recipients, template):
+    """Fill PDF templates with data from CSV/TXT files
 
     Interactive process: configure field positions visually, preview a sample,
-    then generate all certificates.
+    then generate all filled PDFs.
     """
     import subprocess
     import tempfile
 
-    display_header("Certificate Generator", "Create personalized PDF certificates from templates")
+    display_header("PDF Filler", "Fill PDF templates with data from CSV/TXT files")
 
-    # Step 1: Recipients file
-    display_step(1, 2, "Select recipients file")
-    default_recipients = "local/inputs/certificates/recipients.csv"
+    # Step 1: Data file
+    display_step(1, 2, "Select data file")
+    default_recipients = "local/inputs/fill-pdfs/data.csv"
     if not recipients:
         recipients = Prompt.ask(
-            "  Enter path to recipients file (CSV or TXT)", default=default_recipients
+            "  Enter path to data file (CSV or TXT)", default=default_recipients
         )
 
     if not Path(recipients).exists():
@@ -281,7 +281,7 @@ Bob Johnson,Designer"""
 
     # Step 2: Configuration
     display_step(2, 2, "Configuration")
-    default_config = "local/configs/certificates.json"
+    default_config = "local/configs/fill-pdfs.json"
     if not config:
         config = Prompt.ask("  Enter path to configuration file", default=default_config)
 
@@ -296,7 +296,7 @@ Bob Johnson,Designer"""
         if not template:
             template = Prompt.ask(
                 "  Enter path to PDF template",
-                default="local/inputs/certificates/template.pdf",
+                default="local/inputs/fill-pdfs/template.pdf",
             )
         if not Path(template).exists():
             console.print(f"[red]  Template not found: {template}[/]")
@@ -334,7 +334,7 @@ Bob Johnson,Designer"""
 
         # Load first recipient for preview
         try:
-            all_recipients = fill_certificates.load_recipients(recipients)
+            all_recipients = fill_pdfs.load_recipients(recipients)
         except Exception as e:
             console.print(f"[red]Error loading recipients: {e}[/]")
             return
@@ -351,7 +351,7 @@ Bob Johnson,Designer"""
             preview_path = tmp.name
 
         try:
-            fill_certificates.fill_certificate(template_path, cfg, first_recipient, preview_path)
+            fill_pdfs.fill_certificate(template_path, cfg, first_recipient, preview_path)
             console.print(f"[green]  Preview generated.[/]")
 
             # Open the preview PDF
@@ -397,19 +397,19 @@ Bob Johnson,Designer"""
             console.print(f"[red]Error generating preview: {e}[/]")
             return
 
-    # Generate all certificates
-    output_dir = cfg.get("output_directory", "local/outputs/certificates")
+    # Generate all filled PDFs
+    output_dir = cfg.get("output_directory", "local/outputs/fill-pdfs")
     os.makedirs(output_dir, exist_ok=True)
 
     console.print()
-    console.print(f"[cyan]Generating {len(all_recipients)} certificates...[/]")
+    console.print(f"[cyan]Generating {len(all_recipients)} PDFs...[/]")
 
     try:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(cfg, f)
             temp_config = f.name
 
-        results = fill_certificates.fill_certificates_from_file(
+        results = fill_pdfs.fill_certificates_from_file(
             recipients, temp_config, base_dir="local"
         )
 
@@ -576,8 +576,8 @@ def images(input_dir, output, quality, max_size, prefix, preserve_names):
 @click.option("--config", "-c", help="Email configuration file")
 @click.option("--recipients", "-r", help="Recipients CSV file")
 @click.option("--body", "-b", help="Email body template file")
-@click.option("--certificates-dir", "-d", help="Directory with certificate attachments")
-def email(config, recipients, body, certificates_dir):
+@click.option("--attachments-dir", "-d", help="Directory with PDF attachments")
+def email(config, recipients, body, attachments_dir):
     """Send bulk personalized emails with attachments
 
     Step-by-step interactive process to send emails with certificate attachments.
@@ -672,20 +672,20 @@ The Team"""
     console.print(f"[green]  Using: {body}[/]")
     console.print()
 
-    # Step 4: Certificates directory
-    display_step(4, total_steps, "Select certificates directory")
-    default_certs = "local/outputs/certificates"
-    if not certificates_dir:
-        certificates_dir = Prompt.ask(
-            "  Enter path to directory with PDF certificates", default=default_certs
+    # Step 4: Attachments directory
+    display_step(4, total_steps, "Select attachments directory")
+    default_attachments = "local/outputs/fill-pdfs"
+    if not attachments_dir:
+        attachments_dir = Prompt.ask(
+            "  Enter path to directory with PDF attachments", default=default_attachments
         )
 
-    if not Path(certificates_dir).exists():
-        console.print(f"[yellow]  Directory not found: {certificates_dir}[/]")
+    if not Path(attachments_dir).exists():
+        console.print(f"[yellow]  Directory not found: {attachments_dir}[/]")
         console.print("[dim]  Emails will be sent without attachments.[/]")
     else:
-        cert_count = len(list(Path(certificates_dir).glob("*.pdf")))
-        console.print(f"[green]  Found {cert_count} certificates in: {certificates_dir}[/]")
+        pdf_count = len(list(Path(attachments_dir).glob("*.pdf")))
+        console.print(f"[green]  Found {pdf_count} PDFs in: {attachments_dir}[/]")
     console.print()
 
     # Confirmation
@@ -693,7 +693,7 @@ The Team"""
     console.print(f"  Config:       {config}")
     console.print(f"  Recipients:   {recipients}")
     console.print(f"  Body:         {body}")
-    console.print(f"  Certificates: {certificates_dir}")
+    console.print(f"  Attachments:  {attachments_dir}")
     console.print()
 
     console.print("[bold yellow]Warning:[/] This will send real emails!")
@@ -711,7 +711,7 @@ The Team"""
             email_list_file=recipients,
             body_file=body,
             config_file=config,
-            certificates_dir=certificates_dir,
+            certificates_dir=attachments_dir,
         )
 
         console.print()
@@ -1560,17 +1560,17 @@ def mcp():
 @click.option("--template", "-t", required=True, help="PDF template file")
 @click.option("--recipients", "-r", help="CSV file (for column headers)")
 @click.option(
-    "--output", "-o", default="local/configs/certificates.json", help="Output config path"
+    "--output", "-o", default="local/configs/fill-pdfs.json", help="Output config path"
 )
 def configure(template, recipients, output):
-    """Launch visual field picker for certificate configuration
+    """Launch visual field picker for PDF fill configuration
 
     Opens a browser-based tool where you can click on a PDF template
     to place fields, configure styling, preview results, and save the config.
     """
     from src.configure import launch_picker
 
-    display_header("Visual Field Picker", "Click on the template to place certificate fields")
+    display_header("Visual Field Picker", "Click on the template to place text fields")
 
     if not Path(template).exists():
         console.print(f"[red]Template not found: {template}[/]")
@@ -1599,8 +1599,8 @@ def configure(template, recipients, output):
         console.print()
         console.print(f"[bold green]Configuration saved to: {saved_path}[/]")
         console.print(
-            "[dim]  Run [cyan]r10n certificates --config "
-            f"{saved_path}[/cyan] to generate certificates.[/]"
+            "[dim]  Run [cyan]r10n fill-pdfs --config "
+            f"{saved_path}[/cyan] to generate filled PDFs.[/]"
         )
     except Exception as e:
         console.print(f"[red]Error: {e}[/]")
@@ -1661,7 +1661,7 @@ def status():
 
     console.print("[bold]Quick Start:[/]")
     console.print("  r10n contacts       Generate VCF contact cards")
-    console.print("  r10n certificates   Generate PDF certificates")
+    console.print("  r10n fill-pdfs      Fill PDF templates with data")
     console.print("  r10n images         Optimize images to WebP")
     console.print("  r10n email          Send bulk emails")
     console.print("  r10n colors         Convert CSS colors to oklch()")
@@ -1678,14 +1678,14 @@ def init():
     folders = [
         "local/configs",
         "local/inputs/contacts",
-        "local/inputs/certificates",
+        "local/inputs/fill-pdfs",
         "local/inputs/images",
         "local/inputs/email",
         "local/inputs/rename",
         "local/inputs/validate",
         "local/inputs/markdown",
         "local/outputs/contacts",
-        "local/outputs/certificates",
+        "local/outputs/fill-pdfs",
         "local/outputs/images",
         "local/outputs/rename",
         "local/outputs/validate",

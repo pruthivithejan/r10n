@@ -2,7 +2,7 @@
 
 from . import (
     convert_colors,
-    fill_certificates,
+    fill_pdfs,
     generate_contacts,
     markdown_to_pdf,
     optimize_images,
@@ -13,7 +13,7 @@ from . import (
 
 __all__ = [
     "convert_colors",
-    "fill_certificates",
+    "fill_pdfs",
     "generate_contacts",
     "markdown_to_pdf",
     "optimize_images",

@@ -9,7 +9,7 @@ from mcp.server import FastMCP
 mcp = FastMCP(
     name="r10n",
     instructions=(
-        "r10n automation toolkit - exposes contacts, certificates, images, email, "
+        "r10n automation toolkit - exposes contacts, fill-pdfs, images, email, "
         "colors, rename, validate, and markdown-to-pdf automations as tools."
     ),
 )
