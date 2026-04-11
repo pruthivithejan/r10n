@@ -41,7 +41,6 @@ dependencies = [
     "openpyxl>=3.0.0",
     "zensical>=0.0.8",
     "markdown>=3.10.1",
-    "mcp>=1.0.0",
     "flask>=3.0.0",
     "pypdfium2>=4.0.0",
 ]
@@ -54,7 +53,6 @@ Repository = "https://github.com/pruthivithejan/r10n.git"
 
 [project.scripts]
 r10n = "src.cli:main"
-r10n-mcp = "src.mcp.server:main"
 
 [project.optional-dependencies]
 dev = [

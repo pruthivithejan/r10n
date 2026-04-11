@@ -12,8 +12,7 @@
 4. [Documentation Standards](#documentation-standards)
 5. [Testing Requirements](#testing-requirements)
 6. [Git Workflow](#git-workflow)
-7. [MCP Server Roadmap](#mcp-server-roadmap)
-8. [Examples](#examples)
+7. [Examples](#examples)
 
 ---
 
@@ -629,83 +628,6 @@ test(images): add edge case tests for WebP conversion
 8. [ ] Run tests: `uv run pytest`
 9. [ ] Run linting: `uv run ruff check src tests`
 10. [ ] Commit with appropriate message
-
----
-
-## MCP Server Roadmap
-
-### Overview
-
-The Model Context Protocol (MCP) enables AI applications to connect to external tools. r10n automations are excellent candidates for MCP tools.
-
-### Architecture Plan
-
-```
-r10n-mcp-server/
-├── src/
-│   └── mcp_server.py        # FastMCP server implementation
-├── pyproject.toml           # Separate package or same package
-└── README.md
-```
-
-### Implementation Approach
-
-1. **Use FastMCP (Python SDK)**
-   ```python
-   from mcp.server.fastmcp import FastMCP
-
-   mcp = FastMCP("r10n")
-
-   @mcp.tool()
-   async def generate_contacts(
-       input_file: str,
-       prefix: str = "Contact",
-       output_file: str = None
-   ) -> str:
-       """Generate VCF contact cards from phone numbers.
-
-       Args:
-           input_file: Path to file with phone numbers (one per line)
-           prefix: Prefix for contact names
-           output_file: Output VCF file path
-       """
-       from src.automations.generate_contacts import generate_vcf_from_file
-       result = generate_vcf_from_file(input_file, output_file, prefix)
-       return f"Generated {result['valid']} contacts to {result['output_file']}"
-   ```
-
-2. **Tool Registration for Each Automation**
-   - `generate_contacts`: Generate VCF from phone numbers
-   - `optimize_images`: Optimize images to WebP
-   - `fill_pdfs`: Fill PDF templates with data
-   - `send_emails`: Send bulk emails (with confirmation)
-   - `convert_colors`: Convert CSS colors to oklch
-
-3. **Configuration**
-   Claude Desktop config (`claude_desktop_config.json`):
-   ```json
-   {
-     "mcpServers": {
-       "r10n": {
-         "command": "uv",
-         "args": ["--directory", "/path/to/r10n", "run", "mcp-server"]
-       }
-     }
-   }
-   ```
-
-4. **Safety Considerations**
-   - Email automation requires explicit confirmation
-   - File operations should be sandboxed to project directory
-   - Sensitive data (SMTP credentials) handled via environment variables
-
-### Next Steps
-
-1. Create `src/mcp_server.py` with FastMCP implementation
-2. Add `mcp` dependency to `pyproject.toml`
-3. Create entry point: `r10n-mcp = "src.mcp_server:main"`
-4. Write MCP-specific documentation
-5. Test with Claude Desktop
 
 ---
 
