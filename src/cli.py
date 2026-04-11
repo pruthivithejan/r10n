@@ -238,118 +238,25 @@ def contacts(input_file, output, prefix):
 
 @main.command()
 @click.option("--config", "-c", help="Certificate configuration file")
-@click.option("--recipients", "-r", help="Recipients data file")
-@click.option("--template", "-t", help="PDF template file")
-@click.option("--output", "-o", help="Output directory")
-def certificates(config, recipients, template, output):
+@click.option("--recipients", "-r", help="Recipients data file (CSV or TXT)")
+@click.option("--template", "-t", help="PDF template file (for initial setup)")
+def certificates(config, recipients, template):
     """Generate personalized PDF certificates
 
-    Step-by-step interactive process to create certificates from a template.
+    Interactive process: configure field positions visually, preview a sample,
+    then generate all certificates.
     """
+    import subprocess
+    import tempfile
+
     display_header("Certificate Generator", "Create personalized PDF certificates from templates")
 
-    total_steps = 4
-
-    # Step 1: Configuration file
-    display_step(1, total_steps, "Select configuration")
-    default_config = "local/configs/certificates.json"
-    if not config:
-        config = Prompt.ask("  Enter path to configuration file", default=default_config)
-
-    # Load config or create example
-    if not Path(config).exists():
-        console.print(f"\n[yellow]Config not found: {config}[/]")
-        choice = Prompt.ask(
-            "  How would you like to create a configuration?",
-            choices=["visual", "example", "cancel"],
-            default="visual",
-        )
-        if choice == "visual":
-            console.print()
-            template_path = Prompt.ask(
-                "  Enter path to PDF template",
-                default="local/inputs/certificates/template.pdf",
-            )
-            if not Path(template_path).exists():
-                console.print(f"[red]  Template not found: {template_path}[/]")
-                console.print("[dim]  Add your PDF template and try again.[/]")
-                return
-            recipients_path = Prompt.ask(
-                "  Enter path to recipients CSV (optional, for field names)",
-                default="",
-            )
-            from src.configure import launch_picker
-
-            console.print()
-            console.print("[cyan]Opening visual picker in your browser...[/]")
-            try:
-                launch_picker(
-                    template_pdf=template_path,
-                    recipients_file=recipients_path or None,
-                    output_config=config,
-                )
-                console.print(f"[green]  Config saved: {config}[/]")
-            except Exception as e:
-                console.print(f"[red]  Visual picker error: {e}[/]")
-                return
-        elif choice == "example":
-            config_path = Path(config)
-            config_path.parent.mkdir(parents=True, exist_ok=True)
-            example_config = {
-                "template_pdf": "local/inputs/certificates/template.pdf",
-                "output_directory": "local/outputs/certificates",
-                "font_family": "Helvetica",
-                "fields": {
-                    "name": {
-                        "x": 300,
-                        "y": 400,
-                        "font_size": 36,
-                        "font_weight": "bold",
-                        "alignment": "center",
-                        "color": [0, 0, 0],
-                    },
-                    "position": {
-                        "x": 300,
-                        "y": 350,
-                        "font_size": 24,
-                        "font_weight": "normal",
-                        "alignment": "center",
-                        "color": [50, 50, 50],
-                    },
-                },
-            }
-            config_path.write_text(json.dumps(example_config, indent=2))
-            console.print(f"[green]  Created: {config}[/]")
-            console.print("[dim]  Edit this file to match your template layout.[/]")
-        else:
-            console.print("[red]Cancelled.[/]")
-            return
-
-    cfg = load_config(config)
-    if cfg:
-        console.print(f"[green]  Using: {config}[/]")
-    console.print()
-
-    # Step 2: Template PDF
-    display_step(2, total_steps, "Select PDF template")
-    default_template = cfg.get("template_pdf", "local/inputs/certificates/template.pdf")
-    if not template:
-        template = Prompt.ask("  Enter path to PDF template", default=default_template)
-
-    if not Path(template).exists():
-        console.print(f"[red]  Template not found: {template}[/]")
-        console.print("[dim]  Please add your PDF template file and try again.[/]")
-        return
-
-    console.print(f"[green]  Using: {template}[/]")
-    console.print()
-
-    # Step 3: Recipients file
-    display_step(3, total_steps, "Select recipients file")
-    default_recipients = "local/inputs/certificates/recipients.txt"
+    # Step 1: Recipients file
+    display_step(1, 2, "Select recipients file")
+    default_recipients = "local/inputs/certificates/recipients.csv"
     if not recipients:
         recipients = Prompt.ask(
-            "  Enter path to recipients file (TXT or CSV)", default=default_recipients
+            "  Enter path to recipients file (CSV or TXT)", default=default_recipients
         )
 
     if not Path(recipients).exists():
@@ -357,12 +264,10 @@ def certificates(config, recipients, template, output):
         if Confirm.ask("  Create example file?"):
             recipients_path = Path(recipients)
             recipients_path.parent.mkdir(parents=True, exist_ok=True)
-            example_content = """# Recipients file (one per line)
-# Format: Name<TAB>Position
-# Or use CSV with headers: name,position
-John Doe	Team Lead
-Jane Smith	Developer
-Bob Johnson	Designer"""
+            example_content = """Name,Position
+John Doe,Team Lead
+Jane Smith,Developer
+Bob Johnson,Designer"""
             recipients_path.write_text(example_content)
             console.print(f"[green]  Created: {recipients}[/]")
             console.print("[dim]  Edit this file and run the command again.[/]")
@@ -374,38 +279,132 @@ Bob Johnson	Designer"""
     console.print(f"[green]  Using: {recipients}[/]")
     console.print()
 
-    # Step 4: Output directory
-    display_step(4, total_steps, "Set output directory")
-    default_output = cfg.get("output_directory", "local/outputs/certificates")
-    if not output:
-        output = Prompt.ask("  Enter output directory", default=default_output)
-    console.print(f"[green]  Output: {output}[/]")
+    # Step 2: Configuration
+    display_step(2, 2, "Configuration")
+    default_config = "local/configs/certificates.json"
+    if not config:
+        config = Prompt.ask("  Enter path to configuration file", default=default_config)
+
+    # If config doesn't exist, open visual picker to create it
+    config_exists = Path(config).exists()
+    if not config_exists:
+        console.print(f"\n[yellow]Config not found: {config}[/]")
+        console.print("[cyan]  Opening visual picker to configure field positions...[/]")
+        console.print()
+
+        # Get template path
+        if not template:
+            template = Prompt.ask(
+                "  Enter path to PDF template",
+                default="local/inputs/certificates/template.pdf",
+            )
+        if not Path(template).exists():
+            console.print(f"[red]  Template not found: {template}[/]")
+            console.print("[dim]  Add your PDF template and try again.[/]")
+            return
+
+        from src.configure import launch_picker
+
+        try:
+            launch_picker(
+                template_pdf=template,
+                recipients_file=recipients,
+                output_config=config,
+            )
+            console.print(f"[green]  Config saved: {config}[/]")
+        except Exception as e:
+            console.print(f"[red]  Visual picker error: {e}[/]")
+            return
+    else:
+        console.print(f"[green]  Using: {config}[/]")
+
     console.print()
 
-    # Confirmation
-    console.print("[bold]Summary:[/]")
-    console.print(f"  Config:     {config}")
-    console.print(f"  Template:   {template}")
-    console.print(f"  Recipients: {recipients}")
-    console.print(f"  Output:     {output}")
-    console.print()
+    # Preview loop: generate a sample certificate and let user approve or re-edit
+    while True:
+        cfg = load_config(config)
+        if not cfg:
+            console.print("[red]Failed to load configuration.[/]")
+            return
 
-    if not Confirm.ask("Proceed with certificate generation?"):
-        console.print("[yellow]Cancelled.[/]")
-        return
+        template_path = cfg.get("template_pdf", "")
+        if not Path(template_path).exists():
+            console.print(f"[red]Template not found: {template_path}[/]")
+            return
 
-    # Run the automation
+        # Load first recipient for preview
+        try:
+            all_recipients = fill_certificates.load_recipients(recipients)
+        except Exception as e:
+            console.print(f"[red]Error loading recipients: {e}[/]")
+            return
+
+        if not all_recipients:
+            console.print("[red]No valid recipients found in the file.[/]")
+            return
+
+        first_recipient = all_recipients[0]
+        console.print(f"[cyan]Generating preview for:[/] {first_recipient.get('name', 'Unknown')}")
+
+        # Generate a single preview certificate
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+            preview_path = tmp.name
+
+        try:
+            fill_certificates.fill_certificate(template_path, cfg, first_recipient, preview_path)
+            console.print(f"[green]  Preview generated.[/]")
+
+            # Open the preview PDF
+            try:
+                if sys.platform == "darwin":
+                    subprocess.run(["open", preview_path], check=True)
+                elif sys.platform == "win32":
+                    os.startfile(preview_path)
+                else:
+                    subprocess.run(["xdg-open", preview_path], check=True)
+                console.print("[dim]  Preview opened in your default PDF viewer.[/]")
+            except Exception:
+                console.print(f"[dim]  Preview saved at: {preview_path}[/]")
+
+            console.print()
+            approved = Confirm.ask("Does the preview look correct?", default=True)
+
+            if approved:
+                # Clean up preview
+                Path(preview_path).unlink(missing_ok=True)
+                break
+            else:
+                # Clean up preview and re-open picker
+                Path(preview_path).unlink(missing_ok=True)
+                console.print()
+                console.print("[cyan]Re-opening visual picker to edit configuration...[/]")
+                from src.configure import launch_picker
+
+                try:
+                    launch_picker(
+                        template_pdf=template_path,
+                        recipients_file=recipients,
+                        output_config=config,
+                    )
+                    console.print(f"[green]  Config updated: {config}[/]")
+                    console.print()
+                except Exception as e:
+                    console.print(f"[red]  Visual picker error: {e}[/]")
+                    return
+
+        except Exception as e:
+            Path(preview_path).unlink(missing_ok=True)
+            console.print(f"[red]Error generating preview: {e}[/]")
+            return
+
+    # Generate all certificates
+    output_dir = cfg.get("output_directory", "local/outputs/certificates")
+    os.makedirs(output_dir, exist_ok=True)
+
     console.print()
-    console.print("[cyan]Generating certificates...[/]")
+    console.print(f"[cyan]Generating {len(all_recipients)} certificates...[/]")
 
     try:
-        # Update config with paths
-        cfg["template_pdf"] = template
-        cfg["output_directory"] = output
-
-        # Save updated config temporarily
-        import tempfile
-
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(cfg, f)
             temp_config = f.name
@@ -426,7 +425,7 @@ Bob Johnson	Designer"""
         table.add_row("Total recipients", str(results.get("total", 0)))
         table.add_row("Generated", str(results.get("generated", 0)))
         table.add_row("Failed", str(results.get("failed", 0)))
-        table.add_row("Output directory", output)
+        table.add_row("Output directory", output_dir)
         console.print(table)
 
     except Exception as e:

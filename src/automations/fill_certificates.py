@@ -171,12 +171,16 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
             color = field_config.get("color", [0, 0, 0])
             alignment = field_config.get("alignment", "left")
 
-            # Adjust font size for long names
-            if field_name == "name" and len(text) > 20:
-                font_size = font_size - 8
-                print(
-                    f"Note: Reduced font size to {font_size}px for long name: {text[:30]}{'...' if len(text) > 30 else ''}"
-                )
+            # Adjust font size for long text (reduce proportionally)
+            base_size = font_size
+            if len(text) > 20:
+                reduction = (len(text) - 20) * 0.4
+                font_size = max(base_size * 0.5, base_size - reduction)
+                font_size = round(font_size)
+                if font_size != base_size:
+                    print(
+                        f"Note: Reduced font size from {base_size} to {font_size}px for long text in '{field_name}': {text[:30]}{'...' if len(text) > 30 else ''}"
+                    )
 
             # Set font with improved fallback handling
             font_name = None
