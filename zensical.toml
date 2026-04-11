@@ -1,6 +1,6 @@
 [project]
 site_name = "r10n"
-site_description = "Automate repetitive routines: contacts, certificates, images, and email"
+site_description = "Automate repetitive routines: contacts, fill PDFs, images, and email"
 site_author = "Pruthivi Thejan"
 site_url = "https://pruthivithejan.github.io/r10n/"
 repo_url = "https://github.com/pruthivithejan/r10n"
@@ -19,7 +19,7 @@ nav = [
     { "Automations" = [
         "automations/index.md",
         "automations/contacts.md",
-        "automations/certificates.md",
+        "automations/fill-pdfs.md",
         "automations/images.md",
         "automations/email.md",
         "automations/colors.md",

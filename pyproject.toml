@@ -1,7 +1,7 @@
 [project]
 name = "r10n"
 version = "2.0.0"
-description = "r10n (routine automation): Automates repetitive routines like emails, certificates, contacts, images, and more"
+description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
@@ -11,7 +11,7 @@ authors = [
 keywords = [
     "automation",
     "email",
-    "certificates",
+    "pdf",
     "contacts",
     "vcf",
     "images",

@@ -35,7 +35,7 @@ r10n/
 │   └── automations/              # Automation modules
 │       ├── __init__.py
 │       ├── generate_contacts.py
-│       ├── fill_certificates.py
+│       ├── fill_pdfs.py
 │       ├── optimize_images.py
 │       ├── send_same_email.py
 │       └── utils.py
@@ -677,7 +677,7 @@ r10n-mcp-server/
 2. **Tool Registration for Each Automation**
    - `generate_contacts`: Generate VCF from phone numbers
    - `optimize_images`: Optimize images to WebP
-   - `fill_certificates`: Generate PDF certificates
+   - `fill_pdfs`: Fill PDF templates with data
    - `send_emails`: Send bulk emails (with confirmation)
    - `convert_colors`: Convert CSS colors to oklch
 

@@ -1,4 +1,4 @@
-"""Tests for the visual certificate field picker."""
+"""Tests for the visual PDF field picker."""
 
 import json
 import tempfile

@@ -111,7 +111,7 @@ Optimize and convert images to WebP format.
 
 ### send_email
 
-Send bulk personalized emails with optional certificate attachments.
+Send bulk personalized emails with optional PDF attachments.
 
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
