@@ -20,11 +20,11 @@ from src.automations.send_same_email import (
     SimpleEmailSender,
     find_matching_certificate,
     load_simple_config,
+    preview_email_setup,
     normalize_name_for_matching,
     send_from_file,
     send_personalized_emails_with_certificates,
     send_same_email_to_all,
-    test_email_setup,
 )
 
 
@@ -118,6 +118,21 @@ class TestSimpleEmailSender:
         """Test disconnect when not connected does nothing."""
         # Should not raise
         sender.disconnect()
+
+    @patch("smtplib.SMTP")
+    def test_ensure_connected_reconnects_after_noop_failure(self, mock_smtp, sender):
+        """Test ensure_connected reconnects when the connection is stale."""
+        first_connection = MagicMock()
+        second_connection = MagicMock()
+        mock_smtp.side_effect = [first_connection, second_connection]
+
+        assert sender.connect() is True
+        first_connection.noop.side_effect = smtplib.SMTPServerDisconnected("lost")
+
+        assert sender.ensure_connected() is True
+        first_connection.quit.assert_called_once()
+        second_connection.login.assert_called_once_with("sender@example.com", "password")
+        assert sender.smtp_connection is second_connection
 
 
 class TestCreateMessage:
@@ -584,6 +599,35 @@ class TestSendPersonalizedEmailsWithCertificates:
         assert results["sent"] == 2
         assert "Alice Smith" in results["missing_certificates"]
 
+    def test_send_personalized_with_no_valid_recipients(self, tmp_path):
+        """Test early return when the CSV has no usable recipients."""
+        email_list = tmp_path / "emails.csv"
+        email_list.write_text("Name,Email\n,\n", encoding="utf-8")
+
+        config = tmp_path / "config.json"
+        config.write_text(
+            json.dumps(
+                {
+                    "smtp_server": "smtp.example.com",
+                    "smtp_port": 587,
+                    "email": "sender@example.com",
+                    "password": "password",
+                    "subject": "Your Certificate",
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        results = send_personalized_emails_with_certificates(
+            email_list_file=str(email_list),
+            subject="Your Certificate",
+            body_template="Dear {name}, here is your certificate.",
+            config_file=str(config),
+            certificates_dir=str(tmp_path / "certificates"),
+        )
+
+        assert results == {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
+
 
 class TestSendFromFile:
     """Test send_from_file function."""
@@ -650,8 +694,8 @@ class TestSendFromFile:
         assert results["total"] == 1
 
 
-class TestTestEmailSetup:
-    """Test the test_email_setup function."""
+class TestPreviewEmailSetup:
+    """Test the preview_email_setup helper."""
 
     @pytest.fixture
     def setup_test_files(self):
@@ -699,7 +743,7 @@ class TestTestEmailSetup:
     def test_email_setup_success(self, setup_test_files):
         """Test successful email setup test."""
         files = setup_test_files
-        result = test_email_setup(
+        result = preview_email_setup(
             email_list_file=files["email_list"],
             body_file=files["body"],
             config_file=files["config"],
@@ -725,6 +769,7 @@ class TestUvxCompatibility:
         assert hasattr(mod, "send_personalized_emails_with_certificates")
         assert hasattr(mod, "find_matching_certificate")
         assert hasattr(mod, "normalize_name_for_matching")
+        assert hasattr(mod, "preview_email_setup")
 
     def test_dataclass_fields(self):
         """Test SimpleEmailConfig has all expected fields."""

@@ -112,6 +112,23 @@ class TestLoadRecipients:
         finally:
             Path(file_path).unlink()
 
+    def test_load_recipients_csv_repairs_shifted_columns(self):
+        """Test CSV rows where the name column contains an index value."""
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".csv", delete=False, encoding="utf-8"
+        ) as f:
+            f.write("Name,Position,E-mail\n")
+            f.write("1,Alice Smith,Engineer\n")
+            file_path = f.name
+
+        try:
+            recipients = load_recipients(file_path)
+            assert len(recipients) == 1
+            assert recipients[0]["name"] == "Alice Smith"
+            assert recipients[0]["position"] == "Engineer"
+        finally:
+            Path(file_path).unlink()
+
     def test_load_recipients_skips_empty_lines(self):
         """Test that empty lines are skipped in TXT files."""
         with tempfile.NamedTemporaryFile(
@@ -634,6 +651,47 @@ class TestGenerateCertificates:
 
         assert result["total"] == 2
         assert result["generated"] == 2
+
+    def test_generate_certificates_keeps_project_relative_paths(self, monkeypatch, tmp_path):
+        """Test anchored relative paths are resolved from the workspace, not base_dir."""
+        monkeypatch.chdir(tmp_path)
+
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+
+        (tmp_path / "templates").mkdir()
+        (tmp_path / "workspace").mkdir()
+        (tmp_path / "configs").mkdir()
+
+        template_path = tmp_path / "templates" / "template.pdf"
+        c = canvas.Canvas(str(template_path), pagesize=letter)
+        c.drawString(100, 700, "Certificate Template")
+        c.save()
+
+        recipients_path = tmp_path / "workspace" / "recipients.txt"
+        recipients_path.write_text("Alice Smith\n", encoding="utf-8")
+
+        config_path = tmp_path / "configs" / "fill-pdfs.json"
+        config_path.write_text(
+            json.dumps(
+                {
+                    "template_pdf": "templates/template.pdf",
+                    "output_directory": "workspace/output",
+                    "fields": {"name": {"x": 306, "y": 400, "font_size": 24}},
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = generate_certificates(
+            recipients_file="workspace/recipients.txt",
+            config_file="configs/fill-pdfs.json",
+            base_dir=str(tmp_path / "elsewhere"),
+        )
+
+        assert result["generated"] == 1
+        assert (tmp_path / "workspace" / "output").exists()
+        assert len(list((tmp_path / "workspace" / "output").glob("*.pdf"))) == 1
 
 
 class TestUvxCompatibility:

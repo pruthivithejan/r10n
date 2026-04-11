@@ -401,6 +401,21 @@ class TestRenameFiles:
         with pytest.raises(FileNotFoundError):
             rename_files(input_directory="/nonexistent/path")
 
+    def test_rename_files_marks_conflicts_as_unsuccessful(self, setup_files):
+        """Test conflicting targets are reported through the result object."""
+        temp_path = Path(setup_files)
+        (temp_path / "img_photo_0.jpg").write_bytes(b"existing")
+
+        result = rename_files(
+            input_directory=setup_files,
+            prefix="img_",
+            file_pattern="photo_0.jpg",
+        )
+
+        assert result.success is False
+        assert result.skipped == 1
+        assert result.errors[0]["error"].startswith("Target already exists")
+
 
 class TestPreviewRename:
     """Test the preview_rename function."""

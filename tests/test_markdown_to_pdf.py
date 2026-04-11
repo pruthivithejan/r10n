@@ -427,6 +427,26 @@ class TestConvertDirectory:
             expected_output = output_dir / "docs" / "api" / "reference.pdf"
             assert expected_output.exists() or result["converted"] >= 1
 
+    def test_convert_directory_reports_failed_files(self):
+        """Test per-file failures are surfaced in the batch summary."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            output_dir = temp_path / "output"
+            missing_css = temp_path / "missing.css"
+
+            (temp_path / "doc1.md").write_text("# Document 1")
+
+            result = convert_directory(
+                input_dir=str(temp_path),
+                output_dir=str(output_dir),
+                css_file=str(missing_css),
+            )
+
+            assert result["total"] == 1
+            assert result["converted"] == 0
+            assert result["failed"] == 1
+            assert result["files"][0]["success"] is False
+
 
 class TestLoadConfig:
     """Test configuration loading from file."""

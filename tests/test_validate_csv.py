@@ -516,6 +516,22 @@ class TestCleanCsv:
 
             assert result["success"] is True
 
+    def test_clean_csv_creates_nested_output_directory(self):
+        """Test cleaning writes to nested output directories when needed."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            input_path = Path(temp_dir) / "source.csv"
+            output_path = Path(temp_dir) / "nested" / "clean" / "output.csv"
+
+            with open(input_path, "w", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["name"])
+                writer.writerow(["Alice"])
+
+            result = clean_csv(input_file=str(input_path), output_file=str(output_path))
+
+            assert result["success"] is True
+            assert output_path.exists()
+
 
 class TestGenerateReport:
     """Test validation report generation."""

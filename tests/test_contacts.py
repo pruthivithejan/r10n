@@ -61,6 +61,19 @@ class TestCleanNumber:
 class TestGenerateVcfFromFile:
     """Test VCF generation from file."""
 
+    def test_default_output_path_uses_local_contacts_directory(self, monkeypatch, tmp_path):
+        """Test bare output filenames are written to local/outputs/contacts."""
+        monkeypatch.chdir(tmp_path)
+        input_file = tmp_path / "numbers.txt"
+        input_file.write_text("0771234567\n", encoding="utf-8")
+
+        result = generate_vcf_from_file(str(input_file), "contacts.vcf", "Team")
+
+        expected_output = tmp_path / "local" / "outputs" / "contacts" / "contacts.vcf"
+        assert Path(result["output_file"]) == Path("local/outputs/contacts/contacts.vcf")
+        assert expected_output.exists()
+        assert "FN:Team 1" in expected_output.read_text(encoding="utf-8")
+
     def test_valid_numbers(self):
         """Test generating VCF with valid numbers."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:

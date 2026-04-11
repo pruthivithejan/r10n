@@ -616,6 +616,32 @@ class TestOptimizeImagesFunction:
             finally:
                 Path(config_path).unlink()
 
+    def test_optimize_images_config_overrides_output_and_prefix(self, setup_images):
+        """Test CLI arguments override output and prefix from config files."""
+        with tempfile.TemporaryDirectory() as output_dir:
+            config_data = {
+                "input_directory": setup_images,
+                "output_directory": str(Path(setup_images) / "from-config"),
+                "quality": 70,
+                "prefix": "optimized",
+            }
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+                json.dump(config_data, f)
+                config_path = f.name
+
+            try:
+                results = optimize_images(
+                    input_dir=setup_images,
+                    output_dir=output_dir,
+                    prefix="photo",
+                    config_file=config_path,
+                )
+                assert results["processed"] == 2
+                assert len(list(Path(output_dir).glob("photo*.webp"))) == 2
+                assert not (Path(setup_images) / "from-config").exists()
+            finally:
+                Path(config_path).unlink()
+
     def test_optimize_images_default_output_dir(self, setup_images):
         """Test default output directory creation."""
         results = optimize_images(input_dir=setup_images)

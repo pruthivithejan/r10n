@@ -376,7 +376,7 @@ def send_from_file(
         return {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
 
 
-def test_email_setup(
+def preview_email_setup(
     email_list_file: str, body_file: str, config_file: str, certificates_dir: str
 ) -> dict:
     """Test email setup without sending actual emails"""
@@ -459,6 +459,11 @@ def test_email_setup(
     except Exception as e:
         print(f"❌ Error in test setup: {e!s}")
         return {"error": str(e)}
+
+
+# Backward-compatible alias for older imports while preventing pytest collection.
+test_email_setup = preview_email_setup
+test_email_setup.__test__ = False
 
 
 if __name__ == "__main__":
