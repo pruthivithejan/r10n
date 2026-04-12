@@ -255,6 +255,7 @@ If you're behind a firewall or have slow internet, consider [setting up locally]
 
 ## Next Steps
 
+- [Install Binary](install-binary.md) — Install with curl and update via `r10n upgrade`
 - [Setup Locally](setup-locally.md) — For repeated use or development
 - [Automations](../automations/index.md) — Detailed guides for each automation
 - [GitHub Issues](https://github.com/pruthivithejan/r10n/issues) — Get help or report bugs

@@ -37,6 +37,27 @@ uv sync
 uv run r10n --help
 ```
 
+### Install Binary (curl)
+
+Install a prebuilt binary (no Python or uv required):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh
+```
+
+Safer alternative:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh -o install.sh
+sh install.sh
+```
+
+Update later with:
+
+```bash
+r10n upgrade
+```
+
 ## Usage
 
 Each command is interactive - just run it and follow the prompts:
@@ -96,8 +117,8 @@ Full documentation is available at [pruthivithejan.github.io/r10n](https://pruth
 
 ## Requirements
 
-- Python 3.10+
-- [uv](https://docs.astral.sh/uv/) package manager
+- For `uvx` / local source install: Python 3.10+ and [uv](https://docs.astral.sh/uv/)
+- For prebuilt binary install: `curl` (macOS/Linux)
 
 ## Local Development
 

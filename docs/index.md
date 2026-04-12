@@ -57,6 +57,20 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
     uv run r10n --help
     ```
 
+=== "Install Binary (curl)"
+
+    Install the standalone binary:
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh
+    ```
+
+    Update later with:
+
+    ```bash
+    r10n upgrade
+    ```
+
 ---
 
 ## Available Automations

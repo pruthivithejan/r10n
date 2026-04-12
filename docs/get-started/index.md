@@ -19,6 +19,10 @@ r10n lets you automate everyday tasks instantly, with no installation required â
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M20 16V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v9m16 0H4m16 0 1.28 2.55a1 1 0 0 1-.9 1.45H3.62a1 1 0 0 1-.9-1.45L4 16"/></svg>
     <span style="font-size:1.1rem; font-weight:600; margin-left:.7rem;">Setup Locally</span>
   </a>
+  <a href="install-binary/" style="flex:1; min-width:220px; border:1px solid var(--md-default-fg-color--lightest); border-radius:.7rem; padding:1.1rem 1rem; display:flex; align-items:center; text-decoration:none; background:var(--md-accent-fg-color--lightest)">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M12 15V3"/><path d="m6 9 6 6 6-6"/><path d="M20 21H4"/></svg>
+    <span style="font-size:1.1rem; font-weight:600; margin-left:.7rem;">Install Binary</span>
+  </a>
 </div>
 
 ---
@@ -26,6 +30,7 @@ r10n lets you automate everyday tasks instantly, with no installation required â
 ## Walkthrough
 
 - **Not installed Python or uv?** Start with [Run Instantly](run-on-terminal/) â€” works everywhere, even on unmodified machines.
+- **Want a single local command without Python tooling?** Use [Install Binary](install-binary/).
 - **Want to use r10n more than once?** Use [Setup Locally](setup-locally/).
 - Each guide is step-by-step and copy-paste friendly.
 

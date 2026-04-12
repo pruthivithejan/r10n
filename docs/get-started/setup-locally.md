@@ -276,6 +276,12 @@ git pull
 uv sync
 ```
 
+If you installed via standalone binary, use:
+
+```bash
+r10n upgrade
+```
+
 ---
 
 ## Development Setup
