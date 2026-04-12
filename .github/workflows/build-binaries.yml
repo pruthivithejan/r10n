@@ -109,11 +109,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-assets
-
-      - name: Flatten artifacts
-        run: |
-          find release-assets -mindepth 2 -type f -exec mv {} release-assets/ \;
-          find release-assets -mindepth 1 -type d -empty -delete
+          pattern: r10n-*
+          merge-multiple: true
 
       - name: Generate SHA256SUMS
         run: |
@@ -138,11 +135,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: release-assets
-
-      - name: Flatten artifacts
-        run: |
-          find release-assets -mindepth 2 -type f -exec mv {} release-assets/ \;
-          find release-assets -mindepth 1 -type d -empty -delete
+          pattern: "*"
+          merge-multiple: true
 
       - name: Publish GitHub release assets
         uses: softprops/action-gh-release@v2
