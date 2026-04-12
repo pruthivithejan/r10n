@@ -53,7 +53,7 @@ cd r10n
 uv sync
 ```
 
-This creates a virtual environment and installs all dependencies automatically.
+This creates a virtual environment and installs all dependencies automatically, including contributor tooling like documentation builders and testing frameworks.
 
 ### Step 3: Verify Installation
 

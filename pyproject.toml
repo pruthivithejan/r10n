@@ -39,7 +39,6 @@ dependencies = [
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
     "openpyxl>=3.0.0",
-    "zensical>=0.0.8",
     "markdown>=3.10.1",
     "flask>=3.0.0",
     "pypdfium2>=4.0.0",
@@ -53,14 +52,6 @@ Repository = "https://github.com/pruthivithejan/r10n.git"
 
 [project.scripts]
 r10n = "src.cli:main"
-
-[project.optional-dependencies]
-dev = [
-    "pytest>=7.0.0",
-    "ruff>=0.1.0",
-    "pytest-cov>=4.0.0",
-    "black>=23.0.0",
-]
 
 [build-system]
 requires = ["hatchling"]
@@ -110,6 +101,8 @@ packages = ["src"]
 
 [dependency-groups]
 dev = [
+    "zensical>=0.0.8",
+    "black>=23.0.0",
     "lefthook>=2.0.15",
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",

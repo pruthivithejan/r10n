@@ -20,11 +20,15 @@
 
 ### Run Instantly (No Installation)
 
+Use `uvx` to run `r10n` without cloning the repository. This installs only the runtime dependencies needed to execute the commands.
+
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
 ```
 
 ### Setup Locally
+
+For local development or persistent use, clone the repository. `uv sync` installs all dependencies, including local contributor tooling like `zensical` for documentation and `pytest` for testing.
 
 ```bash
 git clone https://github.com/pruthivithejan/r10n.git
