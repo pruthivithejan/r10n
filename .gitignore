@@ -42,6 +42,7 @@ workspace/
 
 # Legacy Data Directory
 data/
+.plans/
 
 #Templates
 templates/
