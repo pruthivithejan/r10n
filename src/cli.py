@@ -38,7 +38,7 @@ from src.automations import (
 )
 
 console = Console()
-VERSION = "2.0.0"
+VERSION = "0.5.1"
 RELEASE_REPO = "pruthivithejan/r10n"
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
 UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
@@ -138,11 +138,8 @@ def detect_platform_asset_name() -> str:
 
     if system == "linux" and normalized_machine == "x86_64":
         return "r10n-linux-x86_64"
-    elif system == "darwin":
-        if normalized_machine == "x86_64":
-            return "r10n-macos-x86_64"
-        if normalized_machine == "arm64":
-            return "r10n-macos-arm64"
+    elif system == "darwin" and normalized_machine == "arm64":
+        return "r10n-macos-arm64"
     elif system == "windows":
         if normalized_machine == "x86_64":
             return "r10n-windows-x86_64.exe"

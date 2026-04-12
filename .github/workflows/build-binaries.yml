@@ -2,6 +2,10 @@ name: Build Binaries
 
 on:
   push:
+    branches:
+      - main
+    paths:
+      - "pyproject.toml"
     tags:
       - "v*"
   workflow_dispatch:
@@ -20,10 +24,6 @@ jobs:
           - os: ubuntu-latest
             python: "3.11"
             asset: r10n-linux-x86_64
-            executable: dist/r10n
-          - os: macos-13
-            python: "3.11"
-            asset: r10n-macos-x86_64
             executable: dist/r10n
           - os: macos-14
             python: "3.11"

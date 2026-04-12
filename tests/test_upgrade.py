@@ -20,6 +20,13 @@ class TestDetectPlatformAssetName:
         monkeypatch.setattr(cli.platform, "machine", lambda: "aarch64")
         assert cli.detect_platform_asset_name() == "r10n-macos-arm64"
 
+    def test_darwin_x86_64_is_unsupported(self, monkeypatch):
+        """macOS Intel is not built, so it must raise unsupported platform."""
+        monkeypatch.setattr(cli.platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(cli.platform, "machine", lambda: "x86_64")
+        with pytest.raises(RuntimeError, match="Unsupported platform"):
+            cli.detect_platform_asset_name()
+
     def test_windows_amd64_alias(self, monkeypatch):
         """Maps Windows amd64 alias to .exe asset name."""
         monkeypatch.setattr(cli.platform, "system", lambda: "Windows")

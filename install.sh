@@ -77,9 +77,6 @@ case "$uname_s/$arch" in
   linux/x86_64)
     asset="r10n-linux-x86_64"
     ;;
-  darwin/x86_64)
-    asset="r10n-macos-x86_64"
-    ;;
   darwin/arm64)
     asset="r10n-macos-arm64"
     ;;
