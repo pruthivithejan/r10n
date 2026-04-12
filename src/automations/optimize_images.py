@@ -29,12 +29,12 @@ class ImageOptimizer:
     def __init__(self, config: ImageOptimizationConfig):
         self.config = config
         self.supported_formats = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
-        self.results = {
+        self.results: dict[str, Any] = {
             "processed": 0,
             "skipped": 0,
             "failed": 0,
-            "total_size_before": 0,
-            "total_size_after": 0,
+            "total_size_before": 0.0,
+            "total_size_after": 0.0,
             "files": [],
         }
 

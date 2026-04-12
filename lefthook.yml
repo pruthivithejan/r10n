@@ -11,6 +11,15 @@ pre-commit:
         fi
         echo "Linting staged python files: $files"
         uv run ruff check $files || exit 1
+    ty_staged:
+      run: |
+        files=$(git diff --name-only --cached -- '*.py' || true)
+        if [ -z "$files" ]; then
+          echo "No staged python files to typecheck"
+          exit 0
+        fi
+        echo "Typechecking staged python files: $files"
+        uv run ty check $files || exit 1
     pytest_changed:
       run: |
         tests_changed=$(git diff --name-only --cached -- 'tests/**' || true)
@@ -37,6 +46,10 @@ pre-push:
       run: |
         echo "Running ruff on all Python files (pre-push)"
         uv run ruff check src tests || exit 1
+    ty_all:
+      run: |
+        echo "Running ty type check on all Python files (pre-push)"
+        uv run ty check src tests || exit 1
     pytest_all:
       run: |
         echo "Running pytest (pre-push)"

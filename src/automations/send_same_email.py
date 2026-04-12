@@ -461,9 +461,8 @@ def preview_email_setup(
         return {"error": str(e)}
 
 
-# Backward-compatible alias for older imports while preventing pytest collection.
+# Backward-compatible alias for older imports.
 test_email_setup = preview_email_setup
-test_email_setup.__test__ = False
 
 
 if __name__ == "__main__":

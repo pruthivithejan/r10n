@@ -102,6 +102,7 @@ packages = ["src"]
 [dependency-groups]
 dev = [
     "zensical>=0.0.8",
+    "ty>=0.0.29",
     "black>=26.3.1",
     "lefthook>=2.0.15",
     "pytest>=9.0.2",
