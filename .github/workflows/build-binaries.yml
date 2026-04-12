@@ -9,6 +9,9 @@ on:
       - main
     paths:
       - "pyproject.toml"
+  release:
+    types:
+      - published
   workflow_dispatch:
 
 permissions:
@@ -127,7 +130,9 @@ jobs:
 
   release:
     name: Publish Release Assets
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'release' && github.event.action == 'published')
     runs-on: ubuntu-latest
     needs: [build, checksums]
 
@@ -142,14 +147,19 @@ jobs:
         id: release_tag
         shell: python
         env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_REF: ${{ github.ref }}
           GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_EVENT_RELEASE_TAG_NAME: ${{ github.event.release.tag_name }}
         run: |
           import os
           import tomllib
 
+          event_name = os.environ["GITHUB_EVENT_NAME"]
           ref = os.environ["GITHUB_REF"]
-          if ref.startswith("refs/tags/v"):
+          if event_name == "release":
+            tag = os.environ["GITHUB_EVENT_RELEASE_TAG_NAME"]
+          elif ref.startswith("refs/tags/v"):
             tag = os.environ["GITHUB_REF_NAME"]
           else:
             with open("pyproject.toml", "rb") as f:
