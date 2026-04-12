@@ -1,27 +1,34 @@
 #!/bin/sh
+# shellcheck shell=dash
+# shellcheck disable=SC2039
+# shellcheck disable=SC2268
 
 set -eu
 
+APP_NAME="r10n"
+APP_VERSION="0.5.1"
 REPO="pruthivithejan/r10n"
-INSTALL_DIR="${R10N_INSTALL_DIR:-$HOME/.local/bin}"
-VERSION="latest"
 
 usage() {
   cat <<'EOF'
-Install r10n binary from GitHub Releases.
+r10n installer
 
 Usage:
   install.sh [--version <tag>] [--install-dir <path>]
 
 Options:
-  --version      Release tag to install (for example: v2.0.0 or 2.0.0)
+  --version      Release tag to install (for example: v0.5.1 or 0.5.1)
   --install-dir  Install directory (default: ~/.local/bin)
   -h, --help     Show this help message
 
 Environment:
   R10N_INSTALL_DIR  Override install directory
+  R10N_DOWNLOAD_URL  Override the release download base URL
 EOF
 }
+
+VERSION="latest"
+INSTALL_DIR="${R10N_INSTALL_DIR:-$HOME/.local/bin}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -54,9 +61,21 @@ while [ "$#" -gt 0 ]; do
 done
 
 if ! command -v curl >/dev/null 2>&1; then
-  echo "curl is required to install r10n" >&2
+  echo "curl is required to install $APP_NAME" >&2
   exit 1
 fi
+
+case "$VERSION" in
+  latest)
+    BASE_URLS=${R10N_DOWNLOAD_URL:-"https://github.com/${REPO}/releases/latest/download"}
+    ;;
+  v*)
+    BASE_URLS=${R10N_DOWNLOAD_URL:-"https://github.com/${REPO}/releases/download/${VERSION}"}
+    ;;
+  *)
+    BASE_URLS=${R10N_DOWNLOAD_URL:-"https://github.com/${REPO}/releases/download/v${VERSION}"}
+    ;;
+esac
 
 uname_s=$(uname -s | tr '[:upper:]' '[:lower:]')
 uname_m=$(uname -m | tr '[:upper:]' '[:lower:]')
@@ -82,39 +101,29 @@ case "$uname_s/$arch" in
     ;;
   *)
     echo "Unsupported platform: $uname_s/$arch" >&2
-    echo "Download a matching binary manually from GitHub Releases." >&2
     exit 1
     ;;
 esac
 
-if [ "$VERSION" = "latest" ]; then
-  base_url="https://github.com/${REPO}/releases/latest/download"
-else
-  case "$VERSION" in
-    v*)
-      tag="$VERSION"
-      ;;
-    *)
-      tag="v$VERSION"
-      ;;
-  esac
-  base_url="https://github.com/${REPO}/releases/download/${tag}"
-fi
-
 tmp_dir=$(mktemp -d)
-cleanup() {
-  rm -rf "$tmp_dir"
-}
+cleanup() { rm -rf "$tmp_dir"; }
 trap cleanup EXIT INT TERM
 
 binary_path="$tmp_dir/$asset"
 checksum_path="$tmp_dir/SHA256SUMS"
 
-echo "Downloading $asset..."
-curl -fL "$base_url/$asset" -o "$binary_path"
+downloaded=0
+for base_url in $BASE_URLS; do
+  if curl -fsSL "$base_url/$asset" -o "$binary_path" && curl -fsSL "$base_url/SHA256SUMS" -o "$checksum_path"; then
+    downloaded=1
+    break
+  fi
+done
 
-echo "Downloading SHA256SUMS..."
-curl -fL "$base_url/SHA256SUMS" -o "$checksum_path"
+if [ "$downloaded" -ne 1 ]; then
+  echo "Failed to download $asset from release assets" >&2
+  exit 1
+fi
 
 expected_hash=$(awk -v name="$asset" '$2 == name || $2 == "*"name { print $1; exit }' "$checksum_path")
 if [ -z "$expected_hash" ]; then
@@ -139,16 +148,5 @@ fi
 mkdir -p "$INSTALL_DIR"
 install -m 755 "$binary_path" "$INSTALL_DIR/r10n"
 
-echo "Installed r10n to $INSTALL_DIR/r10n"
+echo "Installed $APP_NAME to $INSTALL_DIR/r10n"
 echo "Run: r10n --help"
-echo "Update later with: r10n upgrade"
-
-case ":$PATH:" in
-  *":$INSTALL_DIR:"*)
-    ;;
-  *)
-    echo ""
-    echo "Add this directory to your PATH if needed:"
-    echo "  export PATH=\"$INSTALL_DIR:\$PATH\""
-    ;;
-esac

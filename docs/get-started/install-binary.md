@@ -32,6 +32,8 @@ sh install.sh
 
 The installer downloads the correct binary for your OS/architecture, verifies checksums, and installs to `~/.local/bin/r10n`.
 
+The release workflow publishes the binaries and `SHA256SUMS` automatically after a version bump on `main`, so `install.sh` always targets the latest published release.
+
 ---
 
 ## Verify
