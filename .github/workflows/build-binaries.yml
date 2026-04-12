@@ -46,7 +46,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install . pyinstaller
 
-      - name: Build binary
+      - name: Build binary (Unix)
+        if: runner.os != 'Windows'
         run: |
           pyinstaller \
             --name r10n \
@@ -54,6 +55,18 @@ jobs:
             --paths . \
             --collect-all pypdfium2 \
             --collect-all PIL \
+            src/cli.py
+
+      - name: Build binary (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pyinstaller `
+            --name r10n `
+            --onefile `
+            --paths . `
+            --collect-all pypdfium2 `
+            --collect-all PIL `
             src/cli.py
 
       - name: Rename asset (Unix)
