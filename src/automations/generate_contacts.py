@@ -2,19 +2,51 @@ import re
 from pathlib import Path
 
 
-def clean_number(number):
-    """Clean and validate phone numbers (Sri Lankan format)"""
-    number = re.sub(r"\D", "", number)  # remove non-digits
+def clean_number(number: str) -> str | None:
+    """Clean and validate a phone number (Sri Lankan format).
+
+    Handles comma-separated or space-separated numbers by taking the first valid one.
+    Removes all non-digit characters before validation.
+
+    Args:
+        number: Raw phone number string
+
+    Returns:
+        Cleaned number in +94XXXXXXXXX format, or None if invalid
+    """
+    number = number.strip()
+
+    # Handle comma-separated or multiple space-separated numbers
+    if "," in number:
+        parts = [p.strip() for p in number.split(",")]
+        for part in parts:
+            if part:
+                result = clean_number(part)
+                if result:
+                    return result
+        return None
+
+    # Remove all non-digit characters
+    number = re.sub(r"\D", "", number)
+
+    # Strip leading zeros (e.g., 007123456789 -> 7123456789)
+    number = number.lstrip("0")
+
+    # Add Sri Lankan country code
     if number.startswith("94") and len(number) == 11:
         number = "+" + number
     elif number.startswith("0"):
         number = "+94" + number[1:]
     elif not number.startswith("+94"):
         number = "+94" + number
+
+    # Validate final format: +94 followed by exactly 9 digits
     return number if re.fullmatch(r"\+94\d{9}", number) else None
 
 
-def generate_vcf_from_file(input_file: str, output_name: str = "contacts.vcf", prefix: str = "Contact"):
+def generate_vcf_from_file(
+    input_file: str, output_name: str = "contacts.vcf", prefix: str = "Contact"
+):
     """
     Generate a VCF file from a text file containing phone numbers.
 

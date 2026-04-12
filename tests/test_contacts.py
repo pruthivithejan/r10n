@@ -57,6 +57,26 @@ class TestCleanNumber:
         """Test non-numeric string."""
         assert clean_number("not a number") is None
 
+    def test_comma_separated_numbers(self):
+        """Test comma-separated numbers take first valid one."""
+        assert clean_number("0771234567, 0781234567") == "+94771234567"
+
+    def test_comma_separated_with_invalid_first(self):
+        """Test comma-separated with invalid first, returns second valid."""
+        assert clean_number("123, 0771234567") == "+94771234567"
+
+    def test_all_comma_separated_invalid(self):
+        """Test all comma-separated are invalid."""
+        assert clean_number("123, 456, abc") is None
+
+    def test_leading_zeros_stripped(self):
+        """Test leading zeros are stripped before country code."""
+        assert clean_number("00771234567") == "+94771234567"
+
+    def test_multiple_leading_zeros(self):
+        """Test multiple leading zeros are stripped."""
+        assert clean_number("00000771234567") == "+94771234567"
+
 
 class TestGenerateVcfFromFile:
     """Test VCF generation from file."""
@@ -185,6 +205,7 @@ class TestUvxCompatibility:
     def test_module_import(self):
         """Test module can be imported."""
         from src.automations import generate_contacts
+
         assert hasattr(generate_contacts, "generate_vcf_from_file")
         assert hasattr(generate_contacts, "generate_vcf")
         assert hasattr(generate_contacts, "clean_number")
@@ -202,7 +223,7 @@ class TestUvxCompatibility:
             result = generate_vcf_from_file(
                 input_file,
                 str(output_file),  # Absolute path
-                "Test"
+                "Test",
             )
 
             assert result["valid"] == 1
