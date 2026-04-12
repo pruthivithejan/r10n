@@ -616,6 +616,40 @@ docs(automations): add colors automation documentation
 test(images): add edge case tests for WebP conversion
 ```
 
+### Versioning and Release Bumps (Required Before Commit)
+
+When a PR changes shipped behavior, versioning MUST be handled before committing.
+
+1. Determine bump type using semantic versioning:
+   - **Bug fix** (`fix`): bump **patch** (`x.y.z` -> `x.y.(z+1)`)
+   - **Feature release** (`feat`): bump **minor** (`x.y.z` -> `x.(y+1).0`)
+   - **Major release** (breaking changes): bump **major** (`x.y.z` -> `(x+1).0.0`)
+
+2. Update version in all required locations (keep them identical):
+   - `pyproject.toml` -> `[project].version`
+   - `src/cli.py` -> `VERSION`
+
+3. Verify before commit:
+   - Run `uv run python -m src.cli --version`
+   - Ensure reported CLI version matches `pyproject.toml`
+
+4. Release trigger note:
+   - Binary release workflow runs when `pyproject.toml` changes on `main`.
+   - Publishing release assets still occurs on version tag pushes (`v<version>`).
+
+Example:
+
+```bash
+# Feature release from 2.0.0 -> 2.1.0
+# 1) Update pyproject.toml and src/cli.py
+# 2) Commit
+git commit -m "feat(scope): add new capability"
+
+# 3) Tag release for GitHub Release asset publishing
+git tag v2.1.0
+git push origin main --tags
+```
+
 ### Adding a New Automation Checklist
 
 1. [ ] Create automation module in `src/automations/<name>.py`
