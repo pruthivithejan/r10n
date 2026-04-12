@@ -6,7 +6,15 @@ Interactive command-line interface with beautiful terminal UI
 
 import json
 import os
+import platform
+import shutil
+import stat
 import sys
+import tempfile
+import time
+import urllib.error
+import urllib.request
+from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
@@ -31,6 +39,10 @@ from src.automations import (
 
 console = Console()
 VERSION = "2.0.0"
+RELEASE_REPO = "pruthivithejan/r10n"
+RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
+UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
+UPDATE_CHECK_TIMEOUT_SECONDS = 4
 
 # Load environment variables from local folder if exists
 env_path = Path("local/.env")
@@ -112,6 +124,251 @@ def get_local_path(subpath: str) -> Path:
     return path
 
 
+def detect_platform_asset_name() -> str:
+    """Return the release asset name for the current OS and architecture."""
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    machine_aliases = {
+        "amd64": "x86_64",
+        "x64": "x86_64",
+        "aarch64": "arm64",
+    }
+    normalized_machine = machine_aliases.get(machine, machine)
+
+    if system == "linux" and normalized_machine == "x86_64":
+        return "r10n-linux-x86_64"
+    elif system == "darwin":
+        if normalized_machine == "x86_64":
+            return "r10n-macos-x86_64"
+        if normalized_machine == "arm64":
+            return "r10n-macos-arm64"
+    elif system == "windows":
+        if normalized_machine == "x86_64":
+            return "r10n-windows-x86_64.exe"
+
+    raise RuntimeError(f"Unsupported platform: {system}/{machine}")
+
+
+def normalize_version(version: str) -> tuple[int, ...]:
+    """Convert a semantic version string into a comparable tuple."""
+    cleaned = version.strip().lstrip("v")
+    if not cleaned:
+        return (0,)
+
+    parts = []
+    for part in cleaned.split("."):
+        if not part.isdigit():
+            break
+        parts.append(int(part))
+
+    return tuple(parts or [0])
+
+
+def is_newer_version(candidate: str, current: str) -> bool:
+    """Return True when candidate represents a newer version than current."""
+    candidate_parts = list(normalize_version(candidate))
+    current_parts = list(normalize_version(current))
+
+    max_len = max(len(candidate_parts), len(current_parts))
+    candidate_parts.extend([0] * (max_len - len(candidate_parts)))
+    current_parts.extend([0] * (max_len - len(current_parts)))
+
+    return tuple(candidate_parts) > tuple(current_parts)
+
+
+def fetch_release_data(version: str | None = None, timeout: int = 30) -> dict[str, Any]:
+    """Fetch release metadata from GitHub Releases API."""
+    if version:
+        tag = version if version.startswith("v") else f"v{version}"
+        url = f"{RELEASES_API}/tags/{tag}"
+    else:
+        url = f"{RELEASES_API}/latest"
+
+    token = os.getenv("GITHUB_TOKEN")
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "r10n-upgrade",
+    }
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    request = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(request, timeout=timeout) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def find_asset_download_url(release_data: dict[str, Any], asset_name: str) -> str:
+    """Find an asset download URL in a release payload by filename."""
+    assets = release_data.get("assets", [])
+    for asset in assets:
+        if asset.get("name") == asset_name and asset.get("browser_download_url"):
+            return str(asset["browser_download_url"])
+
+    raise RuntimeError(f"Release asset not found: {asset_name}")
+
+
+def download_to_path(url: str, destination: Path) -> None:
+    """Download a URL to a destination path."""
+    request = urllib.request.Request(url, headers={"User-Agent": "r10n-upgrade"})
+    with urllib.request.urlopen(request, timeout=60) as response, open(destination, "wb") as output:
+        shutil.copyfileobj(response, output)
+
+
+def parse_sha256_sums(checksum_content: str) -> dict[str, str]:
+    """Parse a sha256sum file into a filename -> hash mapping."""
+    checksums: dict[str, str] = {}
+    for line in checksum_content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        parts = stripped.split()
+        if len(parts) < 2:
+            continue
+
+        checksum = parts[0].lower()
+        filename = parts[-1].lstrip("*")
+        checksums[filename] = checksum
+
+    return checksums
+
+
+def compute_file_sha256(file_path: Path) -> str:
+    """Compute the SHA-256 hash of a file."""
+    hasher = sha256()
+    with open(file_path, "rb") as file_handle:
+        for chunk in iter(lambda: file_handle.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+def resolve_current_executable_path() -> Path:
+    """Resolve the currently running executable path."""
+    argv0 = Path(sys.argv[0])
+    if argv0.exists() and argv0.name in {"r10n", "r10n.exe"}:
+        return argv0.resolve()
+
+    executable = shutil.which("r10n")
+    if executable:
+        return Path(executable).resolve()
+
+    raise RuntimeError("Could not determine current executable path.")
+
+
+def is_standalone_binary(executable_path: Path) -> bool:
+    """Return True when the executable appears to be a compiled binary."""
+    if executable_path.suffix.lower() == ".exe":
+        return True
+
+    try:
+        with open(executable_path, "rb") as handle:
+            prefix = handle.read(2)
+    except OSError:
+        return False
+
+    return prefix != b"#!"
+
+
+def get_update_cache_path() -> Path:
+    """Return the location of the update check cache file."""
+    cache_root = Path(os.getenv("XDG_CACHE_HOME", Path.home() / ".cache"))
+    return cache_root / "r10n" / "update_check.json"
+
+
+def load_update_cache() -> dict[str, Any]:
+    """Load cached update check data from disk."""
+    cache_path = get_update_cache_path()
+    if not cache_path.exists():
+        return {}
+
+    try:
+        return json.loads(cache_path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def save_update_cache(data: dict[str, Any]) -> None:
+    """Persist update check cache data to disk."""
+    cache_path = get_update_cache_path()
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    cache_path.write_text(json.dumps(data), encoding="utf-8")
+
+
+def should_check_for_updates(cache_data: dict[str, Any]) -> bool:
+    """Decide whether an update check should be performed now."""
+    checked_at = cache_data.get("checked_at")
+    if not isinstance(checked_at, (int, float)):
+        return True
+    return (time.time() - float(checked_at)) >= UPDATE_CHECK_INTERVAL_SECONDS
+
+
+def maybe_notify_update(subcommand: str | None) -> None:
+    """Display a non-blocking update notice when a newer version exists."""
+    if os.getenv("R10N_DISABLE_UPDATE_CHECK"):
+        return
+    if subcommand in {None, "upgrade"}:
+        return
+
+    cache_data = load_update_cache()
+    latest_version = cache_data.get("latest_version") if isinstance(cache_data, dict) else None
+
+    if should_check_for_updates(cache_data):
+        try:
+            release_data = fetch_release_data(timeout=UPDATE_CHECK_TIMEOUT_SECONDS)
+            latest_version = str(release_data.get("tag_name", "")).lstrip("v")
+            save_update_cache(
+                {
+                    "checked_at": int(time.time()),
+                    "latest_version": latest_version,
+                }
+            )
+        except Exception:
+            return
+
+    if (
+        isinstance(latest_version, str)
+        and latest_version
+        and is_newer_version(latest_version, VERSION)
+    ):
+        console.print(
+            "[dim yellow]Update available: "
+            f"v{latest_version} (current v{VERSION}). "
+            "Run [cyan]r10n upgrade[/] to update.[/]"
+        )
+
+
+def replace_current_executable(current_executable: Path, new_binary: Path) -> None:
+    """Atomically replace the current executable with a new binary."""
+    if os.name == "nt":
+        raise RuntimeError(
+            "In-place upgrade is not supported on Windows. "
+            "Please reinstall from the latest release binary."
+        )
+
+    if not os.access(current_executable.parent, os.W_OK):
+        raise PermissionError(
+            f"No write permission for install directory: {current_executable.parent}"
+        )
+
+    backup_path = current_executable.with_name(f"{current_executable.name}.bak")
+    staged_path = current_executable.with_name(f"{current_executable.name}.new")
+
+    shutil.copy2(current_executable, backup_path)
+    try:
+        shutil.copy2(new_binary, staged_path)
+        mode = staged_path.stat().st_mode
+        staged_path.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+        os.replace(staged_path, current_executable)
+        backup_path.unlink(missing_ok=True)
+    except Exception:
+        if backup_path.exists():
+            os.replace(backup_path, current_executable)
+        if staged_path.exists():
+            staged_path.unlink()
+        raise
+
+
 @click.group(invoke_without_command=True)
 @click.version_option(version=VERSION)
 @click.pass_context
@@ -129,6 +386,8 @@ def main(ctx: click.Context):
     - md2pdf: Convert Markdown files to PDF
     """
     display_banner()
+    if not ctx.resilient_parsing:
+        maybe_notify_update(ctx.invoked_subcommand)
     if ctx.invoked_subcommand is None and not ctx.resilient_parsing:
         click.echo(ctx.get_help())
 
@@ -352,7 +611,7 @@ Bob Johnson,Designer"""
 
         try:
             fill_pdfs.fill_certificate(template_path, cfg, first_recipient, preview_path)
-            console.print(f"[green]  Preview generated.[/]")
+            console.print("[green]  Preview generated.[/]")
 
             # Open the preview PDF
             try:
@@ -409,9 +668,7 @@ Bob Johnson,Designer"""
             json.dump(cfg, f)
             temp_config = f.name
 
-        results = fill_pdfs.fill_certificates_from_file(
-            recipients, temp_config, base_dir="local"
-        )
+        results = fill_pdfs.fill_certificates_from_file(recipients, temp_config, base_dir="local")
 
         os.unlink(temp_config)
 
@@ -1435,7 +1692,7 @@ Markdown to PDF conversion is easy with r10n!
         if use_css:
             css = Prompt.ask("  Enter CSS file path", default="local/configs/pdf_style.css")
             if not Path(css).exists():
-                console.print(f"[yellow]  CSS file not found, using default styling[/]")
+                console.print("[yellow]  CSS file not found, using default styling[/]")
                 css = None
 
     if css:
@@ -1542,9 +1799,7 @@ Markdown to PDF conversion is easy with r10n!
 @main.command()
 @click.option("--template", "-t", required=True, help="PDF template file")
 @click.option("--recipients", "-r", help="CSV file (for column headers)")
-@click.option(
-    "--output", "-o", default="local/configs/fill-pdfs.json", help="Output config path"
-)
+@click.option("--output", "-o", default="local/configs/fill-pdfs.json", help="Output config path")
 def configure(template, recipients, output):
     """Launch visual field picker for PDF fill configuration
 
@@ -1651,6 +1906,119 @@ def status():
     console.print("  r10n rename         Batch rename files")
     console.print("  r10n validate       Validate CSV files")
     console.print("  r10n md2pdf         Convert Markdown to PDF")
+    console.print("  r10n upgrade        Update installed binary")
+
+
+# =============================================================================
+# UPGRADE COMMAND
+# =============================================================================
+
+
+@main.command()
+@click.option(
+    "--version",
+    "target_version",
+    help="Install a specific version tag (for example: 2.0.0 or v2.0.0)",
+)
+@click.option("--check", is_flag=True, help="Only check for updates")
+def upgrade(target_version, check):
+    """Upgrade r10n binary from GitHub Releases."""
+    display_header("Upgrade", "Update your installed r10n binary")
+
+    try:
+        asset_name = detect_platform_asset_name()
+    except RuntimeError as error:
+        console.print(f"[red]Error: {error}[/]")
+        sys.exit(1)
+
+    try:
+        current_executable = resolve_current_executable_path()
+        if not is_standalone_binary(current_executable):
+            console.print("[yellow]Upgrade is available only for standalone binary installs.[/]")
+            console.print("[dim]Use [cyan]uv sync[/] and [cyan]git pull[/] for source installs.[/]")
+            return
+
+        release_data = fetch_release_data(target_version)
+        release_tag = str(release_data.get("tag_name") or "")
+        release_version = release_tag.lstrip("v")
+        if not release_version:
+            raise RuntimeError("Release response did not include a valid version tag.")
+
+        binary_name = current_executable.name
+        if binary_name.endswith(".exe") and not asset_name.endswith(".exe"):
+            asset_name = f"{asset_name}.exe"
+        elif not binary_name.endswith(".exe") and asset_name.endswith(".exe"):
+            asset_name = asset_name.removesuffix(".exe")
+
+        current_version = VERSION
+        newer_available = is_newer_version(release_version, current_version)
+
+        console.print(f"[cyan]Current version:[/] {current_version}")
+        console.print(f"[cyan]Latest release:[/] {release_version}")
+        console.print(f"[cyan]Asset:[/] {asset_name}")
+        console.print()
+
+        if check:
+            if newer_available:
+                console.print("[bold yellow]Update available.[/]")
+                console.print("Run [cyan]r10n upgrade[/] to install it.")
+            else:
+                console.print("[bold green]You are up to date.[/]")
+            return
+
+        if not newer_available and not target_version:
+            console.print("[bold green]You are already on the latest version.[/]")
+            return
+
+        console.print(f"[cyan]Install path:[/] {current_executable}")
+
+        binary_url = find_asset_download_url(release_data, asset_name)
+        checksum_url = find_asset_download_url(release_data, "SHA256SUMS")
+
+        with tempfile.TemporaryDirectory(prefix="r10n-upgrade-") as temp_dir:
+            temp_path = Path(temp_dir)
+            binary_path = temp_path / asset_name
+            checksum_path = temp_path / "SHA256SUMS"
+
+            console.print("[cyan]Downloading release assets...[/]")
+            download_to_path(binary_url, binary_path)
+            download_to_path(checksum_url, checksum_path)
+
+            checksums = parse_sha256_sums(checksum_path.read_text(encoding="utf-8"))
+            expected_hash = checksums.get(asset_name)
+            if not expected_hash:
+                raise RuntimeError(f"Checksum for {asset_name} not found in SHA256SUMS")
+
+            actual_hash = compute_file_sha256(binary_path)
+            if actual_hash.lower() != expected_hash.lower():
+                raise RuntimeError("Checksum verification failed for downloaded binary")
+
+            console.print("[green]Checksum verified.[/]")
+            replace_current_executable(current_executable, binary_path)
+
+        console.print()
+        console.print(f"[bold green]Done! Updated to r10n v{release_version}[/]")
+
+    except urllib.error.HTTPError as error:
+        if error.code == 404:
+            console.print(
+                "[red]Release not found. Check the version tag and published artifacts.[/]"
+            )
+        elif error.code == 403:
+            console.print("[red]GitHub API rate limit reached. Try again later.[/]")
+        else:
+            console.print(f"[red]HTTP error: {error}[/]")
+        sys.exit(1)
+    except urllib.error.URLError as error:
+        console.print(f"[red]Network error: {error.reason}[/]")
+        sys.exit(1)
+    except PermissionError as error:
+        console.print(f"[red]Permission error: {error}[/]")
+        console.print("[yellow]Reinstall to a writable location like ~/.local/bin.[/]")
+        sys.exit(1)
+    except Exception as error:
+        console.print(f"[red]Error: {error}[/]")
+        sys.exit(1)
 
 
 @main.command()
