@@ -1,60 +1,227 @@
-# Lefthook configuration: run ruff, pytest, and build docs before commits/pushes
+# Lefthook configuration for r10n.
+#
+# Pre-commit focuses on staged changes so commits fail fast on local mistakes.
+# Pre-push runs the broader suite before changes leave the machine.
+
 pre-commit:
-  # Only lint staged Python files, run tests or docs build when relevant files are staged.
   commands:
+    conflict_markers:
+      run: |
+        files=$(git diff --name-only --cached --diff-filter=ACMR || true)
+        if [ -z "$files" ]; then
+          echo "No staged files to scan for conflict markers"
+          exit 0
+        fi
+
+        matches=$(printf '%s\n' "$files" | xargs grep -nE '^(<<<<<<<|=======|>>>>>>>)' 2>/dev/null || true)
+        if [ -n "$matches" ]; then
+          echo "Conflict markers found in staged files:"
+          echo "$matches"
+          exit 1
+        fi
+
+    whitespace:
+      run: |
+        git diff --cached --check
+
+    protect_local_files:
+      run: |
+        blocked=$(git diff --name-only --cached --diff-filter=ACMR | grep -E '(^|/)(\.env($|\.)|local/|htmlcov/|\.coverage$)' | grep -vE '(^|/)\.env\.example$' || true)
+        if [ -n "$blocked" ]; then
+          echo "Do not commit local secrets, generated coverage, or local workspace files:"
+          echo "$blocked"
+          exit 1
+        fi
+
+    large_files:
+      run: |
+        max_bytes=$((2 * 1024 * 1024))
+        failed=0
+        for file in $(git diff --name-only --cached --diff-filter=ACMR); do
+          if [ -f "$file" ]; then
+            size=$(wc -c < "$file" | tr -d ' ')
+            if [ "$size" -gt "$max_bytes" ]; then
+              echo "Staged file is larger than 2 MB: $file ($size bytes)"
+              failed=1
+            fi
+          fi
+        done
+        exit "$failed"
+
+    python_format_staged:
+      run: |
+        files=$(git diff --name-only --cached --diff-filter=ACMR -- '*.py' || true)
+        if [ -z "$files" ]; then
+          echo "No staged Python files to format-check"
+          exit 0
+        fi
+        echo "Checking Python formatting:"
+        echo "$files"
+        uv run black --check $files
+
     ruff_staged:
       run: |
-        files=$(git diff --name-only --cached -- '*.py' || true)
+        files=$(git diff --name-only --cached --diff-filter=ACMR -- '*.py' || true)
         if [ -z "$files" ]; then
-          echo "No staged python files to lint"
+          echo "No staged Python files to lint"
           exit 0
         fi
-        echo "Linting staged python files: $files"
-        uv run ruff check $files || exit 1
+        echo "Linting staged Python files:"
+        echo "$files"
+        uv run ruff check $files
+
+    python_compile_staged:
+      run: |
+        files=$(git diff --name-only --cached --diff-filter=ACMR -- '*.py' || true)
+        if [ -z "$files" ]; then
+          echo "No staged Python files to compile-check"
+          exit 0
+        fi
+        echo "Compiling staged Python files:"
+        echo "$files"
+        uv run python -m py_compile $files
+
+    no_debugger_calls:
+      run: |
+        files=$(git diff --name-only --cached --diff-filter=ACMR -- '*.py' || true)
+        if [ -z "$files" ]; then
+          echo "No staged Python files to scan for debugger calls"
+          exit 0
+        fi
+
+        matches=$(printf '%s\n' "$files" | xargs grep -nE '\b(breakpoint\(|pdb\.set_trace\(|ipdb\.set_trace\()' 2>/dev/null || true)
+        if [ -n "$matches" ]; then
+          echo "Debugger calls found in staged Python files:"
+          echo "$matches"
+          exit 1
+        fi
+
     ty_staged:
       run: |
-        files=$(git diff --name-only --cached -- '*.py' || true)
+        files=$(git diff --name-only --cached --diff-filter=ACMR -- '*.py' || true)
         if [ -z "$files" ]; then
-          echo "No staged python files to typecheck"
+          echo "No staged Python files to typecheck"
           exit 0
         fi
-        echo "Typechecking staged python files: $files"
-        uv run ty check $files || exit 1
+        echo "Typechecking staged Python files:"
+        echo "$files"
+        uv run ty check $files
+
+    pyproject_lock_sync:
+      run: |
+        if git diff --name-only --cached | grep -Eq '^pyproject\.toml$'; then
+          echo "Checking uv.lock is in sync with pyproject.toml"
+          uv lock --check
+        else
+          echo "pyproject.toml not staged; skipping lock sync check"
+        fi
+
+    version_sync:
+      run: |
+        staged=$(git diff --name-only --cached || true)
+        if ! printf '%s\n' "$staged" | grep -Eq '^(pyproject\.toml|src/cli\.py)$'; then
+          echo "Version files not staged; skipping version sync check"
+          exit 0
+        fi
+
+        uv run python - <<'PY'
+        import ast
+        import re
+        import tomllib
+        from pathlib import Path
+
+        pyproject_version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+        cli_tree = ast.parse(Path("src/cli.py").read_text())
+        cli_version = None
+        for node in cli_tree.body:
+            if isinstance(node, ast.Assign):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and target.id == "VERSION":
+                        cli_version = ast.literal_eval(node.value)
+                        break
+
+        lock_text = Path("uv.lock").read_text()
+        lock_match = re.search(r'\[\[package\]\]\nname = "r10n"\nversion = "([^"]+)"', lock_text)
+        lock_version = lock_match.group(1) if lock_match else None
+
+        versions = {
+            "pyproject.toml": pyproject_version,
+            "src/cli.py": cli_version,
+            "uv.lock": lock_version,
+        }
+        if len(set(versions.values())) != 1:
+            for path, version in versions.items():
+                print(f"{path}: {version}")
+            raise SystemExit("Version mismatch. Keep pyproject.toml, src/cli.py, and uv.lock aligned.")
+        PY
+
+    toml_parse:
+      run: |
+        files=$(git diff --name-only --cached --diff-filter=ACMR -- '*.toml' || true)
+        if [ -z "$files" ]; then
+          echo "No staged TOML files to parse"
+          exit 0
+        fi
+        uv run python - <<'PY'
+        import subprocess
+        import tomllib
+        from pathlib import Path
+
+        result = subprocess.run(
+            ["git", "diff", "--name-only", "--cached", "--diff-filter=ACMR", "--", "*.toml"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        for file_name in result.stdout.splitlines():
+            with Path(file_name).open("rb") as file_handle:
+                tomllib.load(file_handle)
+            print(f"Parsed TOML: {file_name}")
+        PY
+
     pytest_changed:
       run: |
-        tests_changed=$(git diff --name-only --cached -- 'tests/**' || true)
-        if [ -z "$tests_changed" ]; then
-          echo "No staged tests to run"
+        changed=$(git diff --name-only --cached --diff-filter=ACMR -- 'src/**' 'tests/**' || true)
+        if [ -z "$changed" ]; then
+          echo "No staged src/tests changes; skipping pytest"
           exit 0
         fi
-        echo "Running pytest for changed tests"
-        uv run pytest || exit 1
+        echo "Running pytest because src/tests files changed"
+        uv run pytest
+
     docs_changed:
       run: |
-        docs_changed=$(git diff --name-only --cached -- 'docs/**' || true)
+        docs_changed=$(git diff --name-only --cached --diff-filter=ACMR -- 'docs/**' 'zensical.toml' || true)
         if [ -z "$docs_changed" ]; then
-          echo "No staged docs to build"
+          echo "No staged docs changes to build"
           exit 0
         fi
-        echo "Building docs (changed doc files detected)"
-        uv run zensical build --clean || exit 1
+        echo "Building docs because docs or zensical.toml changed"
+        uv run zensical build --clean
 
 pre-push:
-  # Always run the full test suite before pushing
   commands:
     ruff_all:
       run: |
-        echo "Running ruff on all Python files (pre-push)"
-        uv run ruff check src tests || exit 1
+        echo "Running ruff on all Python files"
+        uv run ruff check src tests
+
+    python_format_all:
+      run: |
+        echo "Checking Python formatting"
+        uv run black --check src tests
+
     ty_all:
       run: |
-        echo "Running ty type check on all Python files (pre-push)"
-        uv run ty check src tests || exit 1
+        echo "Running ty type check on all Python files"
+        uv run ty check src tests
+
     pytest_all:
       run: |
-        echo "Running pytest (pre-push)"
-        uv run pytest || exit 1
+        echo "Running pytest"
+        uv run pytest
+
     docs_build:
       run: |
-        echo "Building docs (pre-push)"
-        uv run zensical build --clean || exit 1
+        echo "Building docs"
+        uv run zensical build --clean
