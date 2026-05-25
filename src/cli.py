@@ -28,6 +28,7 @@ from rich.table import Table
 # Import automation modules
 from src.automations import (
     convert_colors,
+    download_website_images,
     fill_pdfs,
     generate_contacts,
     markdown_to_pdf,
@@ -38,7 +39,7 @@ from src.automations import (
 )
 
 console = Console()
-VERSION = "0.5.1"
+VERSION = "0.6.0"
 RELEASE_REPO = "pruthivithejan/r10n"
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
 UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
@@ -376,6 +377,7 @@ def main(ctx: click.Context):
     - contacts: Generate VCF contact cards from phone numbers
     - fill-pdfs: Fill PDF templates with data from CSV/TXT files
     - images: Optimize and convert images to WebP
+    - website-images: Download website images and convert format
     - email: Send bulk emails with attachments
     - colors: Convert CSS colors to oklch() format
     - rename: Batch rename files with patterns
@@ -815,6 +817,115 @@ def images(input_dir, output, quality, max_size, prefix, preserve_names):
         table.add_row("Failed", str(results.get("failed", 0)))
         table.add_row("Output directory", output)
         console.print(table)
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+
+
+# =============================================================================
+# WEBSITE IMAGES AUTOMATION
+# =============================================================================
+
+
+@main.command("website-images")
+@click.option("--url", "-u", "website_url", help="Website URL to scan for images")
+@click.option("--output", "-o", help="Output directory")
+@click.option(
+    "--format",
+    "-f",
+    "output_format",
+    type=click.Choice(["jpg", "jpeg", "png", "webp"], case_sensitive=False),
+    help="Converted image format",
+)
+@click.option("--quality", "-q", type=int, help="Image quality for JPG/WebP (1-100)")
+@click.option("--timeout", type=int, default=20, show_default=True, help="Request timeout seconds")
+@click.option("--yes", "-y", is_flag=True, help="Run without confirmation")
+def website_images(website_url, output, output_format, quality, timeout, yes):
+    """Download website images and convert them to a chosen format.
+
+    Scans one web page for common image references and saves converted raster files.
+    """
+    display_header("Website Image Downloader", "Download page images and convert file format")
+
+    total_steps = 4
+
+    display_step(1, total_steps, "Enter website URL")
+    if not website_url:
+        website_url = Prompt.ask("  Enter website URL")
+    console.print(f"[green]  Website: {website_url}[/]")
+    console.print()
+
+    display_step(2, total_steps, "Set output directory")
+    if not output:
+        output = Prompt.ask(
+            "  Enter output directory",
+            default="local/outputs/website-images",
+        )
+    console.print(f"[green]  Output: {output}[/]")
+    console.print()
+
+    display_step(3, total_steps, "Select output format")
+    if not output_format:
+        output_format = Prompt.ask(
+            "  Convert images to",
+            choices=["webp", "jpg", "png"],
+            default="webp",
+        )
+    console.print(f"[green]  Format: {output_format.lower()}[/]")
+    console.print()
+
+    display_step(4, total_steps, "Set quality")
+    if quality is None:
+        quality = IntPrompt.ask("  Enter quality for JPG/WebP (1-100)", default=85)
+    console.print(f"[green]  Quality: {quality}%[/]")
+    console.print()
+
+    console.print("[bold]Summary:[/]")
+    console.print(f"  Website: {website_url}")
+    console.print(f"  Output:  {output}")
+    console.print(f"  Format:  {output_format.lower()}")
+    console.print(f"  Quality: {quality}%")
+    console.print()
+
+    if not yes and not Confirm.ask("Proceed with download?"):
+        console.print("[yellow]Cancelled.[/]")
+        return
+
+    console.print()
+    console.print("[cyan]Downloading and converting website images...[/]")
+    console.print()
+
+    try:
+        results = download_website_images.download_website_images(
+            url=website_url,
+            output_dir=output,
+            output_format=output_format,
+            quality=quality,
+            timeout=timeout,
+        )
+
+        console.print()
+        console.print("[bold green]Done![/]")
+        console.print()
+
+        table = Table(show_header=False)
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        table.add_row("Images found", str(results.get("found", 0)))
+        table.add_row("Downloaded", str(results.get("downloaded", 0)))
+        table.add_row("Failed", str(results.get("failed", 0)))
+        table.add_row("Output directory", str(results.get("output_directory", output)))
+        console.print(table)
+
+        failed_files = [file for file in results.get("files", []) if not file.get("success")]
+        if failed_files:
+            console.print()
+            console.print("[yellow]Some images could not be converted:[/]")
+            for file in failed_files[:5]:
+                console.print(f"  - {file.get('source_url')}: {file.get('error')}")
+            if len(failed_files) > 5:
+                console.print(f"  ...and {len(failed_files) - 5} more")
 
     except Exception as e:
         console.print(f"[red]Error: {e}[/]")

@@ -34,11 +34,12 @@ ENV/
 
 # Enviroment Variables
 .env
-!.env.example 
+!.env.example
 
 # User Workspace (contains sensitive data)
 workspace/
 !workspace/.gitkeep
+local/
 
 # Legacy Data Directory
 data/

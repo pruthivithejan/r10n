@@ -28,6 +28,12 @@ All r10n automations are listed below. Click any card to view the full guide wit
   <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Optimize and convert images to WebP format</span>
 </a>
 
+<a href="website-images/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-primary-fg-color--lightest)">
+  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="2"/><circle cx="8.5" cy="10.5" r="1.5"/><path d="m21 15-3.5-3.5a2 2 0 0 0-2.8 0L9 17"/><path d="M7 2v3"/><path d="M17 2v3"/></svg>
+  <span style="font-weight:600; margin-top:.5em;">Website Images</span>
+  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Download website images and convert format</span>
+</a>
+
 <a href="email/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-primary-fg-color--lightest)">
   <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
   <span style="font-weight:600; margin-top:.5em;">Email</span>
@@ -69,6 +75,7 @@ All r10n automations are listed below. Click any card to view the full guide wit
 | [Contacts](contacts/) | `r10n contacts` | Generate VCF from phone numbers |
 | [Fill PDFs](fill-pdfs/) | `r10n fill-pdfs` | Fill PDF templates with data |
 | [Images](images/) | `r10n images` | Optimize images to WebP |
+| [Website Images](website-images/) | `r10n website-images` | Download website images |
 | [Email](email/) | `r10n email` | Send bulk emails |
 | [Colors](colors/) | `r10n colors` | Convert CSS to oklch() |
 | [Rename Files](rename-files/) | `r10n rename` | Batch rename files |

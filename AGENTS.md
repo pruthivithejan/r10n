@@ -634,20 +634,21 @@ When a PR changes shipped behavior, versioning MUST be handled before committing
    - Ensure reported CLI version matches `pyproject.toml`
 
 4. Release trigger note:
-   - Binary release workflow runs when `pyproject.toml` changes on `main`.
-   - Publishing release assets still occurs on version tag pushes (`v<version>`).
+   - The release workflow is `.github/workflows/release.yml`.
+   - A commit that bumps `pyproject.toml` on `main` is the release trigger.
+   - That workflow builds binaries, generates `SHA256SUMS`, and publishes the GitHub release assets automatically.
+   - Do not rely on creating a GitHub Release manually to publish binaries.
 
 Example:
 
 ```bash
 # Feature release from 2.0.0 -> 2.1.0
 # 1) Update pyproject.toml and src/cli.py
-# 2) Commit
+# 2) Commit the version bump on main
 git commit -m "feat(scope): add new capability"
 
-# 3) Tag release for GitHub Release asset publishing
-git tag v2.1.0
-git push origin main --tags
+# 3) Push; release.yml will publish assets automatically
+git push origin main
 ```
 
 ### Adding a New Automation Checklist
