@@ -10,6 +10,7 @@ on:
     paths:
       - "pyproject.toml"
       - "src/cli.py"
+      - ".github/workflows/auto-release.yml"
   workflow_dispatch:
 
 concurrency:
@@ -63,40 +64,9 @@ jobs:
               output.write(f"version={project_version}\n")
               output.write(f"tag={tag}\n")
 
-  ensure-tag:
-    name: Ensure Git Tag
-    runs-on: ubuntu-latest
-    needs: [prepare]
-
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Create and push tag if missing
-        shell: bash
-        env:
-          TAG: ${{ needs.prepare.outputs.tag }}
-        run: |
-          set -euo pipefail
-          existing_ref=$(git ls-remote --tags origin "refs/tags/${TAG}" | awk '{print $1}')
-          if [ -n "${existing_ref}" ]; then
-            if [ "${existing_ref}" = "${GITHUB_SHA}" ]; then
-              echo "Tag ${TAG} already exists on current commit"
-              exit 0
-            fi
-
-            echo "Tag ${TAG} already exists on a different commit: ${existing_ref}" >&2
-            echo "Bump project version in pyproject.toml and src/cli.py before releasing." >&2
-            exit 1
-          fi
-
-          git tag "${TAG}" "${GITHUB_SHA}"
-          git push origin "${TAG}"
-
   build:
     name: Build Release Artifacts
-    needs: [ensure-tag]
+    needs: [prepare]
     uses: ./.github/workflows/build-binaries.yml
     permissions:
       contents: read
