@@ -194,6 +194,7 @@ jobs:
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
           target_commitish: ${{ github.sha }}
+          body: Automated release for ${{ needs.prepare.outputs.tag }}.
           prerelease: false
           make_latest: true
           overwrite_files: true
