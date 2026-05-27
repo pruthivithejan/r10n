@@ -17,6 +17,8 @@ from src.automations.download_website_images import (
     convert_image_bytes,
     download_website_images,
     extract_image_urls,
+    extract_page_links,
+    get_page_output_directory,
     normalize_output_format,
 )
 
@@ -91,6 +93,28 @@ class TestExtractImageUrls:
         assert result == ["https://example.com/same.jpg"]
 
 
+class TestExtractPageLinks:
+    """Test same-site page link extraction."""
+
+    def test_extracts_same_site_links(self):
+        """Extract same-host page links and ignore external or non-page protocols."""
+        html = """
+        <a href="/about">About</a>
+        <a href="https://example.com/tours/rafting?ref=nav">Rafting</a>
+        <a href="https://other.example.com/external">External</a>
+        <a href="/files/brochure.pdf">PDF</a>
+        <a href="mailto:hello@example.com">Email</a>
+        <a href="#section">Section</a>
+        """
+
+        result = extract_page_links(html, "https://example.com", "https://example.com")
+
+        assert result == [
+            "https://example.com/about",
+            "https://example.com/tours/rafting?ref=nav",
+        ]
+
+
 class TestFormatAndFilenames:
     """Test output format and filename helpers."""
 
@@ -117,6 +141,36 @@ class TestFormatAndFilenames:
         result = build_output_filename("https://example.com/", 3, "webp")
 
         assert result == "003-image-3.webp"
+
+
+class TestPageOutputDirectories:
+    """Test page URL to folder mapping."""
+
+    def test_homepage_images_go_to_root(self, tmp_path):
+        """Map homepage URL to the output root."""
+        result = get_page_output_directory(tmp_path, "https://example.com/", "https://example.com")
+
+        assert result == tmp_path
+
+    def test_subpage_images_go_to_matching_folder(self, tmp_path):
+        """Map nested page paths to nested output folders."""
+        result = get_page_output_directory(
+            tmp_path,
+            "https://example.com/tours/white-water-rafting/",
+            "https://example.com",
+        )
+
+        assert result == tmp_path / "tours" / "white-water-rafting"
+
+    def test_html_page_uses_stem_folder(self, tmp_path):
+        """Use page stem instead of .html filename extension."""
+        result = get_page_output_directory(
+            tmp_path,
+            "https://example.com/about.html",
+            "https://example.com",
+        )
+
+        assert result == tmp_path / "about"
 
 
 class TestConvertImageBytes:
@@ -147,7 +201,7 @@ class TestDownloadWebsiteImages:
     """Test end-to-end website image downloading with mocked network calls."""
 
     def test_downloads_and_converts_images_to_absolute_output_path(self, tmp_path):
-        """Download images from mocked HTML and write converted files."""
+        """Download homepage images from mocked HTML and write converted files."""
         html = b"""
         <html>
           <body>
@@ -179,6 +233,85 @@ class TestDownloadWebsiteImages:
         assert Path(result["files"][0]["output_file"]).exists()
         assert (tmp_path / "001-one.png").exists()
         assert (tmp_path / "002-two.png").exists()
+
+    def test_crawls_pages_and_places_images_in_page_folders(self, tmp_path):
+        """Crawl same-site pages and mirror page paths in output folders."""
+        homepage_html = b"""
+        <html>
+          <body>
+            <img src="/home.png">
+            <a href="/about">About</a>
+            <a href="https://example.com/tours/rafting/">Rafting</a>
+            <a href="https://other.example.com/ignored">Ignored</a>
+          </body>
+        </html>
+        """
+        about_html = b'<html><body><img src="/about.png"></body></html>'
+        rafting_html = b'<html><body><img src="/rafting.png"></body></html>'
+        image_bytes = make_image_bytes("PNG")
+
+        def fake_urlopen(request, timeout=20):
+            url = request.full_url
+            if url == "https://example.com/":
+                return FakeResponse(homepage_html)
+            if url == "https://example.com/about":
+                return FakeResponse(about_html)
+            if url == "https://example.com/tours/rafting/":
+                return FakeResponse(rafting_html)
+            if url in {
+                "https://example.com/home.png",
+                "https://example.com/about.png",
+                "https://example.com/rafting.png",
+            }:
+                return FakeResponse(image_bytes)
+            raise AssertionError(f"Unexpected URL: {url}")
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            result = download_website_images(
+                "https://example.com/",
+                output_dir=str(tmp_path),
+                output_format="png",
+            )
+
+        assert result["pages_scanned"] == 3
+        assert result["found"] == 3
+        assert result["downloaded"] == 3
+        assert (tmp_path / "001-home.png").exists()
+        assert (tmp_path / "about" / "001-about.png").exists()
+        assert (tmp_path / "tours" / "rafting" / "001-rafting.png").exists()
+
+    def test_respects_max_pages(self, tmp_path):
+        """Stop crawling after the requested page limit."""
+        html = b"""
+        <html>
+          <body>
+            <img src="/home.png">
+            <a href="/about">About</a>
+          </body>
+        </html>
+        """
+        image_bytes = make_image_bytes("PNG")
+
+        def fake_urlopen(request, timeout=20):
+            url = request.full_url
+            if url == "https://example.com/":
+                return FakeResponse(html)
+            if url == "https://example.com/home.png":
+                return FakeResponse(image_bytes)
+            raise AssertionError(f"Unexpected URL: {url}")
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            result = download_website_images(
+                "https://example.com/",
+                output_dir=str(tmp_path),
+                output_format="png",
+                max_pages=1,
+            )
+
+        assert result["pages_scanned"] == 1
+        assert result["found"] == 1
+        assert (tmp_path / "001-home.png").exists()
+        assert not (tmp_path / "about").exists()
 
     def test_invalid_url_raises_value_error(self, tmp_path):
         """Reject invalid website URLs."""

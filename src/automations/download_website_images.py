@@ -18,6 +18,7 @@ from PIL import Image, ImageOps, UnidentifiedImageError
 
 DEFAULT_USER_AGENT = "r10n-website-images/1.0"
 SUPPORTED_OUTPUT_FORMATS = {"jpg", "jpeg", "png", "webp"}
+PAGE_EXTENSIONS = {"", ".html", ".htm", ".php", ".asp", ".aspx"}
 IMAGE_URL_PATTERN = re.compile(r"url\(\s*['\"]?([^'\")]+)['\"]?\s*\)", re.IGNORECASE)
 
 
@@ -30,16 +31,18 @@ class WebsiteImageDownloadConfig:
     output_format: str = "webp"
     quality: int = 85
     timeout: int = 20
+    max_pages: int | None = 50
     user_agent: str = DEFAULT_USER_AGENT
 
 
 class WebsiteImageParser(HTMLParser):
-    """Collect image URLs from HTML attributes and inline styles."""
+    """Collect image and same-page navigation URLs from HTML."""
 
     def __init__(self, base_url: str):
         super().__init__()
         self.base_url = base_url
         self.image_urls: list[str] = []
+        self.page_urls: list[str] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         """Collect image references from a start tag."""
@@ -64,6 +67,9 @@ class WebsiteImageParser(HTMLParser):
             if "icon" in rel or "apple-touch-icon" in rel:
                 self._add_url(attr_map.get("href"))
 
+        if tag.lower() == "a":
+            self._add_page_url(attr_map.get("href"))
+
         self._add_style_urls(attr_map.get("style"))
 
     def handle_data(self, data: str) -> None:
@@ -80,6 +86,17 @@ class WebsiteImageParser(HTMLParser):
             return
 
         self.image_urls.append(urllib.parse.urljoin(self.base_url, cleaned))
+
+    def _add_page_url(self, url: str | None) -> None:
+        """Add a normalized page URL."""
+        if not url:
+            return
+
+        cleaned = url.strip()
+        if not cleaned or cleaned.startswith(("mailto:", "tel:", "data:", "javascript:", "#")):
+            return
+
+        self.page_urls.append(urllib.parse.urljoin(self.base_url, cleaned))
 
     def _add_srcset(self, srcset: str | None) -> None:
         """Add all URLs from a srcset attribute."""
@@ -174,6 +191,89 @@ def extract_image_urls(html: str, base_url: str) -> list[str]:
             unique_urls.append(normalized)
 
     return unique_urls
+
+
+def extract_page_links(html: str, base_url: str, root_url: str) -> list[str]:
+    """
+    Extract unique same-site page URLs from HTML content.
+
+    Args:
+        html: HTML content to parse.
+        base_url: URL for resolving relative links.
+        root_url: Original website URL that defines the crawl host.
+
+    Returns:
+        Same-host HTTP(S) page URLs in document order.
+    """
+    parser = WebsiteImageParser(base_url)
+    parser.feed(html)
+
+    root_host = urllib.parse.urlparse(root_url).netloc.lower()
+    seen: set[str] = set()
+    page_links = []
+
+    for page_url in parser.page_urls:
+        parsed = urllib.parse.urlparse(page_url)
+        if parsed.scheme not in {"http", "https"} or parsed.netloc.lower() != root_host:
+            continue
+        if Path(parsed.path).suffix.lower() not in PAGE_EXTENSIONS:
+            continue
+
+        normalized = urllib.parse.urlunparse(
+            (parsed.scheme, parsed.netloc, parsed.path or "/", "", parsed.query, "")
+        )
+        if normalized not in seen:
+            seen.add(normalized)
+            page_links.append(normalized)
+
+    return page_links
+
+
+def sanitize_path_segment(segment: str) -> str:
+    """
+    Convert a URL path segment into a safe folder name.
+
+    Args:
+        segment: URL path segment.
+
+    Returns:
+        Filesystem-safe segment.
+    """
+    decoded = urllib.parse.unquote(segment)
+    safe_segment = re.sub(r"[^A-Za-z0-9._-]+", "-", decoded).strip("-._")
+    return safe_segment or "page"
+
+
+def get_page_output_directory(base_output_dir: Path, page_url: str, root_url: str) -> Path:
+    """
+    Resolve the output directory for a crawled page URL.
+
+    Homepage images are written directly to base_output_dir. Subpage images are
+    written to folders that mirror the page path.
+
+    Args:
+        base_output_dir: Root output directory.
+        page_url: Page URL being processed.
+        root_url: Original website URL.
+
+    Returns:
+        Output directory for the page.
+    """
+    root_path = urllib.parse.urlparse(root_url).path.strip("/")
+    page_path = urllib.parse.urlparse(page_url).path.strip("/")
+
+    if not page_path or page_path in {"index.html", "index.htm"} or page_path == root_path:
+        return base_output_dir
+
+    path = base_output_dir
+    for segment in page_path.split("/"):
+        if not segment:
+            continue
+        parsed_segment = Path(segment)
+        folder_segment = parsed_segment.stem if parsed_segment.suffix else segment
+        path = path / sanitize_path_segment(folder_segment)
+
+    return path
 
 
 def build_output_filename(image_url: str, index: int, output_format: str) -> str:
@@ -308,16 +408,18 @@ def download_website_images(
     output_format: str = "webp",
     quality: int = 85,
     timeout: int = 20,
+    max_pages: int | None = 50,
 ) -> dict[str, Any]:
     """
-    Download all image references from a web page and convert them.
+    Download images from a website and convert them.
 
     Args:
-        url: Website URL to scan.
+        url: Website URL to scan and crawl.
         output_dir: Directory for converted images.
         output_format: Output format: jpg, jpeg, png, or webp.
         quality: Quality for lossy formats.
         timeout: Request timeout in seconds.
+        max_pages: Maximum same-site pages to crawl. Use None for no limit.
 
     Returns:
         dict: Results with download statistics and per-file records.
@@ -329,39 +431,85 @@ def download_website_images(
     normalized_format = normalize_output_format(output_format)
     if not 1 <= quality <= 100:
         raise ValueError("Quality must be between 1 and 100")
+    if max_pages is not None and max_pages < 1:
+        raise ValueError("Max pages must be at least 1, or None for no limit")
 
     destination = Path(output_dir or "local/outputs/website-images")
     destination.mkdir(parents=True, exist_ok=True)
 
-    html = fetch_html(url, timeout=timeout)
-    image_urls = extract_image_urls(html, url)
-
     results: dict[str, Any] = {
         "success": True,
         "url": url,
-        "found": len(image_urls),
+        "pages_scanned": 0,
+        "found": 0,
         "downloaded": 0,
         "failed": 0,
         "output_directory": str(destination),
         "format": normalized_format,
+        "pages": [],
         "files": [],
     }
 
-    for index, image_url in enumerate(image_urls, 1):
-        output_path = destination / build_output_filename(image_url, index, normalized_format)
-        file_result = download_image(
-            image_url=image_url,
-            output_path=output_path,
-            output_format=normalized_format,
-            quality=quality,
-            timeout=timeout,
-        )
+    normalized_start_url = urllib.parse.urlunparse(urllib.parse.urlparse(url)._replace(fragment=""))
+    pending_urls = [normalized_start_url]
+    seen_pages: set[str] = set()
 
-        if file_result["success"]:
-            results["downloaded"] += 1
-        else:
-            results["failed"] += 1
-        results["files"].append(file_result)
+    while pending_urls and (max_pages is None or len(seen_pages) < max_pages):
+        page_url = pending_urls.pop(0)
+        if page_url in seen_pages:
+            continue
+
+        seen_pages.add(page_url)
+        page_output_dir = get_page_output_directory(destination, page_url, normalized_start_url)
+        page_output_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            html = fetch_html(page_url, timeout=timeout)
+        except RuntimeError as exc:
+            results["pages"].append(
+                {
+                    "success": False,
+                    "url": page_url,
+                    "output_directory": str(page_output_dir),
+                    "error": str(exc),
+                }
+            )
+            continue
+
+        image_urls = extract_image_urls(html, page_url)
+        page_links = extract_page_links(html, page_url, normalized_start_url)
+        for linked_page in page_links:
+            if linked_page not in seen_pages and linked_page not in pending_urls:
+                pending_urls.append(linked_page)
+
+        results["pages_scanned"] += 1
+        results["found"] += len(image_urls)
+        page_result = {
+            "success": True,
+            "url": page_url,
+            "images_found": len(image_urls),
+            "output_directory": str(page_output_dir),
+        }
+        results["pages"].append(page_result)
+
+        for index, image_url in enumerate(image_urls, 1):
+            output_path = page_output_dir / build_output_filename(
+                image_url, index, normalized_format
+            )
+            file_result = download_image(
+                image_url=image_url,
+                output_path=output_path,
+                output_format=normalized_format,
+                quality=quality,
+                timeout=timeout,
+            )
+            file_result["page_url"] = page_url
+
+            if file_result["success"]:
+                results["downloaded"] += 1
+            else:
+                results["failed"] += 1
+            results["files"].append(file_result)
 
     return results
 

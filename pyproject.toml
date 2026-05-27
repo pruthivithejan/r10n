@@ -1,6 +1,6 @@
 [project]
 name = "r10n"
-version = "0.6.0"
+version = "0.8.0"
 description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
@@ -34,7 +34,6 @@ dependencies = [
     "pypdf>=3.9.0",
     "reportlab>=4.0.0",
     "pillow>=12.1.1",
-    "click>=8.1.0",
     "rich>=13.0.0",
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
@@ -42,6 +41,7 @@ dependencies = [
     "markdown>=3.10.1",
     "flask>=3.0.0",
     "pypdfium2>=4.0.0",
+    "typer>=0.26.2",
 ]
 
 [project.urls]

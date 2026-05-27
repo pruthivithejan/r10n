@@ -6,7 +6,6 @@
 set -eu
 
 APP_NAME="r10n"
-APP_VERSION="0.5.1"
 REPO="pruthivithejan/r10n"
 
 usage() {
@@ -107,14 +106,21 @@ esac
 
 tmp_dir=$(mktemp -d)
 cleanup() { rm -rf "$tmp_dir"; }
-trap cleanup EXIT INT TERM
+abort() {
+  cleanup
+  exit 130
+}
+trap cleanup EXIT
+trap abort INT TERM
 
 binary_path="$tmp_dir/$asset"
 checksum_path="$tmp_dir/SHA256SUMS"
 
 downloaded=0
 for base_url in $BASE_URLS; do
-  if curl -fsSL "$base_url/$asset" -o "$binary_path" && curl -fsSL "$base_url/SHA256SUMS" -o "$checksum_path"; then
+  rm -f "$binary_path" "$checksum_path"
+  if curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused "$base_url/$asset" -o "$binary_path" \
+    && curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused "$base_url/SHA256SUMS" -o "$checksum_path"; then
     downloaded=1
     break
   fi

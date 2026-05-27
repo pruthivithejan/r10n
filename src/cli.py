@@ -16,9 +16,9 @@ import urllib.error
 import urllib.request
 from hashlib import sha256
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, cast
 
-import click
+import typer
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
@@ -39,11 +39,29 @@ from src.automations import (
 )
 
 console = Console()
-VERSION = "0.6.0"
+VERSION = "0.8.0"
 RELEASE_REPO = "pruthivithejan/r10n"
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
 UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
 UPDATE_CHECK_TIMEOUT_SECONDS = 4
+app = typer.Typer(
+    no_args_is_help=True,
+    rich_markup_mode="rich",
+    help=(
+        "r10n - Automate repetitive routines\n\n"
+        "Available automations:\n"
+        "- contacts: Generate VCF contact cards from phone numbers\n"
+        "- fill-pdfs: Fill PDF templates with data from CSV/TXT files\n"
+        "- images: Optimize and convert images to WebP\n"
+        "- website-images: Download website images and convert format\n"
+        "- email: Send bulk emails with attachments\n"
+        "- colors: Convert CSS colors to oklch() format\n"
+        "- rename: Batch rename files with patterns\n"
+        "- validate: Validate CSV files against schemas\n"
+        "- md2pdf: Convert Markdown files to PDF"
+    ),
+    context_settings={"help_option_names": ["-h", "--help"]},
+)
 
 # Load environment variables from local folder if exists
 env_path = Path("local/.env")
@@ -367,10 +385,24 @@ def replace_current_executable(current_executable: Path, new_binary: Path) -> No
         raise
 
 
-@click.group(invoke_without_command=True)
-@click.version_option(version=VERSION)
-@click.pass_context
-def main(ctx: click.Context):
+def version_callback(value: bool) -> None:
+    """Print the current r10n version and exit."""
+    if value:
+        typer.echo(f"r10n, version {VERSION}")
+        raise typer.Exit()
+
+
+@app.callback(invoke_without_command=True)
+def cli(
+    ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "--version",
+        callback=version_callback,
+        is_eager=True,
+        help="Show the version and exit.",
+    ),
+) -> None:
     """r10n - Automate repetitive routines
 
     Available automations:
@@ -387,8 +419,6 @@ def main(ctx: click.Context):
     display_banner()
     if not ctx.resilient_parsing:
         maybe_notify_update(ctx.invoked_subcommand)
-    if ctx.invoked_subcommand is None and not ctx.resilient_parsing:
-        click.echo(ctx.get_help())
 
 
 # =============================================================================
@@ -396,11 +426,14 @@ def main(ctx: click.Context):
 # =============================================================================
 
 
-@main.command()
-@click.option("--input", "-i", "input_file", help="Input file with phone numbers")
-@click.option("--output", "-o", help="Output VCF file path")
-@click.option("--prefix", "-p", help="Contact name prefix")
-def contacts(input_file, output, prefix):
+@app.command()
+def contacts(
+    input_file: str | None = typer.Option(
+        None, "--input", "-i", help="Input file with phone numbers"
+    ),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output VCF file path"),
+    prefix: str | None = typer.Option(None, "--prefix", "-p", help="Contact name prefix"),
+) -> None:
     """Generate VCF contact cards from phone numbers
 
     Step-by-step interactive process to convert phone numbers to VCF format.
@@ -494,11 +527,19 @@ def contacts(input_file, output, prefix):
 # =============================================================================
 
 
-@main.command("fill-pdfs")
-@click.option("--config", "-c", help="PDF fill configuration file")
-@click.option("--recipients", "-r", help="Data file (CSV or TXT)")
-@click.option("--template", "-t", help="PDF template file (for initial setup)")
-def fill_pdfs_cmd(config, recipients, template):
+@app.command("fill-pdfs")
+def fill_pdfs_cmd(
+    config: str | None = typer.Option(None, "--config", "-c", help="PDF fill configuration file"),
+    recipients: str | None = typer.Option(
+        None, "--recipients", "-r", help="Data file (CSV or TXT)"
+    ),
+    template: str | None = typer.Option(
+        None,
+        "--template",
+        "-t",
+        help="PDF template file (for initial setup)",
+    ),
+) -> None:
     """Fill PDF templates with data from CSV/TXT files
 
     Interactive process: configure field positions visually, preview a sample,
@@ -694,14 +735,15 @@ Bob Johnson,Designer"""
 # =============================================================================
 
 
-@main.command()
-@click.option("--input", "-i", "input_dir", help="Input directory with images")
-@click.option("--output", "-o", help="Output directory")
-@click.option("--quality", "-q", type=int, help="Image quality (1-100)")
-@click.option("--max-size", "-s", type=float, help="Maximum file size in MB")
-@click.option("--prefix", "-p", help="Prefix for output filenames")
-@click.option("--preserve-names", is_flag=True, help="Keep original filenames")
-def images(input_dir, output, quality, max_size, prefix, preserve_names):
+@app.command()
+def images(
+    input_dir: str | None = typer.Option(None, "--input", "-i", help="Input directory with images"),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output directory"),
+    quality: int | None = typer.Option(None, "--quality", "-q", help="Image quality (1-100)"),
+    max_size: float | None = typer.Option(None, "--max-size", "-s", help="Maximum file size in MB"),
+    prefix: str | None = typer.Option(None, "--prefix", "-p", help="Prefix for output filenames"),
+    preserve_names: bool = typer.Option(False, "--preserve-names", help="Keep original filenames"),
+) -> None:
     """Optimize and convert images to WebP format
 
     Step-by-step interactive process to batch optimize images.
@@ -828,27 +870,37 @@ def images(input_dir, output, quality, max_size, prefix, preserve_names):
 # =============================================================================
 
 
-@main.command("website-images")
-@click.option("--url", "-u", "website_url", help="Website URL to scan for images")
-@click.option("--output", "-o", help="Output directory")
-@click.option(
-    "--format",
-    "-f",
-    "output_format",
-    type=click.Choice(["jpg", "jpeg", "png", "webp"], case_sensitive=False),
-    help="Converted image format",
-)
-@click.option("--quality", "-q", type=int, help="Image quality for JPG/WebP (1-100)")
-@click.option("--timeout", type=int, default=20, show_default=True, help="Request timeout seconds")
-@click.option("--yes", "-y", is_flag=True, help="Run without confirmation")
-def website_images(website_url, output, output_format, quality, timeout, yes):
+@app.command("website-images")
+def website_images(
+    website_url: str | None = typer.Option(
+        None, "--url", "-u", help="Website URL to scan for images"
+    ),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output directory"),
+    output_format: Literal["jpg", "jpeg", "png", "webp"] | None = typer.Option(
+        None,
+        "--format",
+        "-f",
+        case_sensitive=False,
+        help="Converted image format",
+    ),
+    quality: int | None = typer.Option(
+        None, "--quality", "-q", help="Image quality for JPG/WebP (1-100)"
+    ),
+    timeout: int = typer.Option(20, "--timeout", help="Request timeout seconds"),
+    max_pages: int | None = typer.Option(
+        None,
+        "--max-pages",
+        help="Maximum same-site pages to scan. Use 0 for no limit",
+    ),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Run without confirmation"),
+) -> None:
     """Download website images and convert them to a chosen format.
 
-    Scans one web page for common image references and saves converted raster files.
+    Crawls same-site pages, mirrors page folders, and saves converted raster files.
     """
-    display_header("Website Image Downloader", "Download page images and convert file format")
+    display_header("Website Image Downloader", "Download website images into page folders")
 
-    total_steps = 4
+    total_steps = 5
 
     display_step(1, total_steps, "Enter website URL")
     if not website_url:
@@ -858,27 +910,52 @@ def website_images(website_url, output, output_format, quality, timeout, yes):
 
     display_step(2, total_steps, "Set output directory")
     if not output:
-        output = Prompt.ask(
-            "  Enter output directory",
-            default="local/outputs/website-images",
-        )
+        output = "local/outputs/website-images"
+        if not yes:
+            output = Prompt.ask(
+                "  Enter output directory",
+                default=output,
+            )
     console.print(f"[green]  Output: {output}[/]")
     console.print()
 
     display_step(3, total_steps, "Select output format")
     if not output_format:
-        output_format = Prompt.ask(
-            "  Convert images to",
-            choices=["webp", "jpg", "png"],
-            default="webp",
-        )
+        output_format = "webp"
+        if not yes:
+            output_format = cast(
+                Literal["jpg", "jpeg", "png", "webp"],
+                Prompt.ask(
+                    "  Convert images to",
+                    choices=["webp", "jpg", "png"],
+                    default=output_format,
+                ),
+            )
+    assert output_format is not None
     console.print(f"[green]  Format: {output_format.lower()}[/]")
     console.print()
 
     display_step(4, total_steps, "Set quality")
     if quality is None:
-        quality = IntPrompt.ask("  Enter quality for JPG/WebP (1-100)", default=85)
+        quality = 85
+        if not yes:
+            quality = IntPrompt.ask("  Enter quality for JPG/WebP (1-100)", default=quality)
     console.print(f"[green]  Quality: {quality}%[/]")
+    console.print()
+
+    display_step(5, total_steps, "Set page crawl limit")
+    if max_pages is None:
+        max_pages = 50
+        if not yes:
+            max_pages = IntPrompt.ask(
+                "  Enter maximum same-site pages to scan (0 for no limit)",
+                default=max_pages,
+            )
+    if max_pages == 0:
+        page_limit_summary = "No limit"
+    else:
+        page_limit_summary = str(max_pages)
+    console.print(f"[green]  Max pages: {page_limit_summary}[/]")
     console.print()
 
     console.print("[bold]Summary:[/]")
@@ -886,6 +963,7 @@ def website_images(website_url, output, output_format, quality, timeout, yes):
     console.print(f"  Output:  {output}")
     console.print(f"  Format:  {output_format.lower()}")
     console.print(f"  Quality: {quality}%")
+    console.print(f"  Pages:   {page_limit_summary}")
     console.print()
 
     if not yes and not Confirm.ask("Proceed with download?"):
@@ -903,6 +981,7 @@ def website_images(website_url, output, output_format, quality, timeout, yes):
             output_format=output_format,
             quality=quality,
             timeout=timeout,
+            max_pages=None if max_pages == 0 else max_pages,
         )
 
         console.print()
@@ -912,6 +991,7 @@ def website_images(website_url, output, output_format, quality, timeout, yes):
         table = Table(show_header=False)
         table.add_column("Metric", style="cyan")
         table.add_column("Value", style="green")
+        table.add_row("Pages scanned", str(results.get("pages_scanned", 0)))
         table.add_row("Images found", str(results.get("found", 0)))
         table.add_row("Downloaded", str(results.get("downloaded", 0)))
         table.add_row("Failed", str(results.get("failed", 0)))
@@ -937,12 +1017,18 @@ def website_images(website_url, output, output_format, quality, timeout, yes):
 # =============================================================================
 
 
-@main.command()
-@click.option("--config", "-c", help="Email configuration file")
-@click.option("--recipients", "-r", help="Recipients CSV file")
-@click.option("--body", "-b", help="Email body template file")
-@click.option("--attachments-dir", "-d", help="Directory with PDF attachments")
-def email(config, recipients, body, attachments_dir):
+@app.command()
+def email(
+    config: str | None = typer.Option(None, "--config", "-c", help="Email configuration file"),
+    recipients: str | None = typer.Option(None, "--recipients", "-r", help="Recipients CSV file"),
+    body: str | None = typer.Option(None, "--body", "-b", help="Email body template file"),
+    attachments_dir: str | None = typer.Option(
+        None,
+        "--attachments-dir",
+        "-d",
+        help="Directory with PDF attachments",
+    ),
+) -> None:
     """Send bulk personalized emails with attachments
 
     Step-by-step interactive process to send emails with certificate attachments.
@@ -1101,14 +1187,17 @@ The Team"""
 # =============================================================================
 
 
-@main.command()
-@click.option("--path", "-p", "dir_path", help="Directory containing CSS files")
-@click.option("--file", "-f", "file_path", help="Single CSS file to process")
-@click.option("--no-backup", is_flag=True, help="Don't create backup files")
-@click.option(
-    "--all", "-a", "process_all", is_flag=True, help="Process all files without prompting"
-)
-def colors(dir_path, file_path, no_backup, process_all):
+@app.command()
+def colors(
+    dir_path: str | None = typer.Option(
+        None, "--path", "-p", help="Directory containing CSS files"
+    ),
+    file_path: str | None = typer.Option(None, "--file", "-f", help="Single CSS file to process"),
+    no_backup: bool = typer.Option(False, "--no-backup", help="Don't create backup files"),
+    process_all: bool = typer.Option(
+        False, "--all", "-a", help="Process all files without prompting"
+    ),
+) -> None:
     """Convert CSS colors to oklch() format
 
     Converts hex, hsl, rgb, and named colors to modern oklch() notation.
@@ -1252,37 +1341,31 @@ def colors(dir_path, file_path, no_backup, process_all):
 # =============================================================================
 
 
-@main.command()
-@click.option("--input", "-i", "input_dir", help="Input directory with files")
-@click.option(
-    "--pattern", "-p", help="Rename pattern with placeholders: {name}, {ext}, {date}, {sequence}"
-)
-@click.option("--prefix", help="Add prefix to filenames")
-@click.option("--suffix", help="Add suffix to filenames")
-@click.option("--replace-from", help="Text to replace in filenames")
-@click.option("--replace-to", help="Replacement text")
-@click.option("--lowercase", is_flag=True, help="Convert filenames to lowercase")
-@click.option("--uppercase", is_flag=True, help="Convert filenames to uppercase")
-@click.option("--add-date", is_flag=True, help="Add current date to filenames")
-@click.option("--add-sequence", is_flag=True, help="Add sequence numbers")
-@click.option("--recursive", "-r", is_flag=True, help="Process subdirectories")
-@click.option("--dry-run", "-n", is_flag=True, help="Preview changes without renaming")
-@click.option("--file-pattern", help="File glob pattern to match (e.g., '*.jpg')")
+@app.command()
 def rename(
-    input_dir,
-    pattern,
-    prefix,
-    suffix,
-    replace_from,
-    replace_to,
-    lowercase,
-    uppercase,
-    add_date,
-    add_sequence,
-    recursive,
-    dry_run,
-    file_pattern,
-):
+    input_dir: str | None = typer.Option(None, "--input", "-i", help="Input directory with files"),
+    pattern: str | None = typer.Option(
+        None,
+        "--pattern",
+        "-p",
+        help="Rename pattern with placeholders: {name}, {ext}, {date}, {sequence}",
+    ),
+    prefix: str | None = typer.Option(None, "--prefix", help="Add prefix to filenames"),
+    suffix: str | None = typer.Option(None, "--suffix", help="Add suffix to filenames"),
+    replace_from: str | None = typer.Option(
+        None, "--replace-from", help="Text to replace in filenames"
+    ),
+    replace_to: str | None = typer.Option(None, "--replace-to", help="Replacement text"),
+    lowercase: bool = typer.Option(False, "--lowercase", help="Convert filenames to lowercase"),
+    uppercase: bool = typer.Option(False, "--uppercase", help="Convert filenames to uppercase"),
+    add_date: bool = typer.Option(False, "--add-date", help="Add current date to filenames"),
+    add_sequence: bool = typer.Option(False, "--add-sequence", help="Add sequence numbers"),
+    recursive: bool = typer.Option(False, "--recursive", "-r", help="Process subdirectories"),
+    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Preview changes without renaming"),
+    file_pattern: str | None = typer.Option(
+        None, "--file-pattern", help="File glob pattern to match (e.g., '*.jpg')"
+    ),
+) -> None:
     """Rename files in bulk with patterns and transformations
 
     Step-by-step interactive process to rename multiple files.
@@ -1491,20 +1574,24 @@ def rename(
 # =============================================================================
 
 
-@main.command()
-@click.option("--input", "-i", "input_file", help="Input CSV file to validate")
-@click.option("--schema", "-s", help="JSON schema file for validation")
-@click.option("--output", "-o", help="Output file for validation report")
-@click.option("--strict", is_flag=True, help="Enable strict validation mode")
-@click.option("--clean", is_flag=True, help="Clean and fix data issues")
-@click.option(
-    "--format",
-    "-f",
-    "report_format",
-    type=click.Choice(["text", "json", "html"]),
-    help="Report format",
-)
-def validate(input_file, schema, output, strict, clean, report_format):
+@app.command()
+def validate(
+    input_file: str | None = typer.Option(None, "--input", "-i", help="Input CSV file to validate"),
+    schema: str | None = typer.Option(
+        None, "--schema", "-s", help="JSON schema file for validation"
+    ),
+    output: str | None = typer.Option(
+        None, "--output", "-o", help="Output file for validation report"
+    ),
+    strict: bool = typer.Option(False, "--strict", help="Enable strict validation mode"),
+    clean: bool = typer.Option(False, "--clean", help="Clean and fix data issues"),
+    report_format: Literal["text", "json", "html"] | None = typer.Option(
+        None,
+        "--format",
+        "-f",
+        help="Report format",
+    ),
+) -> None:
     """Validate CSV files against a schema
 
     Step-by-step interactive process to validate and optionally clean CSV data.
@@ -1595,9 +1682,11 @@ Bob Johnson,bob@example.com,35,Sales"""
     display_step(4, total_steps, "Report options")
 
     if not report_format:
-        report_format = Prompt.ask(
-            "  Report format", choices=["text", "json", "html"], default="text"
+        report_format = cast(
+            Literal["text", "json", "html"],
+            Prompt.ask("  Report format", choices=["text", "json", "html"], default="text"),
         )
+    assert report_format is not None
     console.print(f"[green]  Format: {report_format}[/]")
 
     if not output:
@@ -1698,15 +1787,22 @@ Bob Johnson,bob@example.com,35,Sales"""
 # =============================================================================
 
 
-@main.command()
-@click.option("--input", "-i", "input_path", help="Input markdown file or directory")
-@click.option("--output", "-o", help="Output PDF file or directory")
-@click.option("--css", "-c", help="Custom CSS file for styling")
-@click.option("--page-size", type=click.Choice(["A4", "Letter", "Legal"]), help="Page size")
-@click.option("--toc", is_flag=True, help="Include table of contents")
-@click.option("--syntax-highlight", is_flag=True, help="Enable syntax highlighting for code")
-@click.option("--recursive", "-r", is_flag=True, help="Process subdirectories")
-def md2pdf(input_path, output, css, page_size, toc, syntax_highlight, recursive):
+@app.command()
+def md2pdf(
+    input_path: str | None = typer.Option(
+        None, "--input", "-i", help="Input markdown file or directory"
+    ),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output PDF file or directory"),
+    css: str | None = typer.Option(None, "--css", "-c", help="Custom CSS file for styling"),
+    page_size: Literal["A4", "Letter", "Legal"] | None = typer.Option(
+        None, "--page-size", help="Page size"
+    ),
+    toc: bool = typer.Option(False, "--toc", help="Include table of contents"),
+    syntax_highlight: bool = typer.Option(
+        False, "--syntax-highlight", help="Enable syntax highlighting for code"
+    ),
+    recursive: bool = typer.Option(False, "--recursive", "-r", help="Process subdirectories"),
+) -> None:
     """Convert Markdown files to PDF
 
     Step-by-step interactive process to convert markdown to styled PDFs.
@@ -1792,7 +1888,11 @@ Markdown to PDF conversion is easy with r10n!
     display_step(3, total_steps, "Styling options")
 
     if not page_size:
-        page_size = Prompt.ask("  Page size", choices=["A4", "Letter", "Legal"], default="A4")
+        page_size = cast(
+            Literal["A4", "Letter", "Legal"],
+            Prompt.ask("  Page size", choices=["A4", "Letter", "Legal"], default="A4"),
+        )
+    assert page_size is not None
     console.print(f"[green]  Page size: {page_size}[/]")
 
     if not css:
@@ -1904,11 +2004,16 @@ Markdown to PDF conversion is easy with r10n!
 # =============================================================================
 
 
-@main.command()
-@click.option("--template", "-t", required=True, help="PDF template file")
-@click.option("--recipients", "-r", help="CSV file (for column headers)")
-@click.option("--output", "-o", default="local/configs/fill-pdfs.json", help="Output config path")
-def configure(template, recipients, output):
+@app.command()
+def configure(
+    template: str = typer.Option(..., "--template", "-t", help="PDF template file"),
+    recipients: str | None = typer.Option(
+        None, "--recipients", "-r", help="CSV file (for column headers)"
+    ),
+    output: str = typer.Option(
+        "local/configs/fill-pdfs.json", "--output", "-o", help="Output config path"
+    ),
+) -> None:
     """Launch visual field picker for PDF fill configuration
 
     Opens a browser-based tool where you can click on a PDF template
@@ -1958,8 +2063,8 @@ def configure(template, recipients, output):
 # =============================================================================
 
 
-@main.command()
-def status():
+@app.command()
+def status() -> None:
     """Check the status of your local setup"""
     display_header("Status", "Check your local folder setup")
 
@@ -2022,14 +2127,15 @@ def status():
 # =============================================================================
 
 
-@main.command()
-@click.option(
-    "--version",
-    "target_version",
-    help="Install a specific version tag (for example: 2.0.0 or v2.0.0)",
-)
-@click.option("--check", is_flag=True, help="Only check for updates")
-def upgrade(target_version, check):
+@app.command()
+def upgrade(
+    target_version: str | None = typer.Option(
+        None,
+        "--version",
+        help="Install a specific version tag (for example: 2.0.0 or v2.0.0)",
+    ),
+    check: bool = typer.Option(False, "--check", help="Only check for updates"),
+) -> None:
     """Upgrade r10n binary from GitHub Releases."""
     display_header("Upgrade", "Update your installed r10n binary")
 
@@ -2129,8 +2235,8 @@ def upgrade(target_version, check):
         sys.exit(1)
 
 
-@main.command()
-def init():
+@app.command()
+def init() -> None:
     """Initialize the local folder structure"""
     display_header("Initialize", "Create local folder structure")
 
@@ -2167,6 +2273,11 @@ def init():
     console.print()
     console.print("Run [cyan]r10n status[/] to check your setup.")
     console.print("Run [cyan]r10n <command>[/] to start an automation.")
+
+
+def main() -> None:
+    """Run the Typer-powered r10n CLI."""
+    app()
 
 
 if __name__ == "__main__":
