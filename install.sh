@@ -77,10 +77,10 @@ esac
 
 case "$uname_s/$arch" in
   linux/x86_64)
-    asset="r10n-linux-x86_64"
+    asset="r10n-linux-x86_64.tar.gz"
     ;;
   darwin/arm64)
-    asset="r10n-macos-arm64"
+    asset="r10n-macos-arm64.tar.gz"
     ;;
   *)
     echo "Unsupported platform: $uname_s/$arch" >&2
@@ -97,7 +97,7 @@ abort() {
 trap cleanup EXIT
 trap abort INT TERM
 
-binary_path="$tmp_dir/$asset"
+artifact_path="$tmp_dir/$asset"
 checksum_path="$tmp_dir/SHA256SUMS"
 release_json_path="$tmp_dir/release.json"
 
@@ -150,8 +150,8 @@ if [ -n "$RELEASE_API_URL" ] \
   checksum_url=$(asset_url_from_release_json "SHA256SUMS")
 
   if [ -n "$binary_url" ] && [ -n "$checksum_url" ]; then
-    rm -f "$binary_path" "$checksum_path"
-    if curl $CURL_FLAGS "$binary_url" -o "$binary_path" \
+    rm -f "$artifact_path" "$checksum_path"
+    if curl $CURL_FLAGS "$binary_url" -o "$artifact_path" \
       && curl $CURL_FLAGS "$checksum_url" -o "$checksum_path"; then
       downloaded=1
     fi
@@ -160,8 +160,8 @@ fi
 
 for base_url in $BASE_URLS; do
   if [ "$downloaded" -ne 1 ]; then
-    rm -f "$binary_path" "$checksum_path"
-    if curl $CURL_FLAGS "$base_url/$asset" -o "$binary_path" \
+    rm -f "$artifact_path" "$checksum_path"
+    if curl $CURL_FLAGS "$base_url/$asset" -o "$artifact_path" \
       && curl $CURL_FLAGS "$base_url/SHA256SUMS" -o "$checksum_path"; then
       downloaded=1
       break
@@ -182,9 +182,9 @@ if [ -z "$expected_hash" ]; then
 fi
 
 if command -v sha256sum >/dev/null 2>&1; then
-  actual_hash=$(sha256sum "$binary_path" | awk '{ print $1 }')
+  actual_hash=$(sha256sum "$artifact_path" | awk '{ print $1 }')
 elif command -v shasum >/dev/null 2>&1; then
-  actual_hash=$(shasum -a 256 "$binary_path" | awk '{ print $1 }')
+  actual_hash=$(shasum -a 256 "$artifact_path" | awk '{ print $1 }')
 else
   echo "No SHA-256 tool found (sha256sum or shasum required)." >&2
   exit 1
@@ -196,7 +196,25 @@ if [ "$actual_hash" != "$expected_hash" ]; then
 fi
 
 mkdir -p "$INSTALL_DIR"
-install -m 755 "$binary_path" "$INSTALL_DIR/r10n"
+tar -xzf "$artifact_path" -C "$tmp_dir"
+
+if [ ! -x "$tmp_dir/r10n/r10n" ]; then
+  echo "Release archive did not contain an executable r10n/r10n" >&2
+  exit 1
+fi
+
+rm -rf "$INSTALL_DIR/.r10n.new" "$INSTALL_DIR/.r10n.bak"
+mv "$tmp_dir/r10n" "$INSTALL_DIR/.r10n.new"
+
+if [ -d "$INSTALL_DIR/.r10n" ]; then
+  mv "$INSTALL_DIR/.r10n" "$INSTALL_DIR/.r10n.bak"
+fi
+
+mv "$INSTALL_DIR/.r10n.new" "$INSTALL_DIR/.r10n"
+chmod 755 "$INSTALL_DIR/.r10n/r10n"
+ln -sfn ".r10n/r10n" "$INSTALL_DIR/r10n.new"
+mv -f "$INSTALL_DIR/r10n.new" "$INSTALL_DIR/r10n"
+rm -rf "$INSTALL_DIR/.r10n.bak"
 
 echo "Installed $APP_NAME to $INSTALL_DIR/r10n"
 echo "Run: r10n --help"

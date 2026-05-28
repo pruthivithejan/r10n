@@ -12,7 +12,8 @@
 - **Fill PDFs** - Fill PDF templates with data from CSV/TXT files
 - **Images** - Optimize and convert images to WebP format
 - **Email** - Send bulk personalized emails with attachments
-- **Interactive CLI** - Step-by-step prompts guide you through each automation
+- **Persistent terminal UI** - Run `r10n` once, choose automations from the home screen, and stay in the session until Ctrl+C
+- **Interactive commands** - Step-by-step prompts guide you through each automation
 - **Colors** - Convert CSS color codes (hex, hsl/hsla) to `oklch()` for perceptual color consistency
 - **Fast** - Powered by [uv](https://docs.astral.sh/uv/) for lightning-fast dependency management
 
@@ -39,7 +40,7 @@ uv run r10n --help
 
 ### Install Binary (curl)
 
-Install a prebuilt binary (no Python or uv required):
+Install a prebuilt CLI app (no Python or uv required):
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh
@@ -58,11 +59,22 @@ Update later with:
 r10n upgrade
 ```
 
+If an older installed binary fails during upgrade with a TLS certificate error, reinstall once with the same curl installer, then run `r10n --version`.
+
+Launch the installed terminal UI:
+
+```bash
+r10n
+```
+
 ## Usage
 
 Each command is interactive - just run it and follow the prompts:
 
 ```bash
+# Open the persistent home UI
+r10n
+
 # Generate contact cards
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
 

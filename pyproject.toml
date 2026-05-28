@@ -1,6 +1,6 @@
 [project]
 name = "r10n"
-version = "0.8.0"
+version = "0.9.0"
 description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
@@ -42,6 +42,8 @@ dependencies = [
     "flask>=3.0.0",
     "pypdfium2>=4.0.0",
     "typer>=0.26.2",
+    "click>=8.0.0",
+    "certifi>=2024.8.30",
 ]
 
 [project.urls]

@@ -19,12 +19,12 @@ jobs:
         include:
           - os: ubuntu-latest
             python: "3.11"
-            asset: r10n-linux-x86_64
-            executable: dist/r10n
+            asset: r10n-linux-x86_64.tar.gz
+            executable: dist/r10n/r10n
           - os: macos-14
             python: "3.11"
-            asset: r10n-macos-arm64
-            executable: dist/r10n
+            asset: r10n-macos-arm64.tar.gz
+            executable: dist/r10n/r10n
           - os: windows-latest
             python: "3.11"
             asset: r10n-windows-x86_64.exe
@@ -47,10 +47,11 @@ jobs:
         run: |
           pyinstaller \
             --name r10n \
-            --onefile \
+            --onedir \
             --paths . \
             --collect-all pypdfium2 \
             --collect-all PIL \
+            --collect-data certifi \
             src/cli.py
 
       - name: Build binary (Windows)
@@ -63,13 +64,14 @@ jobs:
             --paths . `
             --collect-all pypdfium2 `
             --collect-all PIL `
+            --collect-data certifi `
             src/cli.py
 
-      - name: Rename asset (Unix)
+      - name: Package asset (Unix)
         if: runner.os != 'Windows'
         run: |
-          mv "${{ matrix.executable }}" "dist/${{ matrix.asset }}"
-          chmod +x "dist/${{ matrix.asset }}"
+          chmod +x "${{ matrix.executable }}"
+          tar -C dist -czf "dist/${{ matrix.asset }}" r10n
 
       - name: Rename asset (Windows)
         if: runner.os == 'Windows'
@@ -80,7 +82,7 @@ jobs:
       - name: Smoke test (Unix)
         if: runner.os != 'Windows'
         run: |
-          ./dist/${{ matrix.asset }} --version
+          ./${{ matrix.executable }} --version
 
       - name: Smoke test (Windows)
         if: runner.os == 'Windows'

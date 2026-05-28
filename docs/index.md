@@ -30,6 +30,7 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 **Features:**
 
 - Beautiful Rich-powered terminal UI
+- Persistent home screen for installed binary use
 - Step-by-step interactive prompts
 - Run instantly with `uvx` or install locally
 - Generate contacts, fill PDFs, optimize images, send emails, and more
@@ -69,6 +70,12 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 
     ```bash
     r10n upgrade
+    ```
+
+    Launch the terminal UI:
+
+    ```bash
+    r10n
     ```
 
 ---

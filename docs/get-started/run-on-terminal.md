@@ -48,6 +48,14 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
 
 This downloads r10n temporarily, runs it, and cleans up automatically.
 
+To open the persistent terminal UI instead of printing help:
+
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
+```
+
+The home screen shows the banner, command list, and an input box. Type an automation command, then press Ctrl+C when you are done.
+
 ---
 
 ## Available Commands

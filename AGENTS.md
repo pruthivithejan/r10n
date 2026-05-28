@@ -625,6 +625,16 @@ When a PR changes shipped behavior, versioning MUST be handled before committing
    - **Feature release** (`feat`): bump **minor** (`x.y.z` -> `x.(y+1).0`)
    - **Major release** (breaking changes): bump **major** (`x.y.z` -> `(x+1).0.0`)
 
+   Patch numbers between minor versions are not a required sequence. For example,
+   `0.8.0 -> 0.9.0` is the correct next version for a feature release; you do
+   not need to publish `0.8.1`, `0.8.2`, etc. first. Use `0.8.1` only when the
+   release is bug fixes only and does not add user-facing features, commands,
+   workflows, install behavior, or packaging changes.
+
+   If one commit includes both fixes and features, choose the highest-impact
+   bump. For example, a release that fixes `r10n upgrade` and adds a persistent
+   terminal UI is a **minor** release, not a patch release.
+
 2. Update version in all required locations (keep them identical):
    - `pyproject.toml` -> `[project].version`
    - `src/cli.py` -> `VERSION`

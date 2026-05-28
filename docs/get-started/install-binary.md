@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh
 sh install.sh
 ```
 
-The installer downloads the correct binary for your OS/architecture, verifies checksums, and installs to `~/.local/bin/r10n`.
+The installer downloads the correct app archive for your OS/architecture, verifies checksums, installs the extracted app under `~/.local/bin/.r10n`, and creates the `~/.local/bin/r10n` launcher.
 
 The release workflow publishes the binaries and `SHA256SUMS` automatically after a version bump on `main`, so `install.sh` always targets the latest published release.
 
@@ -42,6 +42,14 @@ The release workflow publishes the binaries and `SHA256SUMS` automatically after
 r10n --version
 r10n --help
 ```
+
+Run the terminal UI:
+
+```bash
+r10n
+```
+
+The home screen shows the ASCII banner, available automations, and a command input box. Type commands such as `contacts`, `images --input ./photos`, or `upgrade --check`; the session stays open until you press Ctrl+C.
 
 If `r10n` is not found, add this to your shell profile:
 
@@ -99,6 +107,22 @@ Install to a writable path such as `~/.local/bin`, then retry:
 
 ```bash
 r10n upgrade
+```
+
+### TLS certificate verification failed during upgrade
+
+`r10n upgrade` uses the packaged certifi CA store for GitHub downloads. If your network uses a custom proxy certificate, set `SSL_CERT_FILE` to that CA bundle and retry.
+
+If your installed binary is older and fails before it can use the fixed upgrader, reinstall once with the installer instead of `r10n upgrade`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh
+```
+
+Then verify:
+
+```bash
+r10n --version
 ```
 
 ### Unsupported platform

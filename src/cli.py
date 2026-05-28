@@ -7,9 +7,12 @@ Interactive command-line interface with beautiful terminal UI
 import json
 import os
 import platform
+import shlex
 import shutil
+import ssl
 import stat
 import sys
+import tarfile
 import tempfile
 import time
 import urllib.error
@@ -18,6 +21,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any, Literal, cast
 
+import click
 import typer
 from dotenv import load_dotenv
 from rich.console import Console
@@ -25,27 +29,35 @@ from rich.panel import Panel
 from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
-# Import automation modules
-from src.automations import (
-    convert_colors,
-    download_website_images,
-    fill_pdfs,
-    generate_contacts,
-    markdown_to_pdf,
-    optimize_images,
-    rename_files,
-    send_same_email,
-    validate_csv,
-)
-
 console = Console()
-VERSION = "0.8.0"
+VERSION = "0.9.0"
 RELEASE_REPO = "pruthivithejan/r10n"
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
 UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
 UPDATE_CHECK_TIMEOUT_SECONDS = 4
+HOME_COMMANDS = (
+    ("contacts", "Generate VCF contact cards from phone numbers"),
+    ("fill-pdfs", "Fill PDF templates from CSV or TXT data"),
+    ("images", "Optimize and convert images to WebP"),
+    ("website-images", "Download website images and convert format"),
+    ("email", "Send bulk emails with attachments"),
+    ("colors", "Convert CSS colors to oklch()"),
+    ("rename", "Batch rename files"),
+    ("validate", "Validate CSV files against schemas"),
+    ("md2pdf", "Convert Markdown files to PDF"),
+)
+HOME_UTILITY_COMMANDS = (
+    ("status", "Check local setup"),
+    ("init", "Create local folders"),
+    ("upgrade", "Update the standalone binary"),
+    ("configure", "Open the PDF field picker"),
+)
+HOME_HELP_COMMANDS = {"help", "/help", "?", "/?"}
+HOME_CLEAR_COMMANDS = {"clear", "/clear", "cls"}
+HOME_EXIT_COMMANDS = {"exit", "/exit", "quit", "/quit", "q", "/q"}
 app = typer.Typer(
-    no_args_is_help=True,
+    no_args_is_help=False,
+    add_completion=False,
     rich_markup_mode="rich",
     help=(
         "r10n - Automate repetitive routines\n\n"
@@ -80,11 +92,11 @@ def load_config(config_path: str) -> dict[str, Any]:
         return json.load(f)
 
 
-def display_banner():
+def display_banner(force: bool = False) -> None:
     """Display a styled ASCII banner at startup (TTY only).
     Set R10N_NO_BANNER=1 to suppress.
     """
-    if not sys.stdout.isatty() or os.getenv("R10N_NO_BANNER"):
+    if (not force and not sys.stdout.isatty()) or os.getenv("R10N_NO_BANNER"):
         return
 
     banner = """
@@ -114,6 +126,140 @@ def display_header(title: str, description: str = ""):
 def display_step(step_num: int, total: int, description: str):
     """Display a step indicator"""
     console.print(f"[cyan]Step {step_num}/{total}:[/] {description}")
+
+
+def display_home_commands() -> None:
+    """Display the home command list used by the persistent terminal UI."""
+    table = Table(show_header=True, header_style="bold cyan", expand=False)
+    table.add_column("Command", style="cyan", no_wrap=True)
+    table.add_column("What it does", style="white")
+
+    for command_name, description in HOME_COMMANDS:
+        table.add_row(command_name, description)
+    for command_name, description in HOME_UTILITY_COMMANDS:
+        table.add_row(command_name, description)
+
+    console.print(table)
+
+
+def display_home_screen() -> None:
+    """Display the persistent home screen."""
+    display_banner(force=True)
+    console.print(
+        Panel.fit(
+            "[bold]Type an automation command to run it.[/]\n"
+            "[dim]Examples: contacts, images --input ./photos, upgrade --check[/]\n"
+            "[dim]Use /help for commands. Press Ctrl+C to exit.[/]",
+            title="Home",
+            border_style="cyan",
+        )
+    )
+    console.print()
+    display_home_commands()
+    console.print()
+
+
+def display_home_input_box() -> None:
+    """Display the input box above the home prompt."""
+    console.print(
+        Panel.fit(
+            "[dim]Enter a command, flags included. The session stays open after it finishes.[/]",
+            title="r10n",
+            border_style="cyan",
+        )
+    )
+
+
+def restore_env_var(name: str, previous_value: str | None) -> None:
+    """Restore an environment variable to its previous value."""
+    if previous_value is None:
+        os.environ.pop(name, None)
+    else:
+        os.environ[name] = previous_value
+
+
+def execute_home_command(command_line: str) -> bool:
+    """Execute one command from the persistent home UI.
+
+    Args:
+        command_line: Raw command text entered at the home prompt.
+
+    Returns:
+        True to keep the home UI running, False to exit it.
+    """
+    stripped = command_line.strip()
+    if not stripped:
+        return True
+
+    try:
+        args = shlex.split(stripped)
+    except ValueError as error:
+        console.print(f"[red]Could not parse command: {error}[/]")
+        return True
+
+    if args and args[0] == "r10n":
+        args = args[1:]
+    if not args:
+        return True
+
+    command_name = args[0]
+    if command_name in HOME_EXIT_COMMANDS:
+        return False
+    if command_name in HOME_HELP_COMMANDS:
+        display_home_commands()
+        return True
+    if command_name in HOME_CLEAR_COMMANDS:
+        console.clear()
+        display_home_screen()
+        return True
+    if command_name.startswith("/") and command_name[1:]:
+        args[0] = command_name[1:]
+
+    command = typer.main.get_command(app)
+    previous_banner = os.environ.get("R10N_NO_BANNER")
+    os.environ["R10N_NO_BANNER"] = "1"
+
+    try:
+        command.main(args=args, prog_name="r10n", standalone_mode=False)
+    except click.ClickException as error:
+        console.print(f"[red]{error.format_message()}[/]")
+    except click.exceptions.Exit as error:
+        if error.exit_code not in (0, None):
+            console.print(f"[red]Command exited with status {error.exit_code}.[/]")
+    except SystemExit as error:
+        code = error.code if isinstance(error.code, int) else 1
+        if code:
+            console.print(f"[red]Command exited with status {code}.[/]")
+    except Exception as error:
+        console.print(f"[red]Error: {error}[/]")
+    finally:
+        restore_env_var("R10N_NO_BANNER", previous_banner)
+
+    console.print()
+    return True
+
+
+def run_home_screen() -> None:
+    """Run the persistent terminal home UI until the user exits."""
+    display_home_screen()
+
+    while True:
+        try:
+            display_home_input_box()
+            command_line = Prompt.ask("[bold cyan]r10n[/]")
+        except (KeyboardInterrupt, EOFError):
+            console.print("\n[dim]Exiting r10n.[/]")
+            return
+
+        try:
+            keep_running = execute_home_command(command_line)
+        except KeyboardInterrupt:
+            console.print("\n[dim]Exiting r10n.[/]")
+            return
+
+        if not keep_running:
+            console.print("[dim]Exiting r10n.[/]")
+            return
 
 
 def display_config(config: dict[str, Any], title: str = "Configuration"):
@@ -156,9 +302,9 @@ def detect_platform_asset_name() -> str:
     normalized_machine = machine_aliases.get(machine, machine)
 
     if system == "linux" and normalized_machine == "x86_64":
-        return "r10n-linux-x86_64"
+        return "r10n-linux-x86_64.tar.gz"
     elif system == "darwin" and normalized_machine == "arm64":
-        return "r10n-macos-arm64"
+        return "r10n-macos-arm64.tar.gz"
     elif system == "windows":
         if normalized_machine == "x86_64":
             return "r10n-windows-x86_64.exe"
@@ -210,7 +356,9 @@ def fetch_release_data(version: str | None = None, timeout: int = 30) -> dict[st
         headers["Authorization"] = f"Bearer {token}"
 
     request = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    with urllib.request.urlopen(
+        request, timeout=timeout, context=create_https_context()
+    ) as response:
         return json.loads(response.read().decode("utf-8"))
 
 
@@ -227,8 +375,40 @@ def find_asset_download_url(release_data: dict[str, Any], asset_name: str) -> st
 def download_to_path(url: str, destination: Path) -> None:
     """Download a URL to a destination path."""
     request = urllib.request.Request(url, headers={"User-Agent": "r10n-upgrade"})
-    with urllib.request.urlopen(request, timeout=60) as response, open(destination, "wb") as output:
+    with (
+        urllib.request.urlopen(request, timeout=60, context=create_https_context()) as response,
+        open(destination, "wb") as output,
+    ):
         shutil.copyfileobj(response, output)
+
+
+def create_https_context() -> ssl.SSLContext:
+    """Create an HTTPS context with the packaged certifi CA bundle when available."""
+    context = ssl.create_default_context()
+    try:
+        import certifi
+    except ImportError:
+        return context
+
+    context.load_verify_locations(cafile=certifi.where())
+    return context
+
+
+def format_network_error(error: urllib.error.URLError) -> str:
+    """Format network errors with a more useful TLS certificate hint."""
+    reason = error.reason
+    reason_text = str(reason)
+    if (
+        isinstance(reason, ssl.SSLCertVerificationError)
+        or "CERTIFICATE_VERIFY_FAILED" in reason_text
+    ):
+        return (
+            "Network error: TLS certificate verification failed while contacting GitHub. "
+            "r10n uses the bundled certifi CA store; if your network uses a custom "
+            "proxy certificate, set SSL_CERT_FILE to that CA bundle and retry."
+        )
+
+    return f"Network error: {reason}"
 
 
 def parse_sha256_sums(checksum_content: str) -> dict[str, str]:
@@ -261,13 +441,26 @@ def compute_file_sha256(file_path: Path) -> str:
 
 def resolve_current_executable_path() -> Path:
     """Resolve the currently running executable path."""
+    return resolve_command_entry_path().resolve()
+
+
+def resolve_command_entry_path() -> Path:
+    """Return the command path the user runs, preserving launcher symlinks."""
     argv0 = Path(sys.argv[0])
     if argv0.exists() and argv0.name in {"r10n", "r10n.exe"}:
-        return argv0.resolve()
+        argv_path = argv0.absolute()
+        launcher_path = argv_path.parent.parent / "r10n"
+        if (
+            argv_path.parent.name == ".r10n"
+            and launcher_path.exists()
+            and launcher_path.resolve() == argv_path.resolve()
+        ):
+            return launcher_path
+        return argv_path
 
     executable = shutil.which("r10n")
     if executable:
-        return Path(executable).resolve()
+        return Path(executable)
 
     raise RuntimeError("Could not determine current executable path.")
 
@@ -284,6 +477,83 @@ def is_standalone_binary(executable_path: Path) -> bool:
         return False
 
     return prefix != b"#!"
+
+
+def is_archive_asset(asset_name: str) -> bool:
+    """Return True when a release asset is an installable app archive."""
+    return asset_name.endswith(".tar.gz")
+
+
+def extract_release_archive(archive_path: Path, destination: Path) -> Path:
+    """Extract a release archive and return the extracted app directory."""
+    destination.mkdir(parents=True, exist_ok=True)
+    destination_root = destination.resolve()
+
+    with tarfile.open(archive_path, "r:gz") as archive:
+        for member in archive.getmembers():
+            member_path = (destination / member.name).resolve()
+            if os.path.commonpath([str(destination_root), str(member_path)]) != str(
+                destination_root
+            ):
+                raise RuntimeError(f"Unsafe archive path: {member.name}")
+
+        try:
+            archive.extractall(destination, filter="data")
+        except TypeError:
+            archive.extractall(destination)
+
+    app_dir = destination / "r10n"
+    executable = app_dir / "r10n"
+    if not executable.exists():
+        raise RuntimeError("Release archive did not contain r10n/r10n")
+
+    return app_dir
+
+
+def replace_installed_app(command_path: Path, new_app_dir: Path) -> None:
+    """Install an extracted onedir app and point the r10n launcher at it."""
+    if os.name == "nt":
+        raise RuntimeError(
+            "In-place upgrade is not supported on Windows. "
+            "Please reinstall from the latest release binary."
+        )
+
+    install_dir = command_path.parent
+    if not os.access(install_dir, os.W_OK):
+        raise PermissionError(f"No write permission for install directory: {install_dir}")
+
+    app_dir = install_dir / ".r10n"
+    staged_app_dir = install_dir / ".r10n.new"
+    backup_app_dir = install_dir / ".r10n.bak"
+    staged_launcher = install_dir / "r10n.new"
+
+    shutil.rmtree(staged_app_dir, ignore_errors=True)
+    shutil.rmtree(backup_app_dir, ignore_errors=True)
+    if staged_launcher.exists() or staged_launcher.is_symlink():
+        staged_launcher.unlink()
+
+    try:
+        shutil.copytree(new_app_dir, staged_app_dir, symlinks=True)
+        executable = staged_app_dir / "r10n"
+        mode = executable.stat().st_mode
+        executable.chmod(mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+
+        if app_dir.exists():
+            shutil.move(str(app_dir), str(backup_app_dir))
+        shutil.move(str(staged_app_dir), str(app_dir))
+
+        os.symlink(".r10n/r10n", staged_launcher)
+        os.replace(staged_launcher, command_path)
+        shutil.rmtree(backup_app_dir, ignore_errors=True)
+    except Exception:
+        if staged_launcher.exists() or staged_launcher.is_symlink():
+            staged_launcher.unlink()
+        shutil.rmtree(staged_app_dir, ignore_errors=True)
+        if backup_app_dir.exists():
+            if app_dir.exists():
+                shutil.rmtree(app_dir, ignore_errors=True)
+            shutil.move(str(backup_app_dir), str(app_dir))
+        raise
 
 
 def get_update_cache_path() -> Path:
@@ -416,6 +686,10 @@ def cli(
     - validate: Validate CSV files against schemas
     - md2pdf: Convert Markdown files to PDF
     """
+    if not ctx.resilient_parsing and ctx.invoked_subcommand is None:
+        run_home_screen()
+        raise typer.Exit()
+
     display_banner()
     if not ctx.resilient_parsing:
         maybe_notify_update(ctx.invoked_subcommand)
@@ -501,6 +775,8 @@ def contacts(
     console.print("[cyan]Generating contacts...[/]")
 
     try:
+        from src.automations import generate_contacts
+
         results = generate_contacts.generate_vcf_from_file(input_file, output, prefix)
 
         console.print()
@@ -547,6 +823,8 @@ def fill_pdfs_cmd(
     """
     import subprocess
     import tempfile
+
+    from src.automations import fill_pdfs
 
     display_header("PDF Filler", "Fill PDF templates with data from CSV/TXT files")
 
@@ -838,6 +1116,8 @@ def images(
     console.print()
 
     try:
+        from src.automations import optimize_images
+
         results = optimize_images.optimize_images(
             input_dir=input_dir,
             output_dir=output,
@@ -975,6 +1255,8 @@ def website_images(
     console.print()
 
     try:
+        from src.automations import download_website_images
+
         results = download_website_images.download_website_images(
             url=website_url,
             output_dir=output,
@@ -1158,6 +1440,8 @@ The Team"""
     console.print()
 
     try:
+        from src.automations import send_same_email
+
         results = send_same_email.send_from_file(
             email_list_file=recipients,
             body_file=body,
@@ -1285,6 +1569,8 @@ def colors(
     console.print()
 
     try:
+        from src.automations import convert_colors
+
         results = convert_colors.convert_colors(
             path=target_path or ".",
             file=target_file,
@@ -1501,6 +1787,8 @@ def rename(
     console.print()
 
     try:
+        from src.automations import rename_files
+
         result = rename_files.rename_files(
             input_directory=input_dir,
             pattern=pattern,
@@ -1720,6 +2008,8 @@ Bob Johnson,bob@example.com,35,Sales"""
     console.print()
 
     try:
+        from src.automations import validate_csv
+
         result = validate_csv.validate_csv(
             input_file=input_file,
             schema_file=schema,
@@ -1941,6 +2231,8 @@ Markdown to PDF conversion is easy with r10n!
     console.print()
 
     try:
+        from src.automations import markdown_to_pdf
+
         if input_p.is_file():
             result = markdown_to_pdf.convert_markdown_to_pdf(
                 input_path=input_path,
@@ -2146,6 +2438,7 @@ def upgrade(
         sys.exit(1)
 
     try:
+        command_path = resolve_command_entry_path()
         current_executable = resolve_current_executable_path()
         if not is_standalone_binary(current_executable):
             console.print("[yellow]Upgrade is available only for standalone binary installs.[/]")
@@ -2184,7 +2477,7 @@ def upgrade(
             console.print("[bold green]You are already on the latest version.[/]")
             return
 
-        console.print(f"[cyan]Install path:[/] {current_executable}")
+        console.print(f"[cyan]Install path:[/] {command_path}")
 
         binary_url = find_asset_download_url(release_data, asset_name)
         checksum_url = find_asset_download_url(release_data, "SHA256SUMS")
@@ -2208,7 +2501,11 @@ def upgrade(
                 raise RuntimeError("Checksum verification failed for downloaded binary")
 
             console.print("[green]Checksum verified.[/]")
-            replace_current_executable(current_executable, binary_path)
+            if is_archive_asset(asset_name):
+                extracted_app_dir = extract_release_archive(binary_path, temp_path / "extract")
+                replace_installed_app(command_path, extracted_app_dir)
+            else:
+                replace_current_executable(current_executable, binary_path)
 
         console.print()
         console.print(f"[bold green]Done! Updated to r10n v{release_version}[/]")
@@ -2224,7 +2521,7 @@ def upgrade(
             console.print(f"[red]HTTP error: {error}[/]")
         sys.exit(1)
     except urllib.error.URLError as error:
-        console.print(f"[red]Network error: {error.reason}[/]")
+        console.print(f"[red]{format_network_error(error)}[/]")
         sys.exit(1)
     except PermissionError as error:
         console.print(f"[red]Permission error: {error}[/]")
