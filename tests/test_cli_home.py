@@ -19,7 +19,7 @@ class TestHomeTerminalUi:
         result = runner.invoke(cli.app, input="exit\n")
 
         assert result.exit_code == 0
-        assert "r10n v0.9.0 - routine automation" in result.output
+        assert f"r10n v{cli.VERSION} - routine automation" in result.output
         assert "Type an automation command to run it." in result.output
         assert "Press Ctrl+C to exit." in result.output
 

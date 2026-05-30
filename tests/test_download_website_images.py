@@ -19,7 +19,9 @@ from src.automations.download_website_images import (
     extract_image_urls,
     extract_page_links,
     get_page_output_directory,
+    image_variant_key,
     normalize_output_format,
+    select_highest_resolution_image_urls,
 )
 
 
@@ -60,7 +62,7 @@ class TestExtractImageUrls:
     """Test HTML image URL extraction."""
 
     def test_extracts_common_image_sources(self):
-        """Extract images from img, srcset, source, link icons, and style URLs."""
+        """Extract images and keep the largest candidate from responsive sources."""
         html = """
         <html>
           <head><link rel="icon" href="/favicon.png"></head>
@@ -77,8 +79,6 @@ class TestExtractImageUrls:
 
         assert result == [
             "https://example.com/favicon.png",
-            "https://example.com/hero.jpg",
-            "https://example.com/hero-small.jpg",
             "https://example.com/hero-large.jpg",
             "https://cdn.example.com/photo.webp",
             "https://example.com/background.png",
@@ -91,6 +91,55 @@ class TestExtractImageUrls:
         result = extract_image_urls(html, "https://example.com")
 
         assert result == ["https://example.com/same.jpg"]
+
+    def test_deduplicates_query_resized_variants_to_largest(self):
+        """Keep only the largest query-resized variant of the same image."""
+        html = """
+        <img
+          src="/photo-1200x800.jpg?w=2048&q=75&auto=format"
+          srcset="/photo-1200x800.jpg?w=256&q=75&auto=format 256w,
+                  /photo-1200x800.jpg?w=640&q=75&auto=format 640w,
+                  /photo-1200x800.jpg?w=2048&q=75&auto=format 2048w">
+        """
+
+        result = extract_image_urls(html, "https://example.com")
+
+        assert result == ["https://example.com/photo-1200x800.jpg?w=2048&q=75&auto=format"]
+
+
+class TestSelectHighestResolutionImageUrls:
+    """Test responsive image variant selection."""
+
+    def test_groups_urls_without_responsive_query_parameters(self):
+        """Build the same variant key for different widths of one image."""
+        first = image_variant_key("https://example.com/photo.jpg?w=256&q=75&auto=format")
+        second = image_variant_key("https://example.com/photo.jpg?w=2048&q=90&auto=format")
+
+        assert first == second
+
+    def test_keeps_largest_query_width_variant(self):
+        """Keep the URL with the largest requested width."""
+        result = select_highest_resolution_image_urls(
+            [
+                "https://example.com/photo.jpg?w=256&q=75",
+                "https://example.com/photo.jpg?w=2048&q=75",
+                "https://example.com/photo.jpg?w=640&q=75",
+            ]
+        )
+
+        assert result == ["https://example.com/photo.jpg?w=2048&q=75"]
+
+    def test_keeps_largest_filename_dimension_variant(self):
+        """Keep the URL with the largest filename dimensions."""
+        result = select_highest_resolution_image_urls(
+            [
+                "https://example.com/photo-320x180.jpg",
+                "https://example.com/photo-1920x1080.jpg",
+                "https://example.com/photo-800x450.jpg",
+            ]
+        )
+
+        assert result == ["https://example.com/photo-1920x1080.jpg"]
 
 
 class TestExtractPageLinks:
@@ -233,6 +282,44 @@ class TestDownloadWebsiteImages:
         assert Path(result["files"][0]["output_file"]).exists()
         assert (tmp_path / "001-one.png").exists()
         assert (tmp_path / "002-two.png").exists()
+
+    def test_downloads_only_largest_responsive_variant(self, tmp_path):
+        """Download only the highest-resolution URL from responsive image variants."""
+        html = b"""
+        <html>
+          <body>
+            <img
+              src="/photo-1200x800.jpg?w=2048&q=75&auto=format"
+              srcset="/photo-1200x800.jpg?w=256&q=75&auto=format 256w,
+                      /photo-1200x800.jpg?w=640&q=75&auto=format 640w,
+                      /photo-1200x800.jpg?w=2048&q=75&auto=format 2048w">
+          </body>
+        </html>
+        """
+        image_bytes = make_image_bytes("PNG")
+        downloaded_urls = []
+
+        def fake_urlopen(request, timeout=20):
+            url = request.full_url
+            if url == "https://example.com/page":
+                return FakeResponse(html)
+            if url == "https://example.com/photo-1200x800.jpg?w=2048&q=75&auto=format":
+                downloaded_urls.append(url)
+                return FakeResponse(image_bytes)
+            raise AssertionError(f"Unexpected URL: {url}")
+
+        with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+            result = download_website_images(
+                "https://example.com/page",
+                output_dir=str(tmp_path),
+                output_format="jpg",
+            )
+
+        assert result["found"] == 1
+        assert result["downloaded"] == 1
+        assert result["failed"] == 0
+        assert downloaded_urls == ["https://example.com/photo-1200x800.jpg?w=2048&q=75&auto=format"]
+        assert (tmp_path / "001-photo-1200x800.jpg").exists()
 
     def test_crawls_pages_and_places_images_in_page_folders(self, tmp_path):
         """Crawl same-site pages and mirror page paths in output folders."""

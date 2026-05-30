@@ -20,6 +20,30 @@ DEFAULT_USER_AGENT = "r10n-website-images/1.0"
 SUPPORTED_OUTPUT_FORMATS = {"jpg", "jpeg", "png", "webp"}
 PAGE_EXTENSIONS = {"", ".html", ".htm", ".php", ".asp", ".aspx"}
 IMAGE_URL_PATTERN = re.compile(r"url\(\s*['\"]?([^'\")]+)['\"]?\s*\)", re.IGNORECASE)
+DIMENSION_PATTERN = re.compile(r"[-_](?P<width>\d{2,5})x(?P<height>\d{2,5})(?=$|[-_.@])")
+SCALE_PATTERN = re.compile(r"@(?P<scale>\d+(?:\.\d+)?)x(?=$|[-_.])", re.IGNORECASE)
+RESPONSIVE_QUERY_PARAMETERS = {
+    "auto",
+    "dpr",
+    "fm",
+    "format",
+    "h",
+    "height",
+    "q",
+    "quality",
+    "w",
+    "width",
+}
+WIDTH_QUERY_PARAMETERS = {"w", "width"}
+HEIGHT_QUERY_PARAMETERS = {"h", "height"}
+
+
+@dataclass(frozen=True)
+class ImageSourceCandidate:
+    """Image URL candidate and optional srcset descriptor."""
+
+    url: str
+    descriptor: str | None = None
 
 
 @dataclass
@@ -49,8 +73,12 @@ class WebsiteImageParser(HTMLParser):
         attr_map = {name.lower(): value for name, value in attrs if value}
 
         if tag.lower() == "img":
-            self._add_url(attr_map.get("src"))
-            self._add_srcset(attr_map.get("srcset"))
+            self._add_best_source(
+                [
+                    *self._build_url_candidates(attr_map.get("src")),
+                    *self._parse_srcset(attr_map.get("srcset")),
+                ]
+            )
             for key, value in attr_map.items():
                 if key.startswith("data-") and key in {
                     "data-src",
@@ -60,7 +88,7 @@ class WebsiteImageParser(HTMLParser):
                     self._add_url(value)
 
         if tag.lower() == "source":
-            self._add_srcset(attr_map.get("srcset"))
+            self._add_best_source(self._parse_srcset(attr_map.get("srcset")))
 
         if tag.lower() == "link":
             rel = attr_map.get("rel", "").lower()
@@ -98,15 +126,50 @@ class WebsiteImageParser(HTMLParser):
 
         self.page_urls.append(urllib.parse.urljoin(self.base_url, cleaned))
 
-    def _add_srcset(self, srcset: str | None) -> None:
-        """Add all URLs from a srcset attribute."""
+    def _build_url_candidates(self, url: str | None) -> list[ImageSourceCandidate]:
+        """Build a single image candidate from a URL."""
+        if not url:
+            return []
+
+        cleaned = url.strip()
+        if not cleaned or cleaned.startswith(("data:", "blob:", "javascript:")):
+            return []
+
+        return [ImageSourceCandidate(urllib.parse.urljoin(self.base_url, cleaned))]
+
+    def _parse_srcset(self, srcset: str | None) -> list[ImageSourceCandidate]:
+        """Parse image candidates from a srcset attribute."""
         if not srcset:
+            return []
+
+        candidates = []
+        for candidate in srcset.split(","):
+            parts = candidate.strip().split()
+            if not parts:
+                continue
+            built_candidates = self._build_url_candidates(parts[0])
+            if not built_candidates:
+                continue
+            descriptor = parts[1] if len(parts) > 1 else None
+            candidates.append(
+                ImageSourceCandidate(
+                    url=built_candidates[0].url,
+                    descriptor=descriptor,
+                )
+            )
+
+        return candidates
+
+    def _add_best_source(self, candidates: list[ImageSourceCandidate]) -> None:
+        """Add the highest-resolution candidate from one image source set."""
+        if not candidates:
             return
 
-        for candidate in srcset.split(","):
-            url = candidate.strip().split()
-            if url:
-                self._add_url(url[0])
+        best_candidate = max(
+            candidates,
+            key=lambda candidate: image_resolution_score(candidate.url, candidate.descriptor),
+        )
+        self.image_urls.append(best_candidate.url)
 
     def _add_style_urls(self, style_content: str | None) -> None:
         """Add image URLs from CSS url(...) declarations."""
@@ -168,16 +231,283 @@ def fetch_html(url: str, timeout: int = 20, user_agent: str = DEFAULT_USER_AGENT
         raise RuntimeError(f"Could not fetch website: {url}") from exc
 
 
+def parse_positive_int(value: str | None) -> int | None:
+    """
+    Parse a positive integer from a URL value.
+
+    Args:
+        value: Raw string value.
+
+    Returns:
+        Parsed positive integer, or None when not present.
+    """
+    if not value:
+        return None
+
+    match = re.search(r"\d+", value)
+    if not match:
+        return None
+
+    parsed = int(match.group(0))
+    return parsed if parsed > 0 else None
+
+
+def parse_positive_float(value: str | None) -> float | None:
+    """
+    Parse a positive float from a URL value.
+
+    Args:
+        value: Raw string value.
+
+    Returns:
+        Parsed positive float, or None when not present.
+    """
+    if not value:
+        return None
+
+    match = re.search(r"\d+(?:\.\d+)?", value)
+    if not match:
+        return None
+
+    parsed = float(match.group(0))
+    return parsed if parsed > 0 else None
+
+
+def get_filename_dimensions(url_path: str) -> tuple[int, int] | None:
+    """
+    Extract dimensions from common image filename variants.
+
+    Args:
+        url_path: URL path, such as /photo-1200x800.jpg.
+
+    Returns:
+        Width and height when a dimension suffix is present.
+    """
+    decoded_path = urllib.parse.unquote(url_path)
+    matches = list(DIMENSION_PATTERN.finditer(decoded_path))
+    if not matches:
+        return None
+
+    match = matches[-1]
+    return int(match.group("width")), int(match.group("height"))
+
+
+def get_query_dimensions(parsed_url: urllib.parse.ParseResult) -> tuple[int | None, int | None]:
+    """
+    Extract requested dimensions from common resize query parameters.
+
+    Args:
+        parsed_url: Parsed image URL.
+
+    Returns:
+        Requested width and height values when present.
+    """
+    width = None
+    height = None
+
+    for key, value in urllib.parse.parse_qsl(parsed_url.query, keep_blank_values=True):
+        normalized_key = key.lower()
+        if normalized_key in WIDTH_QUERY_PARAMETERS and width is None:
+            width = parse_positive_int(value)
+        if normalized_key in HEIGHT_QUERY_PARAMETERS and height is None:
+            height = parse_positive_int(value)
+
+    return width, height
+
+
+def get_device_pixel_ratio(parsed_url: urllib.parse.ParseResult) -> float:
+    """
+    Extract a device-pixel-ratio multiplier from an image URL.
+
+    Args:
+        parsed_url: Parsed image URL.
+
+    Returns:
+        DPR multiplier, defaulting to 1.
+    """
+    for key, value in urllib.parse.parse_qsl(parsed_url.query, keep_blank_values=True):
+        if key.lower() == "dpr":
+            return parse_positive_float(value) or 1.0
+
+    return 1.0
+
+
+def infer_image_dimensions(url: str) -> tuple[int, int] | None:
+    """
+    Infer image dimensions from URL path and query parameters.
+
+    Args:
+        url: Image URL.
+
+    Returns:
+        Width and height when dimensions are declared in the URL.
+    """
+    parsed = urllib.parse.urlparse(url)
+    filename_dimensions = get_filename_dimensions(parsed.path)
+    query_width, query_height = get_query_dimensions(parsed)
+
+    if query_width and query_height:
+        width, height = query_width, query_height
+    elif query_width and filename_dimensions:
+        filename_width, filename_height = filename_dimensions
+        width = query_width
+        height = max(1, round(query_width * filename_height / filename_width))
+    elif query_height and filename_dimensions:
+        filename_width, filename_height = filename_dimensions
+        height = query_height
+        width = max(1, round(query_height * filename_width / filename_height))
+    elif query_width:
+        width, height = query_width, query_width
+    elif query_height:
+        width, height = query_height, query_height
+    elif filename_dimensions:
+        width, height = filename_dimensions
+    else:
+        return None
+
+    dpr = get_device_pixel_ratio(parsed)
+    return max(1, round(width * dpr)), max(1, round(height * dpr))
+
+
+def parse_srcset_descriptor_score(descriptor: str | None) -> tuple[float, float]:
+    """
+    Convert a srcset descriptor into a comparable resolution score.
+
+    Args:
+        descriptor: srcset descriptor, such as 1200w or 2x.
+
+    Returns:
+        Comparable score tuple.
+    """
+    if not descriptor:
+        return 0, 0
+
+    normalized = descriptor.strip().lower()
+    if normalized.endswith("w"):
+        width = parse_positive_int(normalized[:-1])
+        if width:
+            return float(width * width), float(width)
+
+    if normalized.endswith("x"):
+        scale = parse_positive_float(normalized[:-1])
+        if scale:
+            return scale * 1_000_000, scale
+
+    return 0, 0
+
+
+def image_resolution_score(url: str, descriptor: str | None = None) -> tuple[float, float]:
+    """
+    Estimate an image candidate's resolution from srcset and URL hints.
+
+    Args:
+        url: Image URL.
+        descriptor: Optional srcset descriptor.
+
+    Returns:
+        Comparable score tuple where larger means higher resolution.
+    """
+    descriptor_score = parse_srcset_descriptor_score(descriptor)
+    if descriptor_score != (0, 0):
+        return descriptor_score
+
+    dimensions = infer_image_dimensions(url)
+    if dimensions:
+        width, height = dimensions
+        return float(width * height), float(max(width, height))
+
+    scale_match = SCALE_PATTERN.search(urllib.parse.unquote(urllib.parse.urlparse(url).path))
+    if scale_match:
+        scale = parse_positive_float(scale_match.group("scale"))
+        if scale:
+            return scale * 1_000_000, scale
+
+    return 0, 0
+
+
+def strip_filename_variant_markers(url_path: str) -> str:
+    """
+    Remove common size markers from a URL path for variant grouping.
+
+    Args:
+        url_path: URL path.
+
+    Returns:
+        URL path without size suffixes such as -1200x800 or @2x.
+    """
+    decoded_path = urllib.parse.unquote(url_path)
+    without_dimensions = DIMENSION_PATTERN.sub("", decoded_path)
+    return SCALE_PATTERN.sub("", without_dimensions)
+
+
+def image_variant_key(url: str) -> tuple[str, str, str, tuple[tuple[str, str], ...]]:
+    """
+    Build a stable key for grouping different sizes of the same image.
+
+    Args:
+        url: Image URL.
+
+    Returns:
+        Tuple key that ignores common responsive size, quality, and format parameters.
+    """
+    parsed = urllib.parse.urlparse(url)
+    filtered_query = tuple(
+        sorted(
+            (key.lower(), value)
+            for key, value in urllib.parse.parse_qsl(parsed.query, keep_blank_values=True)
+            if key.lower() not in RESPONSIVE_QUERY_PARAMETERS
+        )
+    )
+    return (
+        parsed.scheme.lower(),
+        parsed.netloc.lower(),
+        strip_filename_variant_markers(parsed.path),
+        filtered_query,
+    )
+
+
+def select_highest_resolution_image_urls(image_urls: list[str]) -> list[str]:
+    """
+    Keep only the highest-resolution URL for repeated image variants.
+
+    Args:
+        image_urls: Extracted image URLs.
+
+    Returns:
+        Image URLs with responsive variants collapsed.
+    """
+    selected_by_key: dict[tuple[str, str, str, tuple[tuple[str, str], ...]], str] = {}
+    scores_by_key: dict[tuple[str, str, str, tuple[tuple[str, str], ...]], tuple[float, float]] = {}
+    key_order: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = []
+
+    for image_url in image_urls:
+        key = image_variant_key(image_url)
+        score = image_resolution_score(image_url)
+
+        if key not in selected_by_key:
+            selected_by_key[key] = image_url
+            scores_by_key[key] = score
+            key_order.append(key)
+            continue
+
+        if score > scores_by_key[key]:
+            selected_by_key[key] = image_url
+            scores_by_key[key] = score
+
+    return [selected_by_key[key] for key in key_order]
+
+
 def extract_image_urls(html: str, base_url: str) -> list[str]:
     """
-    Extract unique image URLs from HTML content.
+    Extract unique highest-resolution image URLs from HTML content.
 
     Args:
         html: HTML content to parse.
         base_url: Base URL for resolving relative links.
 
     Returns:
-        List of unique absolute image URLs in document order.
+        List of unique absolute image URLs in document order, with responsive
+        variants collapsed to the largest candidate.
     """
     parser = WebsiteImageParser(base_url)
     parser.feed(html)
@@ -190,7 +520,7 @@ def extract_image_urls(html: str, base_url: str) -> list[str]:
             seen.add(normalized)
             unique_urls.append(normalized)
 
-    return unique_urls
+    return select_highest_resolution_image_urls(unique_urls)
 
 
 def extract_page_links(html: str, base_url: str, root_url: str) -> list[str]:

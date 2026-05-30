@@ -22,6 +22,7 @@ nav = [
         "automations/fill-pdfs.md",
         "automations/images.md",
         "automations/website-images.md",
+        "automations/logos.md",
         "automations/email.md",
         "automations/colors.md",
         "automations/rename-files.md",

@@ -11,6 +11,7 @@
 - **Contacts** - Generate VCF contact cards from phone numbers
 - **Fill PDFs** - Fill PDF templates with data from CSV/TXT files
 - **Images** - Optimize and convert images to WebP format
+- **Logos** - Download company logos from SVGL
 - **Email** - Send bulk personalized emails with attachments
 - **Persistent terminal UI** - Run `r10n` once, choose automations from the home screen, and stay in the session until Ctrl+C
 - **Interactive commands** - Step-by-step prompts guide you through each automation
@@ -83,6 +84,9 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs
 
 # Optimize images
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images
+
+# Download company logos
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n logos --names "OpenAI, Apple, Google" --yes
 
 # Send emails
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email

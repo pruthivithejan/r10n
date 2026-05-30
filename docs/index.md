@@ -87,6 +87,7 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 | [Contacts](automations/contacts/) | `r10n contacts` | Generate VCF contact cards from phone numbers |
 | [Fill PDFs](automations/fill-pdfs/) | `r10n fill-pdfs` | Fill PDF templates with data |
 | [Images](automations/images/) | `r10n images` | Optimize and convert images to WebP |
+| [Logos](automations/logos/) | `r10n logos` | Download company logos from SVGL |
 | [Email](automations/email/) | `r10n email` | Send bulk emails with attachments |
 | [Colors](automations/colors/) | `r10n colors` | Convert CSS colors to oklch() |
 

@@ -30,7 +30,7 @@ from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
 console = Console()
-VERSION = "0.9.0"
+VERSION = "0.10.0"
 RELEASE_REPO = "pruthivithejan/r10n"
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
 UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
@@ -40,6 +40,7 @@ HOME_COMMANDS = (
     ("fill-pdfs", "Fill PDF templates from CSV or TXT data"),
     ("images", "Optimize and convert images to WebP"),
     ("website-images", "Download website images and convert format"),
+    ("logos", "Download company logos from SVGL"),
     ("email", "Send bulk emails with attachments"),
     ("colors", "Convert CSS colors to oklch()"),
     ("rename", "Batch rename files"),
@@ -66,6 +67,7 @@ app = typer.Typer(
         "- fill-pdfs: Fill PDF templates with data from CSV/TXT files\n"
         "- images: Optimize and convert images to WebP\n"
         "- website-images: Download website images and convert format\n"
+        "- logos: Download company logos from SVGL\n"
         "- email: Send bulk emails with attachments\n"
         "- colors: Convert CSS colors to oklch() format\n"
         "- rename: Batch rename files with patterns\n"
@@ -680,6 +682,7 @@ def cli(
     - fill-pdfs: Fill PDF templates with data from CSV/TXT files
     - images: Optimize and convert images to WebP
     - website-images: Download website images and convert format
+    - logos: Download company logos from SVGL
     - email: Send bulk emails with attachments
     - colors: Convert CSS colors to oklch() format
     - rename: Batch rename files with patterns
@@ -1166,7 +1169,7 @@ def website_images(
     quality: int | None = typer.Option(
         None, "--quality", "-q", help="Image quality for JPG/WebP (1-100)"
     ),
-    timeout: int = typer.Option(20, "--timeout", help="Request timeout seconds"),
+    timeout: int = typer.Option(5, "--timeout", help="Request timeout seconds"),
     max_pages: int | None = typer.Option(
         None,
         "--max-pages",
@@ -1288,6 +1291,157 @@ def website_images(
                 console.print(f"  - {file.get('source_url')}: {file.get('error')}")
             if len(failed_files) > 5:
                 console.print(f"  ...and {len(failed_files) - 5} more")
+
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/]")
+        sys.exit(1)
+
+
+# =============================================================================
+# LOGOS AUTOMATION
+# =============================================================================
+
+
+@app.command()
+def logos(
+    names: str | None = typer.Option(
+        None,
+        "--names",
+        "-n",
+        help="Comma-separated company or brand names",
+    ),
+    output: str | None = typer.Option(None, "--output", "-o", help="Output directory"),
+    timeout: int = typer.Option(5, "--timeout", help="Request timeout seconds"),
+    max_candidates: int | None = typer.Option(
+        None,
+        "--max-candidates",
+        help="Maximum ranked logo URLs to try per name",
+    ),
+    overwrite: bool = typer.Option(False, "--overwrite", help="Replace existing logo files"),
+    no_manifest: bool = typer.Option(False, "--no-manifest", help="Do not write JSON manifest"),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Run without confirmation"),
+) -> None:
+    """Download company logos from the SVGL API.
+
+    Searches SVGL for each requested company or brand name and saves one SVG
+    per matched name. Missing SVGL matches are reported as failures.
+    """
+    display_header("Logo Downloader", "Download company logos from SVGL")
+
+    total_steps = 4
+
+    display_step(1, total_steps, "Enter logo names")
+    if not names:
+        names = Prompt.ask("  Enter company names separated by commas")
+
+    try:
+        from src.automations import download_logos
+
+        company_names = download_logos.parse_logo_names(names)
+    except ValueError as error:
+        console.print(f"[red]{error}[/]")
+        return
+
+    console.print(f"[green]  Logos: {', '.join(company_names)}[/]")
+    console.print()
+
+    display_step(2, total_steps, "Set output directory")
+    if not output:
+        output = "local/outputs/logos"
+        if not yes:
+            output = Prompt.ask("  Enter output directory", default=output)
+    console.print(f"[green]  Output: {output}[/]")
+    console.print()
+
+    display_step(3, total_steps, "Set search depth")
+    if max_candidates is None:
+        max_candidates = 20
+        if not yes:
+            max_candidates = IntPrompt.ask(
+                "  Enter maximum SVGL logo URLs to try per name",
+                default=max_candidates,
+            )
+    if max_candidates < 1:
+        console.print("[red]Max candidates must be at least 1.[/]")
+        return
+    if timeout < 1:
+        console.print("[red]Timeout must be at least 1 second.[/]")
+        return
+    console.print(f"[green]  Max candidates: {max_candidates}[/]")
+    console.print()
+
+    display_step(4, total_steps, "Set overwrite behavior")
+    if not yes and not overwrite:
+        overwrite = Confirm.ask("  Replace existing logo files?", default=False)
+    existing_mode = "Replace existing files" if overwrite else "Skip existing files"
+    console.print(f"[green]  Existing files: {existing_mode}[/]")
+    console.print()
+
+    console.print("[bold]Summary:[/]")
+    console.print(f"  Names:      {', '.join(company_names)}")
+    console.print(f"  Output:     {output}")
+    console.print("  Source:     SVGL API only")
+    console.print(f"  Search:     up to {max_candidates} SVGL candidates per name")
+    console.print(f"  Existing:   {existing_mode}")
+    console.print()
+
+    if not yes and not Confirm.ask("Proceed with logo download?"):
+        console.print("[yellow]Cancelled.[/]")
+        return
+
+    console.print()
+    console.print("[cyan]Searching and downloading logos...[/]")
+    console.print()
+
+    try:
+        from src.automations import download_logos
+
+        def display_logo_progress(logo_result: dict[str, Any]) -> None:
+            company_name = str(logo_result.get("company_name", "Logo"))
+            if logo_result.get("skipped"):
+                console.print(f"[dim]  Skipped:[/] {company_name}")
+            elif logo_result.get("success"):
+                console.print(
+                    f"[green]  Downloaded:[/] {company_name} -> {logo_result.get('output_file')}"
+                )
+            else:
+                console.print(f"[yellow]  Failed:[/] {company_name}: {logo_result.get('error')}")
+
+        results = download_logos.download_logos(
+            names=company_names,
+            output_dir=output,
+            timeout=timeout,
+            max_candidates=max_candidates,
+            overwrite=overwrite,
+            write_manifest=not no_manifest,
+            progress_callback=display_logo_progress,
+        )
+
+        console.print()
+        console.print("[bold green]Done![/]")
+        console.print()
+
+        table = Table(show_header=False)
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        table.add_row("Requested", str(results.get("requested", 0)))
+        table.add_row("Downloaded", str(results.get("downloaded", 0)))
+        table.add_row("Skipped", str(results.get("skipped", 0)))
+        table.add_row("Failed", str(results.get("failed", 0)))
+        table.add_row("Output directory", str(results.get("output_directory", output)))
+        if results.get("manifest_file"):
+            table.add_row("Manifest", str(results["manifest_file"]))
+        console.print(table)
+
+        failed_logos = [logo for logo in results.get("logos", []) if not logo.get("success")]
+        if failed_logos:
+            console.print()
+            console.print("[yellow]Some logos could not be downloaded:[/]")
+            for logo in failed_logos[:5]:
+                console.print(f"  - {logo.get('company_name')}: {logo.get('error')}")
+            if len(failed_logos) > 5:
+                console.print(f"  ...and {len(failed_logos) - 5} more")
+            sys.exit(1)
 
     except Exception as e:
         console.print(f"[red]Error: {e}[/]")
@@ -2549,6 +2703,7 @@ def init() -> None:
         "local/outputs/contacts",
         "local/outputs/fill-pdfs",
         "local/outputs/images",
+        "local/outputs/logos",
         "local/outputs/rename",
         "local/outputs/validate",
         "local/outputs/pdf",

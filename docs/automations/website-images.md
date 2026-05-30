@@ -10,10 +10,11 @@ Download images from a web page and convert them to a chosen file format.
 
 ## Overview
 
-Website Images scans a website for common image references, follows same-site page links, downloads each raster image, and saves converted files into folders that mirror the website page structure. It supports `img` tags, `srcset`, `picture` sources, page icons, and inline CSS `url(...)` references.
+Website Images scans a website for common image references, follows same-site page links, downloads each raster image, and saves converted files into folders that mirror the website page structure. It supports `img` tags, `srcset`, `picture` sources, page icons, and inline CSS `url(...)` references. When a page provides multiple responsive sizes for the same image, it keeps the highest-resolution candidate instead of downloading every size.
 
 **Key Features:**
 - Downloads image references from a website URL and linked same-site pages
+- Collapses responsive variants to the highest-resolution image URL
 - Stores homepage images in the output root and subpage images in matching folders
 - Converts images to WebP, PNG, JPG, or JPEG
 - Works interactively or with CLI flags for scripts
@@ -159,7 +160,7 @@ local/outputs/website-images/
         └── 002-river.webp
 ```
 
-Unsupported image downloads, such as SVG files or broken URLs, are reported as failed while the rest of the images continue processing.
+Responsive variants such as `?w=256`, `?w=2048`, or filename sizes like `photo-320x180.jpg` and `photo-1920x1080.jpg` are grouped so only the largest version is downloaded. Unsupported image downloads, such as SVG files or broken URLs, are reported as failed while the rest of the images continue processing.
 
 ---
 
