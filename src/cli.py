@@ -7,7 +7,6 @@ Interactive command-line interface with beautiful terminal UI
 import json
 import os
 import platform
-import shlex
 import shutil
 import ssl
 import stat
@@ -21,7 +20,6 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any, Literal, cast
 
-import click
 import typer
 from dotenv import load_dotenv
 from rich.console import Console
@@ -30,32 +28,11 @@ from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
 console = Console()
-VERSION = "0.10.0"
+VERSION = "0.11.0"
 RELEASE_REPO = "pruthivithejan/r10n"
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
 UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
 UPDATE_CHECK_TIMEOUT_SECONDS = 4
-HOME_COMMANDS = (
-    ("contacts", "Generate VCF contact cards from phone numbers"),
-    ("fill-pdfs", "Fill PDF templates from CSV or TXT data"),
-    ("images", "Optimize and convert images to WebP"),
-    ("website-images", "Download website images and convert format"),
-    ("logos", "Download company logos from SVGL"),
-    ("email", "Send bulk emails with attachments"),
-    ("colors", "Convert CSS colors to oklch()"),
-    ("rename", "Batch rename files"),
-    ("validate", "Validate CSV files against schemas"),
-    ("md2pdf", "Convert Markdown files to PDF"),
-)
-HOME_UTILITY_COMMANDS = (
-    ("status", "Check local setup"),
-    ("init", "Create local folders"),
-    ("upgrade", "Update the standalone binary"),
-    ("configure", "Open the PDF field picker"),
-)
-HOME_HELP_COMMANDS = {"help", "/help", "?", "/?"}
-HOME_CLEAR_COMMANDS = {"clear", "/clear", "cls"}
-HOME_EXIT_COMMANDS = {"exit", "/exit", "quit", "/quit", "q", "/q"}
 app = typer.Typer(
     no_args_is_help=False,
     add_completion=False,
@@ -128,140 +105,6 @@ def display_header(title: str, description: str = ""):
 def display_step(step_num: int, total: int, description: str):
     """Display a step indicator"""
     console.print(f"[cyan]Step {step_num}/{total}:[/] {description}")
-
-
-def display_home_commands() -> None:
-    """Display the home command list used by the persistent terminal UI."""
-    table = Table(show_header=True, header_style="bold cyan", expand=False)
-    table.add_column("Command", style="cyan", no_wrap=True)
-    table.add_column("What it does", style="white")
-
-    for command_name, description in HOME_COMMANDS:
-        table.add_row(command_name, description)
-    for command_name, description in HOME_UTILITY_COMMANDS:
-        table.add_row(command_name, description)
-
-    console.print(table)
-
-
-def display_home_screen() -> None:
-    """Display the persistent home screen."""
-    display_banner(force=True)
-    console.print(
-        Panel.fit(
-            "[bold]Type an automation command to run it.[/]\n"
-            "[dim]Examples: contacts, images --input ./photos, upgrade --check[/]\n"
-            "[dim]Use /help for commands. Press Ctrl+C to exit.[/]",
-            title="Home",
-            border_style="cyan",
-        )
-    )
-    console.print()
-    display_home_commands()
-    console.print()
-
-
-def display_home_input_box() -> None:
-    """Display the input box above the home prompt."""
-    console.print(
-        Panel.fit(
-            "[dim]Enter a command, flags included. The session stays open after it finishes.[/]",
-            title="r10n",
-            border_style="cyan",
-        )
-    )
-
-
-def restore_env_var(name: str, previous_value: str | None) -> None:
-    """Restore an environment variable to its previous value."""
-    if previous_value is None:
-        os.environ.pop(name, None)
-    else:
-        os.environ[name] = previous_value
-
-
-def execute_home_command(command_line: str) -> bool:
-    """Execute one command from the persistent home UI.
-
-    Args:
-        command_line: Raw command text entered at the home prompt.
-
-    Returns:
-        True to keep the home UI running, False to exit it.
-    """
-    stripped = command_line.strip()
-    if not stripped:
-        return True
-
-    try:
-        args = shlex.split(stripped)
-    except ValueError as error:
-        console.print(f"[red]Could not parse command: {error}[/]")
-        return True
-
-    if args and args[0] == "r10n":
-        args = args[1:]
-    if not args:
-        return True
-
-    command_name = args[0]
-    if command_name in HOME_EXIT_COMMANDS:
-        return False
-    if command_name in HOME_HELP_COMMANDS:
-        display_home_commands()
-        return True
-    if command_name in HOME_CLEAR_COMMANDS:
-        console.clear()
-        display_home_screen()
-        return True
-    if command_name.startswith("/") and command_name[1:]:
-        args[0] = command_name[1:]
-
-    command = typer.main.get_command(app)
-    previous_banner = os.environ.get("R10N_NO_BANNER")
-    os.environ["R10N_NO_BANNER"] = "1"
-
-    try:
-        command.main(args=args, prog_name="r10n", standalone_mode=False)
-    except click.ClickException as error:
-        console.print(f"[red]{error.format_message()}[/]")
-    except click.exceptions.Exit as error:
-        if error.exit_code not in (0, None):
-            console.print(f"[red]Command exited with status {error.exit_code}.[/]")
-    except SystemExit as error:
-        code = error.code if isinstance(error.code, int) else 1
-        if code:
-            console.print(f"[red]Command exited with status {code}.[/]")
-    except Exception as error:
-        console.print(f"[red]Error: {error}[/]")
-    finally:
-        restore_env_var("R10N_NO_BANNER", previous_banner)
-
-    console.print()
-    return True
-
-
-def run_home_screen() -> None:
-    """Run the persistent terminal home UI until the user exits."""
-    display_home_screen()
-
-    while True:
-        try:
-            display_home_input_box()
-            command_line = Prompt.ask("[bold cyan]r10n[/]")
-        except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Exiting r10n.[/]")
-            return
-
-        try:
-            keep_running = execute_home_command(command_line)
-        except KeyboardInterrupt:
-            console.print("\n[dim]Exiting r10n.[/]")
-            return
-
-        if not keep_running:
-            console.print("[dim]Exiting r10n.[/]")
-            return
 
 
 def display_config(config: dict[str, Any], title: str = "Configuration"):
@@ -595,7 +438,7 @@ def maybe_notify_update(subcommand: str | None) -> None:
     """Display a non-blocking update notice when a newer version exists."""
     if os.getenv("R10N_DISABLE_UPDATE_CHECK"):
         return
-    if subcommand in {None, "upgrade"}:
+    if subcommand in {None, "upgrade", "_worker"}:
         return
 
     cache_data = load_update_cache()
@@ -664,6 +507,13 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
+def launch_tui() -> None:
+    """Load and start the interactive Textual workspace."""
+    from src.tui import run_tui
+
+    run_tui(VERSION)
+
+
 @app.callback(invoke_without_command=True)
 def cli(
     ctx: typer.Context,
@@ -690,12 +540,27 @@ def cli(
     - md2pdf: Convert Markdown files to PDF
     """
     if not ctx.resilient_parsing and ctx.invoked_subcommand is None:
-        run_home_screen()
+        launch_tui()
         raise typer.Exit()
 
     display_banner()
     if not ctx.resilient_parsing:
         maybe_notify_update(ctx.invoked_subcommand)
+
+
+@app.command("_worker", hidden=True)
+def worker_command(
+    automation_id: str = typer.Argument(..., help="Registered automation identifier"),
+    input_json: str | None = typer.Option(
+        None,
+        "--input-json",
+        help="Inline input JSON. Reads stdin when omitted.",
+    ),
+) -> None:
+    """Execute an automation through the internal JSON Lines protocol."""
+    from src.worker import worker_main
+
+    raise typer.Exit(code=worker_main(automation_id, input_json))
 
 
 # =============================================================================

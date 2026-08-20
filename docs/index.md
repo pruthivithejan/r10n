@@ -29,8 +29,8 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 
 **Features:**
 
-- Beautiful Rich-powered terminal UI
-- Persistent home screen for installed binary use
+- Searchable Textual workspace with generated, validated forms
+- Review screens, live logs, progress, cancellation, and artifact paths
 - Step-by-step interactive prompts
 - Run instantly with `uvx` or install locally
 - Generate contacts, fill PDFs, optimize images, send emails, and more
@@ -44,7 +44,7 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
     Run any automation without installation:
 
     ```bash
-    uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
+    uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
     ```
 
 === "Install Locally"
@@ -55,7 +55,7 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
     git clone https://github.com/pruthivithejan/r10n.git
     cd r10n
     uv sync
-    uv run r10n --help
+    uv run r10n
     ```
 
 === "Install Binary (curl)"

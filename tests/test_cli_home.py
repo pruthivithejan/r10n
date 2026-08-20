@@ -1,4 +1,4 @@
-"""Tests for the persistent r10n home terminal UI."""
+"""Tests for the r10n CLI entry experience."""
 
 import subprocess
 import sys
@@ -9,31 +9,30 @@ from src import cli
 
 
 class TestHomeTerminalUi:
-    """Test the no-argument persistent home screen."""
+    """Test the no-argument Textual workspace entry point."""
 
-    def test_no_args_shows_home_until_exit(self, monkeypatch):
-        """Running r10n without args opens the home UI and exits on command."""
+    def test_no_args_launches_tui(self, monkeypatch):
+        """Running r10n without args launches the Textual application."""
         monkeypatch.setattr(cli, "maybe_notify_update", lambda subcommand: None)
+        launches = []
+        monkeypatch.setattr(cli, "launch_tui", lambda: launches.append(True))
         runner = CliRunner()
 
-        result = runner.invoke(cli.app, input="exit\n")
+        result = runner.invoke(cli.app)
 
         assert result.exit_code == 0
-        assert f"r10n v{cli.VERSION} - routine automation" in result.output
-        assert "Type an automation command to run it." in result.output
-        assert "Press Ctrl+C to exit." in result.output
+        assert launches == [True]
 
-    def test_home_runs_existing_commands_and_stays_open(self, monkeypatch):
-        """Home input routes through the existing Typer command table."""
+    def test_existing_scriptable_commands_still_work(self, monkeypatch):
+        """Existing Typer subcommands remain available without the TUI."""
         monkeypatch.setattr(cli, "maybe_notify_update", lambda subcommand: None)
         runner = CliRunner()
 
-        result = runner.invoke(cli.app, input="status\nexit\n")
+        result = runner.invoke(cli.app, ["status"])
 
         assert result.exit_code == 0
         assert "Status" in result.output
         assert "Quick Start:" in result.output
-        assert result.output.count("Enter a command, flags included.") >= 2
 
     def test_help_omits_completion_flags(self):
         """Typer shell completion options are intentionally hidden."""

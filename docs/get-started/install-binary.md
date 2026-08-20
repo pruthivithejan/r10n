@@ -49,7 +49,9 @@ Run the terminal UI:
 r10n
 ```
 
-The home screen shows the ASCII banner, available automations, and a command input box. Type commands such as `contacts`, `images --input ./photos`, or `upgrade --check`; the session stays open until you press Ctrl+C.
+The terminal workspace lets you search by automation or role, complete a validated form,
+review the exact inputs, and follow live results. Use `r10n --help` or a direct subcommand
+such as `r10n contacts --input numbers.txt` when you prefer the traditional CLI.
 
 If `r10n` is not found, add this to your shell profile:
 

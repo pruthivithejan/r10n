@@ -48,13 +48,28 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
 
 This downloads r10n temporarily, runs it, and cleans up automatically.
 
-To open the persistent terminal UI instead of printing help:
+To open the full-screen terminal workspace instead of printing help:
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
 ```
 
-The home screen shows the banner, command list, and an input box. Type an automation command, then press Ctrl+C when you are done.
+Search by automation name, category, or role. Select an automation to get a validated form,
+review the resolved inputs, and follow progress and generated files from the same workspace.
+
+| Key | Action |
+|-----|--------|
+| `/` | Focus automation search |
+| Arrow keys | Move through matching automations |
+| `Enter` | Select the highlighted automation |
+| `Ctrl+P` | Open the command palette |
+| `Ctrl+C` | Cancel the active automation |
+| `Q` | Exit when focus is outside a text field |
+
+The form is generated from the same typed automation definition used by the execution
+worker, so values are validated before the review screen appears. Long-running work is
+isolated from the interface and reports logs, progress, results, and artifact paths back to
+the workspace.
 
 ---
 
@@ -134,7 +149,13 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email \
 
 ## Interactive Mode
 
-Run any command without arguments to enter interactive mode:
+There are two interactive modes. Run `r10n` by itself for the terminal workspace:
+
+```bash
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
+```
+
+Run a specific command without flags for the classic step-by-step prompts:
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts

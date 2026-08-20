@@ -13,8 +13,9 @@
 - **Images** - Optimize and convert images to WebP format
 - **Logos** - Download company logos from SVGL
 - **Email** - Send bulk personalized emails with attachments
-- **Persistent terminal UI** - Run `r10n` once, choose automations from the home screen, and stay in the session until Ctrl+C
+- **Full-screen terminal workspace** - Search by task or role, complete validated forms, review inputs, and follow live results
 - **Interactive commands** - Step-by-step prompts guide you through each automation
+- **Scriptable commands** - Existing Typer subcommands remain available for shell scripts and CI
 - **Colors** - Convert CSS color codes (hex, hsl/hsla) to `oklch()` for perceptual color consistency
 - **Fast** - Powered by [uv](https://docs.astral.sh/uv/) for lightning-fast dependency management
 
@@ -22,11 +23,13 @@
 
 ### Run Instantly (No Installation)
 
-Use `uvx` to run `r10n` without cloning the repository. This installs only the runtime dependencies needed to execute the commands.
+Use `uvx` to open the terminal workspace without cloning the repository:
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
 ```
+
+Use `r10n --help` when you want the traditional scriptable command list.
 
 ### Setup Locally
 
@@ -70,10 +73,11 @@ r10n
 
 ## Usage
 
-Each command is interactive - just run it and follow the prompts:
+Run without arguments for the searchable Textual workspace, or use a subcommand for the
+traditional interactive and scriptable CLI:
 
 ```bash
-# Open the persistent home UI
+# Open the terminal workspace
 r10n
 
 # Generate contact cards
@@ -92,7 +96,21 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n logos --names "Op
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email
 ```
 
-## Example
+## Terminal Workspace
+
+The workspace generates forms from the same validated automation definitions used by the
+execution engine. Search for an automation by name, category, or role; review the resolved
+inputs; then follow progress, logs, and generated artifact paths without leaving the app.
+
+Keyboard shortcuts:
+
+- `/` focuses search
+- Arrow keys move through the automation catalog
+- `Ctrl+P` opens Textual's command palette
+- `Ctrl+C` cancels the active automation
+- `Q` exits when focus is outside an input
+
+## CLI Example
 
 ```
 $ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
@@ -161,6 +179,13 @@ uv run pytest
 # Build docs
 uv run zensical serve
 ```
+
+### Automation architecture
+
+Automations are registered in `src/automation_registry.py` with a Pydantic input model,
+role metadata, and an execution adapter. The TUI renders the model's JSON Schema, while
+`src/worker.py` runs the automation through a versioned JSON Lines event protocol. This
+keeps automation code independent from Textual and leaves room for other frontends later.
 
 ## License
 

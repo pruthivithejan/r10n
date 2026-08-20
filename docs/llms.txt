@@ -2,7 +2,7 @@
 
 > CLI toolkit for automating repetitive data and workflow tasks: contacts, fill-pdfs, images, and email.
 
-r10n is a Python CLI tool that automates everyday tasks with a beautiful interactive terminal UI. It supports two execution modes: instant execution via `uvx` (no installation required) and local installation for repeated use.
+r10n is a Python automation toolkit with a searchable Textual workspace and a scriptable Typer CLI. Its typed automation registry generates validated forms, and a versioned JSON Lines worker protocol isolates execution. It supports instant execution via `uvx` (no installation required), standalone binaries, and local installation for repeated use.
 
 ## Quick Start
 
