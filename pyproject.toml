@@ -1,6 +1,6 @@
 [project]
 name = "r10n"
-version = "0.11.2"
+version = "0.11.3"
 description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
@@ -31,9 +31,9 @@ classifiers = [
 ]
 dependencies = [
     "pandas>=2.0.0",
-    "pypdf>=3.9.0",
+    "pypdf>=6.16.1",
     "reportlab>=4.0.0",
-    "pillow>=12.1.1",
+    "pillow>=12.3.0",
     "rich>=13.0.0",
     "pydantic>=2.0.0",
     "python-dotenv>=1.0.0",
@@ -111,4 +111,5 @@ dev = [
     "pytest>=9.0.2",
     "pytest-cov>=7.0.0",
     "ruff>=0.12.12",
+    "pymdown-extensions>=11.0.1",
 ]

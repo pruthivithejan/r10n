@@ -28,7 +28,7 @@ from rich.prompt import Confirm, IntPrompt, Prompt
 from rich.table import Table
 
 console = Console()
-VERSION = "0.11.2"
+VERSION = "0.11.3"
 RELEASE_REPO = "pruthivithejan/r10n"
 RELEASES_API = f"https://api.github.com/repos/{RELEASE_REPO}/releases"
 UPDATE_CHECK_INTERVAL_SECONDS = 24 * 60 * 60
