@@ -65,6 +65,25 @@ r10n upgrade
 
 If an older installed binary fails during upgrade with a TLS certificate error, reinstall once with the same curl installer, then run `r10n --version`.
 
+## Releases
+
+Use the tag-backed release helper to update all version declarations without
+editing them by hand. Patch releases are automatic by default; major and minor
+releases require an explicit command.
+
+```bash
+# Fix or patch release: 0.11.1 -> 0.11.2
+uv run python scripts/release_version.py --publish
+
+# Manual version component changes
+uv run python scripts/release_version.py minor --publish
+uv run python scripts/release_version.py major --publish
+```
+
+The helper updates `pyproject.toml`, `src/cli.py`, and `uv.lock`, then creates
+an annotated `vX.Y.Z` tag. GitHub Actions builds and publishes binaries only
+when that tag is pushed.
+
 Launch the installed terminal UI:
 
 ```bash
