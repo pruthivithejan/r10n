@@ -46,6 +46,25 @@ class ImageSourceCandidate:
     descriptor: str | None = None
 
 
+def is_fragment_reference(value: str) -> bool:
+    """
+    Report whether a URL value is a pure in-document fragment reference.
+
+    SVG markup uses values such as ``url(#clip0_3705_6923)`` and ``href="#icon"``
+    to point at internal definitions, not downloadable images. When joined to the
+    page URL these collapse to the page itself, so they must be rejected before
+    collection. A real path that merely carries a fragment (``/photo.jpg#a``) is
+    not a fragment reference.
+
+    Args:
+        value: Raw, pre-resolution URL value.
+
+    Returns:
+        True when the value is an in-document fragment reference.
+    """
+    return urllib.parse.unquote(value).lstrip().startswith("#")
+
+
 @dataclass
 class WebsiteImageDownloadConfig:
     """Configuration for downloading and converting website images."""
@@ -112,6 +131,8 @@ class WebsiteImageParser(HTMLParser):
         cleaned = url.strip()
         if not cleaned or cleaned.startswith(("data:", "blob:", "javascript:")):
             return
+        if is_fragment_reference(cleaned):
+            return
 
         self.image_urls.append(urllib.parse.urljoin(self.base_url, cleaned))
 
@@ -133,6 +154,8 @@ class WebsiteImageParser(HTMLParser):
 
         cleaned = url.strip()
         if not cleaned or cleaned.startswith(("data:", "blob:", "javascript:")):
+            return []
+        if is_fragment_reference(cleaned):
             return []
 
         return [ImageSourceCandidate(urllib.parse.urljoin(self.base_url, cleaned))]

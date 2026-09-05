@@ -3,8 +3,12 @@ import json
 import os
 import platform
 from io import BytesIO
+from pathlib import Path
 
+from openpyxl import load_workbook
+from PIL import Image, ImageDraw, ImageFont
 from pypdf import PdfReader, PdfWriter
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -44,10 +48,87 @@ def register_futura_font():
         return False
 
 
+def _draw_rasterized_font_text(c, text, font_path, font_size, max_width, x, y, alignment, color):
+    """Draw local CFF/OpenType text as a high-resolution transparent image."""
+    scale = 4
+
+    def load_font(size):
+        return ImageFont.truetype(font_path, max(1, round(size * scale)))
+
+    font = load_font(font_size)
+    draw = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+    measured_width = draw.textlength(text, font=font) / scale
+    if max_width and measured_width > max_width:
+        font_size = max(6, font_size * max_width / measured_width)
+        font = load_font(font_size)
+
+    bbox = draw.textbbox((0, 0), text, font=font, anchor="ls")
+    left, top, right, bottom = bbox
+    image = Image.new("RGBA", (max(1, right - left), max(1, bottom - top)), (0, 0, 0, 0))
+    image_draw = ImageDraw.Draw(image)
+    rgb = tuple(round(value * 255) for value in color) if all(0 <= value <= 1 for value in color) else tuple(color)
+    image_draw.text((-left, -top), text, font=font, fill=(*rgb, 255), anchor="ls")
+
+    width = image.width / scale
+    height = image.height / scale
+    draw_x = x - width / 2 if alignment == "center" else x - width if alignment == "right" else x
+    draw_y = y - (bottom / scale)
+    c.drawImage(ImageReader(image), draw_x, draw_y, width=width, height=height, mask="auto")
+    return font_size
+
+
 def load_recipients(recipients_file):
     """Load recipients from file (supports both single names and tab-separated format)"""
     recipients = []
     try:
+        if recipients_file.lower().endswith(".xlsx"):
+            workbook = load_workbook(recipients_file, read_only=True, data_only=True)
+            try:
+                for worksheet in workbook.worksheets:
+                    rows = worksheet.iter_rows(values_only=True)
+                    for row in rows:
+                        headers = [str(value).strip() if value is not None else "" for value in row]
+                        normalized_headers = [header.lower() for header in headers]
+                        if any(
+                            header in {"name", "full name", "full_name", "recipient", "position", "role"}
+                            for header in normalized_headers
+                        ):
+                            break
+                    else:
+                        continue
+                    break
+                else:
+                    raise ValueError("Could not find a header row in the XLSX file")
+
+                for row in rows:
+                    values = list(row)
+                    if not any(value is not None and str(value).strip() for value in values):
+                        continue
+                    normalized = {
+                        header: (str(values[index]).strip() if values[index] is not None else "")
+                        for index, header in enumerate(normalized_headers)
+                        if header and index < len(values)
+                    }
+                    raw_name = (
+                        normalized.get("name")
+                        or normalized.get("full name")
+                        or normalized.get("full_name")
+                        or normalized.get("recipient")
+                    )
+                    if not raw_name:
+                        continue
+                    normalized["name"] = raw_name
+                    normalized["position"] = (
+                        normalized.get("position")
+                        or normalized.get("role")
+                        or normalized.get("designation")
+                        or ""
+                    )
+                    recipients.append(normalized)
+            finally:
+                workbook.close()
+            return recipients
+
         # CSV support (header-based). Prefer by extension to avoid mis-detection.
         if recipients_file.lower().endswith(".csv"):
             with open(recipients_file, encoding="utf-8-sig", newline="") as f:
@@ -167,20 +248,12 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
             x = field_config["x"]
             y = field_config["y"]
             font_size = field_config["font_size"]
-            font_weight = field_config.get("font_weight", "normal")
+            font_weight = field_config.get("font_weight", 400)
+            numeric_weight = (
+                700 if font_weight == "bold" else 400 if font_weight == "normal" else int(font_weight)
+            )
             color = field_config.get("color", [0, 0, 0])
             alignment = field_config.get("alignment", "left")
-
-            # Adjust font size for long text (reduce proportionally)
-            base_size = font_size
-            if len(text) > 20:
-                reduction = (len(text) - 20) * 0.4
-                font_size = max(base_size * 0.5, base_size - reduction)
-                font_size = round(font_size)
-                if font_size != base_size:
-                    print(
-                        f"Note: Reduced font size from {base_size} to {font_size}px for long text in '{field_name}': {text[:30]}{'...' if len(text) > 30 else ''}"
-                    )
 
             # Set font with improved fallback handling
             font_name = None
@@ -204,13 +277,47 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
                 font_mappings["Futura"] = {"normal": "Helvetica", "bold": "Helvetica-Bold"}
 
             # Get the appropriate font
-            weight = "bold" if font_weight == "bold" else "normal"
+            weight = "bold" if numeric_weight >= 600 else "normal"
 
-            if font_family in font_mappings:
+            local_font_name = None
+            raster_font_path = None
+            font_path = field_config.get("font_path")
+            if font_path and Path(font_path).is_file():
+                try:
+                    local_font_name = f"LocalFont-{abs(hash((font_path, numeric_weight)))}"
+                    if local_font_name not in pdfmetrics.getRegisteredFontNames():
+                        pdfmetrics.registerFont(TTFont(local_font_name, font_path))
+                except Exception as error:
+                    print(f"Note: Rasterizing local font '{font_path}' because PDF embedding failed: {error}")
+                    local_font_name = None
+                    raster_font_path = font_path
+
+            if raster_font_path:
+                fitted_size = _draw_rasterized_font_text(
+                    c,
+                    text,
+                    raster_font_path,
+                    font_size,
+                    float(field_config["max_width"]) if field_config.get("max_width") else None,
+                    x,
+                    y,
+                    alignment,
+                    color,
+                )
+                if fitted_size != font_size:
+                    print(
+                        f"Note: Fitted '{field_name}' to max width {field_config['max_width']:g}pt "
+                        f"at {fitted_size:g}pt: {text[:30]}{'...' if len(text) > 30 else ''}"
+                    )
+                continue
+
+            if local_font_name:
+                font_name = local_font_name
+            elif font_family in font_mappings:
                 font_name = font_mappings[font_family][weight]
             else:
                 # Default fallback for unknown fonts
-                font_name = "Helvetica-Bold" if font_weight == "bold" else "Helvetica"
+                font_name = "Helvetica-Bold" if numeric_weight >= 600 else "Helvetica"
 
             # Set the font with fallback
             try:
@@ -221,8 +328,35 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
                     print("Note: Using Helvetica as substitute for Futura font")
             except Exception:
                 print(f"Warning: Font '{font_name}' not available, using Helvetica fallback")
-                fallback_font = "Helvetica-Bold" if font_weight == "bold" else "Helvetica"
+                fallback_font = "Helvetica-Bold" if numeric_weight >= 600 else "Helvetica"
+                font_name = fallback_font
                 c.setFont(fallback_font, font_size)
+
+            # Keep the historical length-based reduction when no explicit width is set.
+            base_size = font_size
+            max_width = field_config.get("max_width")
+            if max_width:
+                max_width = float(max_width)
+                measured_width = c.stringWidth(text, font_name, base_size)
+                if measured_width > max_width:
+                    font_size = max(6, round(base_size * max_width / measured_width, 1))
+                    while c.stringWidth(text, font_name, font_size) > max_width and font_size > 6:
+                        font_size = round(font_size - 0.1, 1)
+                    c.setFont(font_name, font_size)
+                    print(
+                        f"Note: Fitted '{field_name}' to max width {max_width:g}pt at {font_size:g}pt: "
+                        f"{text[:30]}{'...' if len(text) > 30 else ''}"
+                    )
+            elif len(text) > 20:
+                reduction = (len(text) - 20) * 0.4
+                font_size = max(base_size * 0.5, base_size - reduction)
+                font_size = round(font_size)
+                if font_size != base_size:
+                    c.setFont(font_name, font_size)
+                    print(
+                        f"Note: Reduced font size from {base_size} to {font_size}px for long text in '{field_name}': "
+                        f"{text[:30]}{'...' if len(text) > 30 else ''}"
+                    )
 
             # Set color (convert if needed)
             if all(isinstance(val, (int, float)) and 0 <= val <= 1 for val in color):

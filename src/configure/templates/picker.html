@@ -27,6 +27,19 @@
     padding: 2px 8px; border-radius: 3px; font-size: 11px; white-space: nowrap; color: #fff;
     pointer-events: none;
   }
+  .field-preview {
+    position: absolute; pointer-events: none; z-index: 8; white-space: nowrap;
+    line-height: 1; transform: translateY(-82%);
+    text-shadow: 0 0 2px rgba(255,255,255,0.85);
+  }
+  .field-width-guide {
+    position: absolute; pointer-events: none; z-index: 7; height: 34px;
+    border-left: 2px solid rgba(0,212,255,0.9);
+    border-right: 2px solid rgba(0,212,255,0.9);
+    border-top: 1px dashed rgba(0,212,255,0.75);
+    border-bottom: 1px dashed rgba(0,212,255,0.75);
+    transform: translateY(-75%); background: rgba(0,212,255,0.05);
+  }
 
   /* Right panel - Controls */
   .controls-panel { width: 360px; background: #16213e; border-left: 1px solid #0f3460; display: flex; flex-direction: column; overflow-y: auto; }
@@ -121,7 +134,7 @@
     <div class="section">
       <h3>Global Settings</h3>
       <label>Font Family</label>
-      <select id="globalFont">
+      <select id="globalFont" onchange="renderFields(); renderMarkers()">
         <option value="Helvetica">Helvetica</option>
       </select>
       <label>Output Directory</label>
@@ -154,24 +167,32 @@
 
 <script>
 const state = {
-  fields: {},          // { fieldName: { x_px, y_px, x_pt, y_pt, font_size, font_weight, alignment, color } }
+  fields: {},          // { fieldName: { x_px, y_px, x_pt, y_pt, font_size, max_width, font_weight, alignment, color } }
   selectedField: null,
   templateInfo: null,
+  samples: {},
+  localFonts: [],
 };
-let zoom = 1;
+let zoom = 0.25;
 let dragging = null;
 let dragOffset = { x: 0, y: 0 };
 
 // --- Init ---
 async function init() {
-  const [infoRes, headersRes, fontsRes] = await Promise.all([
+  const [infoRes, headersRes, fontsRes, samplesRes, localFontsRes, configRes] = await Promise.all([
     fetch('/api/template-info'),
     fetch('/api/csv-headers'),
     fetch('/api/font-families'),
+    fetch('/api/sample-data'),
+    fetch('/api/local-fonts'),
+    fetch('/api/current-config'),
   ]);
   state.templateInfo = await infoRes.json();
   const headers = await headersRes.json();
   const fonts = await fontsRes.json();
+  state.samples = await samplesRes.json();
+  state.localFonts = await localFontsRes.json();
+  const currentConfig = await configRes.json();
 
   // Populate field select
   const sel = document.getElementById('fieldSelect');
@@ -185,17 +206,46 @@ async function init() {
   // Populate font select
   const fontSel = document.getElementById('globalFont');
   fontSel.innerHTML = '';
-  fonts.forEach(f => {
+  const fontFamilies = [...new Set([...fonts, ...state.localFonts.map(font => font.family)])];
+  fontFamilies.sort((a, b) => a.localeCompare(b));
+  fontFamilies.forEach(f => {
     const opt = document.createElement('option');
     opt.value = f;
     opt.textContent = f;
     fontSel.appendChild(opt);
   });
+  const configuredFont = currentConfig.font_family;
+  fontSel.value = configuredFont && fontFamilies.includes(configuredFont)
+    ? configuredFont
+    : (fontFamilies.includes('Helvetica') ? 'Helvetica' : fontFamilies[0]);
+  if (currentConfig.output_directory) {
+    document.getElementById('outputDir').value = currentConfig.output_directory;
+  }
 
   // Load template image
   const img = document.getElementById('templateImg');
   img.src = '/api/template-image';
   img.onload = () => {
+    setZoom(zoom);
+    for (const [name, config] of Object.entries(currentConfig.fields || {})) {
+      const [x_px, y_px] = pdfToPixel(
+        config.x, config.y,
+        state.templateInfo.render_width_px, state.templateInfo.render_height_px,
+        state.templateInfo.width_pt, state.templateInfo.height_pt,
+      );
+      state.fields[name] = {
+        x_px, y_px,
+        x_pt: config.x,
+        y_pt: config.y,
+        font_size: config.font_size ?? 24,
+        max_width: config.max_width ?? null,
+        font_weight: config.font_weight ?? 400,
+        alignment: config.alignment ?? 'center',
+        color: config.color ?? [0, 0, 0],
+      };
+    }
+    renderFields();
+    renderMarkers();
     document.getElementById('statusInfo').textContent =
       `PDF: ${state.templateInfo.width_pt.toFixed(0)} x ${state.templateInfo.height_pt.toFixed(0)} pt | Image: ${state.templateInfo.render_width_px} x ${state.templateInfo.render_height_px} px`;
   };
@@ -204,9 +254,11 @@ async function init() {
 // --- Zoom ---
 function setZoom(z) {
   zoom = Math.max(0.25, Math.min(4, z));
-  const wrapper = document.getElementById('canvasWrapper');
-  wrapper.style.transform = `scale(${zoom})`;
-  wrapper.style.transformOrigin = 'top left';
+  const img = document.getElementById('templateImg');
+  if (state.templateInfo) {
+    img.style.width = `${state.templateInfo.render_width_px * zoom}px`;
+    img.style.height = `${state.templateInfo.render_height_px * zoom}px`;
+  }
   document.getElementById('zoomLevel').textContent = `${Math.round(zoom * 100)}%`;
   updateMarkerPositions();
 }
@@ -232,7 +284,8 @@ document.getElementById('canvasWrapper').addEventListener('click', function(e) {
   state.fields[fieldName] = {
     x_px, y_px, x_pt, y_pt,
     font_size: 24,
-    font_weight: 'normal',
+    max_width: null,
+    font_weight: 400,
     alignment: 'center',
     color: [0, 0, 0],
   };
@@ -260,7 +313,7 @@ function pdfToPixel(px, py, rw, rh, pw, ph) {
 
 // --- Markers ---
 function renderMarkers() {
-  document.querySelectorAll('.field-marker').forEach(el => el.remove());
+  document.querySelectorAll('.field-marker, .field-preview, .field-width-guide').forEach(el => el.remove());
   const wrapper = document.getElementById('canvasWrapper');
   const colorClasses = 8;
   let idx = 0;
@@ -268,8 +321,8 @@ function renderMarkers() {
   for (const [name, f] of Object.entries(state.fields)) {
     const marker = document.createElement('div');
     marker.className = `field-marker marker-color-${idx % colorClasses}${name === state.selectedField ? ' active' : ''}`;
-    marker.style.left = f.x_px + 'px';
-    marker.style.top = f.y_px + 'px';
+    marker.style.left = (f.x_px * zoom) + 'px';
+    marker.style.top = (f.y_px * zoom) + 'px';
     marker.dataset.field = name;
     marker.innerHTML = `<span class="label">${name}</span>`;
 
@@ -283,12 +336,46 @@ function renderMarkers() {
     });
 
     wrapper.appendChild(marker);
+
+    const scale = (state.templateInfo.render_width_px / state.templateInfo.width_pt) * zoom;
+    if (f.max_width) {
+      const guide = document.createElement('div');
+      guide.className = 'field-width-guide';
+      guide.style.left = (f.x_px * zoom) + 'px';
+      guide.style.top = (f.y_px * zoom) + 'px';
+      guide.style.width = (f.max_width * scale) + 'px';
+      if (f.alignment === 'center') guide.style.transform = 'translate(-50%, -75%)';
+      if (f.alignment === 'right') guide.style.transform = 'translate(-100%, -75%)';
+      wrapper.appendChild(guide);
+    }
+
+    const preview = document.createElement('div');
+    preview.className = 'field-preview';
+    preview.textContent = f.preview_text || state.samples[name] || `${name} example`;
+    preview.style.left = (f.x_px * zoom) + 'px';
+    preview.style.top = (f.y_px * zoom) + 'px';
+    preview.style.fontSize = (f.font_size * scale) + 'px';
+    preview.style.fontWeight = f.font_weight;
+    preview.style.fontFamily = document.getElementById('globalFont').value;
+    preview.style.color = rgbToHex(f.color[0], f.color[1], f.color[2]);
+    if (f.alignment === 'center') preview.style.transform = 'translate(-50%, -82%)';
+    if (f.alignment === 'right') preview.style.transform = 'translate(-100%, -82%)';
+    wrapper.appendChild(preview);
+    if (f.max_width) {
+      const targetWidth = f.max_width * scale;
+      const naturalWidth = preview.getBoundingClientRect().width;
+      if (naturalWidth > targetWidth) {
+        const fittedSize = Math.max(6 * scale, f.font_size * scale * targetWidth / naturalWidth);
+        preview.style.fontSize = fittedSize + 'px';
+        preview.title = `Fitted from ${f.font_size}pt to approximately ${(fittedSize / scale).toFixed(1)}pt`;
+      }
+    }
     idx++;
   }
 }
 
 function updateMarkerPositions() {
-  // Markers are positioned relative to the wrapper which is scaled, so no adjustment needed
+  renderMarkers();
 }
 
 // --- Dragging ---
@@ -323,8 +410,8 @@ function onDrag(e) {
 
   const marker = document.querySelector(`.field-marker[data-field="${dragging}"]`);
   if (marker) {
-    marker.style.left = x_px + 'px';
-    marker.style.top = y_px + 'px';
+    marker.style.left = (x_px * zoom) + 'px';
+    marker.style.top = (y_px * zoom) + 'px';
   }
 
   document.getElementById('statusCoords').textContent = `${dragging}: (${field.x_pt}, ${field.y_pt}) pt`;
@@ -356,22 +443,29 @@ function renderFields() {
     const selected = name === state.selectedField;
     const colorHex = rgbToHex(f.color[0], f.color[1], f.color[2]);
     return `
-      <div class="field-item${selected ? ' selected' : ''}" onclick="selectField('${name}')">
-        <div class="field-header">
+      <div class="field-item${selected ? ' selected' : ''}">
+        <div class="field-header" onclick="selectField('${name}')">
           <span class="field-name">${name}</span>
           <button class="btn-danger" style="padding:2px 8px; font-size:11px;" onclick="event.stopPropagation(); removeField('${name}')">Remove</button>
         </div>
         <div class="field-coords">Position: (${f.x_pt}, ${f.y_pt}) pt</div>
         <div class="field-config">
+          <div style="grid-column:1 / -1;">
+            <label>Live Preview Text</label>
+            <input type="text" value="${escapeHtml(f.preview_text || state.samples[name] || `${name} example`)}" oninput="updateField('${name}', 'preview_text', this.value)">
+          </div>
           <div>
             <label>Font Size</label>
-            <input type="number" value="${f.font_size}" min="6" max="120" onchange="updateField('${name}', 'font_size', +this.value)">
+            <input type="number" value="${f.font_size}" min="6" max="120" oninput="updateField('${name}', 'font_size', +this.value)">
+          </div>
+          <div>
+            <label>Max Width (pt)</label>
+            <input type="number" value="${f.max_width ?? ''}" min="0" max="4000" step="1" placeholder="No limit" oninput="updateField('${name}', 'max_width', this.value ? +this.value : null)">
           </div>
           <div>
             <label>Weight</label>
-            <select onchange="updateField('${name}', 'font_weight', this.value)">
-              <option value="normal"${f.font_weight === 'normal' ? ' selected' : ''}>Normal</option>
-              <option value="bold"${f.font_weight === 'bold' ? ' selected' : ''}>Bold</option>
+            <select onchange="updateField('${name}', 'font_weight', +this.value)">
+              ${weightOptions(f.font_weight)}
             </select>
           </div>
           <div>
@@ -410,7 +504,35 @@ function removeField(name) {
 function updateField(name, prop, value) {
   if (state.fields[name]) {
     state.fields[name][prop] = value;
+    renderMarkers();
   }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function weightOptions(selectedWeight) {
+  const family = document.getElementById('globalFont').value;
+  const available = state.localFonts
+    .filter(font => font.family === family)
+    .map(font => font.weight);
+  const weights = [...new Set(available.length ? available : [400, 700])].sort((a, b) => a - b);
+  const normalized = selectedWeight === 'bold' ? 700 : selectedWeight === 'normal' ? 400 : Number(selectedWeight || 400);
+  return weights.map(weight => `<option value="${weight}"${weight === normalized ? ' selected' : ''}>${weight}</option>`).join('');
+}
+
+function selectedFontPath(weight) {
+  const family = document.getElementById('globalFont').value;
+  const matches = state.localFonts.filter(font => font.family === family);
+  if (!matches.length) return null;
+  return matches.reduce((best, font) =>
+    Math.abs(font.weight - Number(weight)) < Math.abs(best.weight - Number(weight)) ? font : best
+  ).path;
 }
 
 function updateFieldColor(name, hex) {
@@ -420,6 +542,7 @@ function updateFieldColor(name, hex) {
     const b = parseInt(hex.slice(5,7), 16);
     state.fields[name].color = [r, g, b];
     renderFields();
+    renderMarkers();
   }
 }
 
@@ -438,7 +561,9 @@ async function previewConfig() {
     fields[name] = {
       x: f.x_pt, y: f.y_pt,
       font_size: f.font_size,
+      max_width: f.max_width,
       font_weight: f.font_weight,
+      font_path: selectedFontPath(f.font_weight),
       alignment: f.alignment,
       color: f.color,
     };
@@ -476,7 +601,9 @@ async function saveConfig() {
     fields[name] = {
       x: f.x_pt, y: f.y_pt,
       font_size: f.font_size,
+      max_width: f.max_width,
       font_weight: f.font_weight,
+      font_path: selectedFontPath(f.font_weight),
       alignment: f.alignment,
       color: f.color,
     };

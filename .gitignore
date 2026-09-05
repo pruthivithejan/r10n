@@ -21,6 +21,7 @@ wheels/
 *.egg
 .cache/
 .pytest_cache/
+tmp/
 
 # Virtual Environment
 .venv/
@@ -64,6 +65,7 @@ Thumbs.db
 
 # Documentation
 site/
+htmlcov/
 
 # Test coverage
 .coverage

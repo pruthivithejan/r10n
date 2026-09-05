@@ -92,6 +92,19 @@ class TestExtractImageUrls:
 
         assert result == ["https://example.com/same.jpg"]
 
+    def test_ignores_fragment_only_references(self):
+        """Ignore SVG-internal and placeholder fragment references, not real paths."""
+        html = """
+        <img src="#b">
+        <img src="%23b">
+        <div style="clip-path: url(#clip0_3705_6923)"></div>
+        <img src="/real.jpg#anchor">
+        """
+
+        result = extract_image_urls(html, "https://example.com/stays")
+
+        assert result == ["https://example.com/real.jpg"]
+
     def test_deduplicates_query_resized_variants_to_largest(self):
         """Keep only the largest query-resized variant of the same image."""
         html = """
