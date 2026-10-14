@@ -1,6 +1,6 @@
 [project]
 name = "r10n"
-version = "0.12.0"
+version = "0.12.1"
 description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
@@ -30,7 +30,6 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "pandas>=2.3.3",
     "pypdf>=6.20.1",
     "reportlab>=5.0.1",
     "pillow>=12.3.0",

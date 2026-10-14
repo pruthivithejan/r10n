@@ -133,6 +133,10 @@ three native bundles are built and smoke-tested.
 Go embeds `pyproject.toml` as its version source. No release is published by a
 local build.
 
+Release Go executables are stripped and built with `-trimpath`. Unix packaging
+preserves PyInstaller's relative symlinks so the Python runtime and native image
+libraries are stored once rather than copied for each library reference.
+
 ## Troubleshooting
 
 **Python backend not found:** Reinstall the complete release bundle. For source

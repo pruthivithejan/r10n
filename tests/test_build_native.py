@@ -67,12 +67,16 @@ def test_build_layout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, system: s
                 (backend / "r10n-python").write_bytes(b"backend")
                 (backend / "_internal").mkdir()
                 (backend / "_internal" / "dependency").write_bytes(b"dependency")
+                if os.name != "nt":
+                    (backend / "_internal" / "shared-library").symlink_to("dependency")
         else:
+            assert "-trimpath" in command
+            assert "-ldflags=-s -w" in command
             if system == "Windows":
                 assert (
                     tmp_path / "internal/backend/payload/backend.bin"
                 ).read_bytes() == b"backend"
-                assert command[2:4] == ["-tags", "bundled"]
+                assert command[command.index("-tags") + 1] == "bundled"
             Path(command[command.index("-o") + 1]).write_bytes(b"native")
         return subprocess.CompletedProcess(command, 0)
 
@@ -88,6 +92,15 @@ def test_build_layout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, system: s
             assert "r10n/r10n" in archive.getnames()
             assert "r10n/libexec/r10n-python/r10n-python" in archive.getnames()
             assert "r10n/libexec/r10n-python/_internal/dependency" in archive.getnames()
+            if os.name != "nt":
+                link = archive.getmember("r10n/libexec/r10n-python/_internal/shared-library")
+                assert link.issym()
+                assert link.linkname == "dependency"
+                assert link.size == 0
+        if os.name != "nt":
+            installed_link = tmp_path / "dist/r10n/libexec/r10n-python/_internal/shared-library"
+            assert installed_link.is_symlink()
+            assert installed_link.read_bytes() == b"dependency"
         assert "-tags" not in commands[-1]
     else:
         assert asset.read_bytes() == b"native"

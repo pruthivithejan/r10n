@@ -212,7 +212,17 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
             shutil.copy2(staging / "python" / "r10n-python.exe", payload)
             try:
                 subprocess.run(
-                    ["go", "build", "-tags", "bundled", "-o", str(executable), "./cmd/r10n"],
+                    [
+                        "go",
+                        "build",
+                        "-trimpath",
+                        "-ldflags=-s -w",
+                        "-tags",
+                        "bundled",
+                        "-o",
+                        str(executable),
+                        "./cmd/r10n",
+                    ],
                     cwd=root,
                     check=True,
                 )
@@ -222,9 +232,25 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
             app = staging / "r10n"
             sidecar = app / "libexec"
             sidecar.mkdir(parents=True)
-            shutil.copytree(staging / "python" / "r10n-python", sidecar / "r10n-python")
+            # PyInstaller shares native libraries through relative symlinks. Following
+            # them here duplicates the Python framework and Pillow libraries in releases.
+            shutil.copytree(
+                staging / "python" / "r10n-python",
+                sidecar / "r10n-python",
+                symlinks=True,
+            )
             subprocess.run(
-                ["go", "build", "-o", str(app / "r10n"), "./cmd/r10n"], cwd=root, check=True
+                [
+                    "go",
+                    "build",
+                    "-trimpath",
+                    "-ldflags=-s -w",
+                    "-o",
+                    str(app / "r10n"),
+                    "./cmd/r10n",
+                ],
+                cwd=root,
+                check=True,
             )
             installed = dist / "r10n"
             if installed.exists():
