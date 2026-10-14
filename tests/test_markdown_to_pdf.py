@@ -17,14 +17,14 @@ from pathlib import Path
 import pytest
 
 # These imports will fail until the module is implemented (TDD red phase)
-from src.automations.markdown_to_pdf import (
-    MarkdownToPdfConfig,
+from r10n_backend.automations.markdown_to_pdf import (
     MarkdownConverter,
-    convert_markdown_to_pdf,
+    MarkdownToPdfConfig,
+    apply_css_styling,
     convert_directory,
+    convert_markdown_to_pdf,
     load_config,
     parse_markdown,
-    apply_css_styling,
 )
 
 
@@ -485,7 +485,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import markdown_to_pdf as mod
+        from r10n_backend.automations import markdown_to_pdf as mod
 
         assert hasattr(mod, "MarkdownToPdfConfig")
         assert hasattr(mod, "MarkdownConverter")

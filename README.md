@@ -1,246 +1,153 @@
 # r10n
 
-**Routine Automation** - Automate repetitive tasks with a beautiful CLI.
+**Routine Automation** — automate repetitive tasks with one native CLI.
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8.svg)](https://go.dev/)
+[![Go](https://img.shields.io/badge/Go-native-00ADD8.svg)](https://go.dev/)
 [![uv](https://img.shields.io/badge/uv-Package%20Manager-green.svg)](https://docs.astral.sh/uv/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ## Features
 
-- **Contacts** - Generate VCF contact cards from phone numbers
-- **Fill PDFs** - Fill PDF templates with data from CSV/TXT files
-- **Images** - Optimize and convert images to WebP format
-- **Logos** - Download company logos from SVGL
-- **Email** - Send bulk personalized emails with attachments
-- **Native Charm shell** - Prebuilt installs use Go, huh forms, and Bubble Tea progress around the existing Python engine
-- **Terminal workspace** - Search by task or role, complete validated forms, review inputs, and follow live results
-- **Interactive commands** - Step-by-step prompts guide you through each automation
-- **Scriptable commands** - Existing Typer subcommands remain available for shell scripts and CI
-- **Colors** - Convert CSS color codes (hex, hsl/hsla) to `oklch()` for perceptual color consistency
-- **Fast** - Powered by [uv](https://docs.astral.sh/uv/) for lightning-fast dependency management
+- Generate VCF contacts, fill PDF templates and convert Markdown to PDF
+- Optimize images, download website images and company logos
+- Send personalized email, validate CSV data and batch rename files
+- Convert CSS colors to perceptually consistent `oklch()`
+- Searchable Charm picker, validated forms, input review and cancellable progress
+- Scriptable native flags and JSON execution with explicit headless safety
+- One Go frontend and Python execution engine across binaries, `uv run` and `uvx`
 
-## Quick Start
+## Quick start
 
-### Run Instantly (No Installation)
+### Install a self-contained binary
 
-Use `uvx` to open the terminal workspace without cloning the repository:
+No Python or uv is required:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh -o install.sh
+sh install.sh
+r10n
+```
+
+The installer verifies release checksums. Update an installed bundle with
+`r10n upgrade`; Windows users download the replacement executable.
+
+### Run instantly
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
 ```
 
-Use `r10n --help` when you want the traditional scriptable command list.
+The thin Python launcher resolves a matching native executable: it builds a
+source checkout when Go is available, or downloads the matching published
+release with checksum verification. It never substitutes a Python CLI/UI.
+An unreleased source version requires Go if no matching release is available.
 
-### Setup Locally
+### Develop locally
 
-For local development or persistent use, clone the repository. `uv sync` installs all dependencies, including local contributor tooling like `zensical` for documentation and `pytest` for testing.
+Install Go (see `go.mod`), Python 3.10–3.12 and uv:
 
 ```bash
 git clone https://github.com/pruthivithejan/r10n.git
 cd r10n
-uv sync
-uv run r10n --help
+./setup.sh setup
+go run ./cmd/r10n init
+go run ./cmd/r10n
+# The same native behavior through the package launcher:
+uv run --locked r10n --help
 ```
 
-### Install Binary (curl)
-
-Install a prebuilt CLI app (no Python or uv required):
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh
-```
-
-Safer alternative:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh -o install.sh
-sh install.sh
-```
-
-Update later with:
-
-```bash
-r10n upgrade
-```
-
-If an older installed binary fails during upgrade with a TLS certificate error, reinstall once with the same curl installer, then run `r10n --version`.
-
-## Releases
-
-Use the tag-backed release helper to update all version declarations without
-editing them by hand. Patch releases are automatic by default; major and minor
-releases require an explicit command.
-
-```bash
-# Fix or patch release: 0.11.1 -> 0.11.2
-uv run python scripts/release_version.py --publish
-
-# Manual version component changes
-uv run python scripts/release_version.py minor --publish
-uv run python scripts/release_version.py major --publish
-```
-
-The helper updates `pyproject.toml`, `src/cli.py`, and `uv.lock`, then creates
-an annotated `vX.Y.Z` tag. `.github/workflows/release.yml` builds and publishes
-native binaries and `SHA256SUMS` after a version bump on `main`, or a matching
-`vX.Y.Z` tag. Unrelated metadata changes do not trigger publication.
-The Go shell embeds the version from `pyproject.toml`; there is no separate Go version to update.
-
-Launch the installed terminal UI:
-
-```bash
-r10n
-```
+`init` creates ignored `local/inputs`, `local/outputs` and `local/configs`
+with examples. It does not overwrite existing user files.
 
 ## Usage
 
-Prebuilt installs open the native Charm picker; `uvx` and `uv run r10n` retain the
-Python/Textual workspace. Both use the same automation registry and Python engine.
-Existing subcommand flags continue to work unchanged:
+Run `r10n` or `r10n tui` to open the picker, or a bare automation command
+such as `r10n contacts` for guided inputs. `/` filters tasks; arrows navigate;
+Enter advances; Ctrl+C exits. Ctrl+C or Esc cancels active jobs.
+Set `R10N_ACCESSIBLE=1` for plain prompts and static progress.
+
+Public commands and aliases are handled by Go:
 
 ```bash
-# Open the terminal workspace
-r10n
-
-# Generate contact cards
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
-
-# Fill PDFs
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs
-
-# Optimize images
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images
-
-# Download company logos
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n logos --names "OpenAI, Apple, Google" --yes
-
-# Send emails
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email
+r10n --help
+r10n contacts --input /path/to/numbers.txt --output /path/to/contacts.vcf --yes
+r10n images --input /path/to/images --output /path/to/optimized --yes
+r10n configure --template /path/to/template.pdf
+r10n status
+r10n upgrade --check
 ```
 
-## Terminal Workspace
+Every headless execution requires `--yes` and fully specified inputs.
+It authorizes running without interactive review; it does not bypass validation.
+Keep email and destructive operations interactive until their inputs are verified.
 
-The workspace generates forms from the same validated automation definitions used by the
-execution engine. Search for an automation by name, category, or role; review the resolved
-inputs; then follow progress, logs, and generated artifact paths without leaving the app.
-
-Keyboard shortcuts:
-
-- `/` filters the native picker (or focuses search in Textual)
-- Arrow keys move through the automation catalog
-- Enter selects a task or advances the native form
-- `Ctrl+C` cancels the active automation
-- Esc cancels native progress; `Ctrl+P` and `Q` remain Textual-only shortcuts
-
-Native installs also support JSON-driven execution:
+Use registry field names for JSON rather than flag aliases:
 
 ```bash
+r10n list --json
 r10n run contacts \
   --input-json '{"input_file":"/path/to/numbers.txt","output_file":"/path/to/contacts.vcf"}' \
   --json --yes
+r10n run images --input-file local/configs/images.json --yes
 ```
 
-Use `r10n list --json` to inspect input schemas. `--json` emits the original worker
-events without terminal decoration; headless runs require `--yes`. Use
-`r10n legacy --help` for the original command list. See the
-[native shell guide](docs/get-started/native-shell.md) for development and packaging details.
+`--input-file -` reads one JSON object from stdin. `--json` emits versioned worker
+events on stdout and diagnostics on stderr. Cancellation may leave partial outputs.
 
-## CLI Example
+## Architecture and tooling
 
+```text
+cmd/r10n/                         Native executable
+internal/cli/                     Routing, flags and operations
+internal/tui/                     Charm UI
+internal/backend/                 Python process client
+src/r10n_backend/                 Registry, worker, automations and configure web service
+scripts/                          Shared checks, native packaging and version preparation
 ```
-$ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
 
-  ██████╗  ██╗ ██████╗ ███╗   ██╗
-  ██╔══██╗███║██╔═══██╗████╗  ██║
-  ██████╔╝╚██║██║   ██║██╔██╗ ██║
-  ██╔══██╗ ██║██║   ██║██║╚██╗██║
-  ██║  ██║ ██║╚██████╔╝██║ ╚████║
-  ╚═╝  ╚═╝ ╚═╝ ╚═════╝ ╚═╝  ╚═══╝
+The Python package has no public CLI/TUI framework. Registry schemas are the
+source of automation defaults and validation. Python backend modes are `catalog`,
+`worker AUTOMATION_ID` and `configure`; the public command surface belongs to Go.
 
-Step 1/3: Select input file
-  Enter path to file with phone numbers: numbers.txt
-Step 2/3: Set contact name prefix
-  Enter prefix for contact names: Customer
-Step 3/3: Set output file
-  Enter output VCF file path: contacts.vcf
-
-Proceed with contact generation? [y/n]: y
-
-Done!
-┌─────────────────────┬──────────────┐
-│ Total numbers       │ 50           │
-│ Valid contacts      │ 48           │
-│ Duplicates removed  │ 1            │
-│ Invalid numbers     │ 1            │
-│ Output file         │ contacts.vcf │
-└─────────────────────┴──────────────┘
+```bash
+./setup.sh lint                  # Format, lint, type, lock and Go checks (read-only)
+./setup.sh test                  # Go + Python tests
+./setup.sh format                # Explicit Black + gofmt rewrites
+./setup.sh check                 # Complete checks and documentation build
+./setup.sh build                 # Host-native bundle and real artifact smoke tests
+./setup.sh dev                   # Restore dev tooling after isolated build sync
 ```
+
+Lefthook checks changed Go files with gofmt before commit without altering staged
+changes. Pre-push and CI enforce full Go/Python checks, including module/lock
+consistency. Python CI covers 3.10, 3.11 and 3.12. Native bundles use target-platform
+build runners; Unix sidecar symlinks are preserved and Windows embeds the backend.
+Builds validate contacts, image optimization and PDF generation outside the checkout
+and produce JSON size/duplicate reports.
+
+## Releases
+
+`pyproject.toml` is the only human-edited version. Go embeds it; Python uses
+installed distribution metadata. The generated `uv.lock` package version must agree.
+
+```bash
+uv run --locked python scripts/release_version.py --check
+uv run --locked python scripts/release_version.py patch --dry-run
+# Prepare, review, and commit separately; this never publishes:
+uv run --locked python scripts/release_version.py patch
+```
+
+A version bump committed on main triggers `.github/workflows/release.yml`,
+which builds native assets, SHA256SUMS and the GitHub release. Do not publish
+manually through local scripts. Architecture batch 0.12.2 is explicitly requested;
+the completed 0.12.1 release remains unchanged.
 
 ## Documentation
 
-Full documentation is available at [pruthivithejan.github.io/r10n](https://pruthivithejan.github.io/r10n/)
+- [Get started](https://pruthivithejan.github.io/r10n/get-started/)
+- [Automations](https://pruthivithejan.github.io/r10n/automations/)
+- [Native shell and packaging](docs/get-started/native-shell.md)
+- [Contributor guidelines](AGENTS.md)
 
-- [Get Started](https://pruthivithejan.github.io/r10n/get-started/)
-- [Run on Terminal](https://pruthivithejan.github.io/r10n/run-on-terminal/)
-- [Setup Locally](https://pruthivithejan.github.io/r10n/setup-locally/)
-
-## Requirements
-
-- For `uvx` / local source install: Python 3.10+ and [uv](https://docs.astral.sh/uv/)
-- For prebuilt binary install: `curl` (macOS/Linux)
-- For native shell development: Go 1.24+ and the local Python environment
-
-## Local Development
-
-```bash
-# Clone
-git clone https://github.com/pruthivithejan/r10n.git
-cd r10n
-
-# Install dependencies
-uv sync
-
-# Initialize local folder
-uv run r10n init
-
-# Run automations
-uv run r10n contacts
-uv run r10n fill-pdfs
-uv run r10n images
-uv run r10n email
-
-# Run tests
-uv run pytest
-
-# Build docs
-uv run zensical serve
-```
-
-### Automation architecture
-
-Automations are registered in `src/automation_registry.py` with a Pydantic input model,
-role metadata, and an execution adapter. `src/backend.py` exports that catalog to Go;
-both terminal interfaces render the model's JSON Schema. `src/worker.py` runs the automation
-through the existing v1 JSON Lines protocol. No task metadata or automation logic is
-duplicated in Go.
-
-```bash
-uv sync
-go run ./cmd/r10n               # Native Charm picker
-go test ./...                  # Native shell tests (no Python/network needed)
-uv run --with pyinstaller python scripts/build_native.py
-```
-
-Unix release archives contain the native executable and a frozen Python sidecar under
-`libexec/`. Windows embeds a frozen backend in the existing single `.exe` asset and
-extracts it to a verified, private cache. End users need neither Python nor uv.
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
-## Author
-
-**Pruthivi Thejan** - [@pruthivithejan](https://github.com/pruthivithejan)
+MIT — see [LICENSE](LICENSE). By [Pruthivi Thejan](https://github.com/pruthivithejan).

@@ -1,4 +1,4 @@
-// Package r10n exposes the shared release version to the native shell.
+// Package r10n exposes shared release metadata to the native command interface.
 package r10n
 
 import (

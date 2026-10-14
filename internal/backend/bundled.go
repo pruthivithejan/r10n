@@ -12,6 +12,9 @@ import (
 	"runtime"
 )
 
+// Bundled identifies a release with its Python runtime embedded.
+const Bundled = true
+
 // The release builder supplies a frozen, self-contained Python backend.
 //
 //go:embed payload/backend.bin

@@ -22,6 +22,22 @@ The Email automation reads a list of recipients from a CSV file, personalizes ea
 
 ---
 
+## Native execution
+
+Run `r10n email` for native guided inputs, review, and confirmation.
+For a headless send, verify the recipients and configuration first; `--yes`
+explicitly authorizes sending real messages:
+
+```bash
+r10n email --config /path/to/email.json \
+  --recipients /path/to/recipients.csv --body /path/to/body.txt \
+  --attachments-dir /path/to/pdfs --yes
+```
+
+The authoritative default body path is `local/inputs/email/body.txt`.
+JSON input uses `config_file`, `recipients_file`, `body_file`, and
+`attachments_directory`. Never commit populated credential files.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)
@@ -111,7 +127,7 @@ uv run r10n email \
 |-----------|-------|------|----------|---------|-------------|
 | `--config` | `-c` | string | Yes | `local/configs/email.json` | Email configuration file |
 | `--recipients` | `-r` | string | Yes | `local/inputs/email/recipients.csv` | Recipients CSV file |
-| `--body` | `-b` | string | Yes | `local/inputs/email/template.txt` | Email body template |
+| `--body` | `-b` | string | Yes | `local/inputs/email/body.txt` | Email body template |
 | `--attachments-dir` | `-d` | string | No | `local/outputs/fill-pdfs` | Directory with PDF attachments |
 
 ---

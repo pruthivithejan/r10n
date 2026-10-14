@@ -8,13 +8,11 @@ local usage and uvx distribution.
 import json
 import tempfile
 from pathlib import Path
-from typing import Any
-from unittest.mock import patch
 
 import pytest
 from PIL import Image
 
-from src.automations.optimize_images import (
+from r10n_backend.automations.optimize_images import (
     ImageOptimizationConfig,
     ImageOptimizer,
     load_config,
@@ -557,7 +555,7 @@ class TestLoadConfig:
 
     def test_load_config_file_not_found(self):
         """Test error for missing config file."""
-        with pytest.raises(Exception):
+        with pytest.raises(FileNotFoundError):
             load_config("nonexistent_config.json")
 
     def test_load_config_invalid_json(self):
@@ -567,7 +565,7 @@ class TestLoadConfig:
             file_path = f.name
 
         try:
-            with pytest.raises(Exception):
+            with pytest.raises(json.JSONDecodeError):
                 load_config(file_path)
         finally:
             Path(file_path).unlink()
@@ -647,6 +645,7 @@ class TestOptimizeImagesFunction:
         results = optimize_images(input_dir=setup_images)
 
         expected_output = Path(setup_images) / "optimized"
+        assert results["processed"] == 2
         assert expected_output.exists()
 
     def test_optimize_images_custom_prefix(self, setup_images):
@@ -656,6 +655,7 @@ class TestOptimizeImagesFunction:
 
             output_path = Path(output_dir)
             files = list(output_path.glob("photo*.webp"))
+            assert results["processed"] == 2
             assert len(files) == 2
 
 
@@ -664,7 +664,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import optimize_images as mod
+        from r10n_backend.automations import optimize_images as mod
 
         assert hasattr(mod, "ImageOptimizationConfig")
         assert hasattr(mod, "ImageOptimizer")

@@ -1,14 +1,12 @@
 """Tests for the visual PDF field picker."""
 
 import json
-import tempfile
-from io import BytesIO
 from pathlib import Path
 
 import pytest
 from reportlab.pdfgen import canvas
 
-from src.configure.server import (
+from r10n_backend.configure.server import (
     create_app,
     pixel_to_pdf_coords,
     render_pdf_page,
@@ -94,7 +92,7 @@ class TestRenderPdfPage:
 
     def test_renders_png(self, test_pdf):
         """Should return valid PNG bytes."""
-        png_bytes, w, h, pdf_w, pdf_h = render_pdf_page(test_pdf)
+        png_bytes, _w, _h, _pdf_w, _pdf_h = render_pdf_page(test_pdf)
         assert len(png_bytes) > 0
         # PNG magic bytes
         assert png_bytes[:4] == b"\x89PNG"

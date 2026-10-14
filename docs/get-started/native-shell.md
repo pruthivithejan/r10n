@@ -4,150 +4,148 @@ icon: lucide/terminal
 
 # Native Charm shell
 
-Prebuilt r10n releases use a Go frontend powered by Charm's huh and Bubble Tea.
-The Python automation core, Pydantic models, and v1 JSON Lines protocol are unchanged.
-The Python `uvx` and `uv run r10n` entry points remain available, including their
-existing Textual workspace.
+Every r10n entry point uses the same Go frontend: standalone binary, `go run`,
+`uv run r10n` and `uvx`. Charm's huh forms and Bubble Tea progress surround
+the Python automation engine; there is no separate Python command interface.
 
 ## Interactive use
 
-Run `r10n` or `r10n tui` to choose an automation. The picker includes every registered
-task and supports `/` filtering by title, category, description, or role.
-Run a bare task such as `r10n contacts` to open its guided form directly.
+Run `r10n` or `r10n tui` for the searchable automation picker, or a bare task
+such as `r10n contacts` for its guided form. `/` filters by title, category,
+description or role. Arrows navigate, Enter advances and Ctrl+C exits.
 
-Forms use registry field order, defaults, booleans, nullable inputs, and enum choices.
-Numbers and required values get immediate feedback; Pydantic validates the final
-payload before execution. Review the input table and confirm before running.
-Confirmation starts at **Cancel**, including for email, file renaming, and overwrites.
+Forms follow registry defaults, booleans, nullable inputs and enums.
+Python validates the payload; review resolved inputs and confirm before running.
+Cancellation is the safe default, including for email, renames and overwrites.
+During jobs Ctrl+C or Esc terminates the worker and its subprocesses.
+Known totals show a progress bar; other jobs show a spinner and live logs.
+Results include generated artifact paths.
 
-Arrow keys navigate, Enter advances, and Ctrl+C exits. During execution,
-Ctrl+C or Esc terminates the worker and its subprocesses. Known totals display
-a progress bar; other tasks display a spinner and live log messages.
-Results appear as a table with generated artifact paths.
-
-Set `R10N_ACCESSIBLE=1` for plain prompts and static progress without animation.
-Native interactive workflows need an attached terminal; headless workflows must
-use JSON inputs or existing command flags instead.
+Set `R10N_ACCESSIBLE=1` for plain prompts and static progress.
+Native Go environment options must be exported in the shell; Python `.env`
+loading is not a substitute for exporting frontend settings.
 
 ## Scripted use
 
-JSON input names match the Pydantic models, not the old CLI option aliases:
+Go routes both public flags and registry-driven jobs:
 
 ```bash
-r10n list
+r10n contacts --input /tmp/numbers.txt --output /tmp/contacts.vcf --yes
 r10n list --json
 r10n run contacts \
   --input-json '{"input_file":"/tmp/numbers.txt","output_file":"/tmp/contacts.vcf","prefix":"Customer"}' \
   --json --yes
+r10n run images --input-file /path/to/images.json --yes
 ```
 
-Alternatively use `--input-file inputs.json`, or `--input-file -` to read stdin.
-Input must be one JSON object, at most 8 MiB. Unspecified fields use Python defaults.
-`--yes` is required without a terminal and authorizes execution without review.
-Without `--json`, events and results are printed as plain text and a table.
+JSON field names match registry models, not public flag aliases.
+`--input-file -` reads stdin. Input must be one JSON object, at most 8 MiB.
+Unspecified fields use registry defaults. Headless runs require `--yes` and
+complete inputs, never prompts. `--yes` skips review, not validation.
 
-`--json` forwards original protocol events on stdout, with diagnostics on stderr:
-`hello`, `started`, `progress`, `log`, `artifact`, `completed`, `error`, or `cancelled`.
-The shell requires protocol version 1, rejects malformed or incomplete streams,
-and preserves worker input errors (exit 2), execution failures (exit 1), and
-cancellation (exit 130). `completed.success=false` is also a failure.
+`--json` forwards protocol events on stdout and diagnostics on stderr:
+`hello`, `started`, `progress`, `log`, `artifact`, `completed`, `error`, `cancelled`.
+Input errors exit 2, execution failures exit 1 and cancellation exits 130.
+Malformed/incomplete streams and `completed.success=false` fail the command.
 
-Existing CLI flags still dispatch to the Python frontend:
+Go also owns operational commands:
 
 ```bash
-r10n contacts --input numbers.txt --output contacts.vcf
-r10n configure
 r10n init
 r10n status
+r10n configure --template /path/to/template.pdf --output /path/to/config.json
 r10n upgrade --check
-r10n legacy --help
 ```
 
-This compatibility path intentionally retains legacy prompts and flag semantics.
-The native shell does not translate them into a second input-validation system.
-Legacy commands remain in the terminal's foreground process group so their
-prompts and terminal signals work normally. The isolated-worker subtree
-cancellation guarantee applies to native form and JSON jobs, not this compatibility path.
+The configure frontend launches Python's local web service. It includes the
+packaged PDF picker asset; it does not dispatch to another CLI implementation.
 
 ## Source development
 
 ```bash
-uv sync
+./setup.sh setup
 go run ./cmd/r10n
-go test ./...
-go vet ./...
-uv run pytest
+uv run --locked r10n --help
+./setup.sh check
 ```
 
-Source builds discover the checkout from the working directory or executable
-location and run the trusted absolute `src/backend.py` script through
-`uv run --project <checkout> python -u <checkout>/src/backend.py`.
-The subprocess keeps the caller's working directory, so relative paths stay relative
-to the user, not the checkout.
+Go routing lives in `internal/cli`, Charm UI in `internal/tui` and the Python
+client in `internal/backend`. Python lives under `src/r10n_backend`.
+Backend modes are `catalog`, `worker AUTOMATION_ID` (stdin JSON), and
+`configure --template [--recipients] [--output]`.
+The thin launcher builds/resolves or checksum-downloads the matching Go executable.
+An unpublished version needs a local Go toolchain if no matching binary exists.
 
-For a source binary run elsewhere, set `R10N_PROJECT` to the checkout.
-`R10N_PYTHON` can select an already-configured Python interpreter instead of uv.
-`R10N_BACKEND` can select a compatible backend executable for testing/integration;
-it is an executable path, never a shell command. Only use a backend you trust.
-Source builds do not support the standalone upgrader.
+Source builds find the checkout or use `R10N_PROJECT` when run elsewhere.
+Python runs the trusted absolute backend entry with the checkout's `src` on its
+import path, while retaining the caller's working directory so relative user
+paths are not rebased. A lookalike package in the caller's directory cannot
+replace the source backend.
+`R10N_PYTHON` selects an already-configured interpreter; `R10N_BACKEND`
+selects a trusted backend executable, never a shell command.
 
 ## Release packaging
 
-Build for the host OS after installing Go and the Python project:
-
 ```bash
-uv run --with pyinstaller python scripts/build_native.py
+./setup.sh build
+./setup.sh dev  # Restore developer tools after build-only locked sync
 ```
 
-The build performs a real contacts run with absolute temporary paths from outside
-the checkout and verifies the generated VCF and catalog.
+Build dependencies come from the separate locked `build` group, not unconstrained
+pip installs or the developer environment. PyInstaller includes distribution
+metadata for `importlib.metadata.version("r10n")` and configure `picker.html`.
+The build rejects unused old UI/data runtimes if they are not declared dependencies.
+
+Smoke verification runs outside the checkout with absolute temporary paths.
+It validates the native version/catalog, generated VCF, optimized WebP dimensions,
+and PDF content. Each build writes a size/duplicate JSON report beside its asset.
+These reports expose library-copy regressions without brittle platform byte limits.
 
 | Platform | Asset | Backend |
 |----------|-------|---------|
-| Linux x86_64 | `r10n-linux-x86_64.tar.gz` | Frozen sidecar under `r10n/libexec/r10n-python/` |
-| macOS arm64 | `r10n-macos-arm64.tar.gz` | Frozen sidecar under `r10n/libexec/r10n-python/` |
-| Windows x86_64 | `r10n-windows-x86_64.exe` | Frozen onefile backend embedded in Go |
+| Linux x86_64 | `r10n-linux-x86_64.tar.gz` | Frozen `r10n/libexec/r10n-python/` sidecar |
+| macOS arm64 | `r10n-macos-arm64.tar.gz` | Frozen `r10n/libexec/r10n-python/` sidecar |
+| Windows x86_64 | `r10n-windows-x86_64.exe` | Embedded frozen backend |
 
-Unix installers and upgrades replace the **whole bundle**. Copying only its Go
-executable will not provide an automation runtime. Windows extracts its embedded
-backend into a content-addressed user cache, verifies existing contents before use,
-and never downloads Python at runtime. Windows in-place upgrade remains unsupported;
-download the replacement executable from the release.
+Unix installs/upgrades replace the whole bundle, not only its Go executable.
+Applying an upgrade requires confirmation, or `--yes` without a terminal.
+Before replacement, the updater checks the requested native/backend version
+and runs a contacts job outside the checkout; installed validation failures
+restore the old bundle. `upgrade --check` never installs or prompts.
+Python-managed `uv`/`uvx` caches must be updated through the Python package,
+not modified by native in-place upgrade.
+Windows extracts and verifies its backend in a private content-addressed cache;
+download a replacement executable instead of using in-place upgrade.
+End users need neither Python nor uv.
 
-The Go shell can cross-compile, but the frozen Python runtime and native Python
-dependencies must be built on each target platform. GitHub Actions uses native
-Linux, macOS, and Windows runners rather than pretending `GOOS` alone packages Python.
-Linux runtime compatibility follows the build runner's glibc baseline; the asset
-is not a promise of compatibility with every Linux distribution.
+Go executables use `-trimpath -ldflags="-s -w"`; Unix copies preserve relative
+symlinks so shared Python/native libraries are not duplicated.
+Native Python dependencies require native Linux/macOS/Windows runners;
+Go cross-compilation alone is insufficient. Linux compatibility follows the
+runner's glibc baseline, not every distribution.
 
-Cancellation force-terminates processes without rolling back work already done.
-Partially written outputs can remain, and a frozen onefile runtime may leave
-temporary extraction files. Windows' content-addressed backend cache also retains
-older versions; unused cache directories can be removed when r10n is not running.
+Cancellation does not roll back outputs. Partial files and extraction caches may
+remain; remove unused cache directories only when no r10n process is running.
 
-`.github/workflows/release.yml` publishes installer-compatible assets and
-`SHA256SUMS` after a version increase in `pyproject.toml` on `main`, or a matching
-`v*` tag/manual run. It reuses `build-binaries.yml` and validates the CLI version.
-The complete Python test suite runs on Python 3.10, 3.11, and 3.12 before the
-three native bundles are built and smoke-tested.
-Go embeds `pyproject.toml` as its version source. No release is published by a
-local build.
-
-Release Go executables are stripped and built with `-trimpath`. Unix packaging
-preserves PyInstaller's relative symlinks so the Python runtime and native image
-libraries are stored once rather than copied for each library reference.
+`.github/workflows/release.yml` builds/publishes matching versioned assets and
+SHA256SUMS after a project version bump on main (or matching tag/manual workflow).
+`pyproject.toml` is the sole edited version, embedded by Go and checked against
+generated `uv.lock` and installed Python metadata. Local builds never publish.
+CI checks both languages and Python 3.10–3.12 before platform bundle builds.
 
 ## Troubleshooting
 
-**Python backend not found:** Reinstall the complete release bundle. For source
-builds, run `uv sync` and set `R10N_PROJECT` if running outside the checkout.
+**Backend not found:** Reinstall the complete bundle. For source builds, run
+`uv sync --locked` and set `R10N_PROJECT` outside the checkout.
 
-**Unsupported protocol:** The native shell and backend are from different releases.
-Reinstall together; do not mix sidecars between versions.
+**Unsupported protocol/version:** Do not mix sidecars and frontends from different releases.
 
-**Invalid inputs:** Inspect `r10n list --json` or the worker error event. Existing
-CLI aliases such as `--input` map to model names such as `input_file` only in
-the compatibility command path.
+**Invalid inputs:** Inspect `r10n list --json`. Public aliases such as `--input`
+map to registry names like `input_file`; JSON must use the latter.
+
+**Legacy workspace:** `scripts/setup.py` and `scripts/migrate.py` are retired.
+Run native `init`, then copy old inputs/configs into `local/` manually, keeping
+the originals until outputs have been verified.
 
 ## See also
 

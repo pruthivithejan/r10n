@@ -1,4 +1,4 @@
-// Package backend locates and communicates with the unchanged Python engine.
+// Package backend locates and communicates with the Python automation worker.
 package backend
 
 import (
@@ -62,27 +62,28 @@ func Resolve() (Backend, error) {
 		return Backend{}, err
 	}
 	env = setEnv(env, "R10N_SOURCE", "1")
-	pythonPath := root
+	pythonPath := filepath.Join(root, "src")
 	if existing := os.Getenv("PYTHONPATH"); existing != "" {
 		pythonPath += string(os.PathListSeparator) + existing
 	}
 	env = setEnv(env, "PYTHONPATH", pythonPath)
 	env = setEnv(env, "PYTHONUNBUFFERED", "1")
+	entry := filepath.Join(root, "src", "r10n_backend", "__main__.py")
 	if python := os.Getenv("R10N_PYTHON"); python != "" {
 		path, err := exec.LookPath(python)
 		if err != nil {
 			return Backend{}, fmt.Errorf("R10N_PYTHON: %w", err)
 		}
-		return Backend{path, []string{"-u", filepath.Join(root, "src", "backend.py")}, env}, nil
+		return Backend{path, []string{"-u", entry}, env}, nil
 	}
 	if uv, err := exec.LookPath("uv"); err == nil {
-		return Backend{uv, []string{"run", "--project", root, "python", "-u", filepath.Join(root, "src", "backend.py")}, env}, nil
+		return Backend{uv, []string{"run", "--locked", "--project", root, "python", "-u", entry}, env}, nil
 	}
 	python, err := exec.LookPath("python3")
 	if err != nil {
 		return Backend{}, fmt.Errorf("source installs require uv or Python 3.10+: %w", err)
 	}
-	return Backend{python, []string{"-u", filepath.Join(root, "src", "backend.py")}, env}, nil
+	return Backend{python, []string{"-u", entry}, env}, nil
 }
 
 func sourceRoot(executable string) (string, error) {
@@ -114,9 +115,9 @@ func sourceRoot(executable string) (string, error) {
 }
 
 func isSourceRoot(path string) bool {
-	_, err := os.Stat(filepath.Join(path, "src", "backend.py"))
+	info, err := os.Stat(filepath.Join(path, "src", "r10n_backend"))
 	metadata, metadataErr := os.ReadFile(filepath.Join(path, "pyproject.toml"))
-	return err == nil && metadataErr == nil && strings.Contains(string(metadata), `name = "r10n"`)
+	return err == nil && info.IsDir() && metadataErr == nil && strings.Contains(string(metadata), `name = "r10n"`)
 }
 
 func setEnv(env []string, key, value string) []string {
@@ -133,6 +134,6 @@ func setEnv(env []string, key, value string) []string {
 func (b Backend) Command(ctx context.Context, args ...string) *exec.Cmd {
 	command := exec.CommandContext(ctx, b.Executable, append(append([]string{}, b.Prefix...), args...)...)
 	command.Env = b.Env
-	configureProcess(command, len(args) > 0 && args[0] == "legacy")
+	configureProcess(command, len(args) > 0 && args[0] == "configure")
 	return command
 }

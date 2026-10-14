@@ -22,6 +22,20 @@ The Validate CSV automation checks rows and columns for type errors, missing fie
 
 ---
 
+## Native execution
+
+Run `r10n validate` for guided native inputs. All entry points use Go routing
+and the same Python validation schema. Fully specified scripts require `--yes`:
+
+```bash
+r10n validate --input /path/to/data.csv --schema /path/to/schema.json \
+  --output /path/to/report.json --format json --yes
+```
+
+JSON input uses `input_file`, `schema_file`, `report_file`, and `report_format`.
+Whitespace trimming is enabled by default; `--clean` additionally writes a
+cleaned CSV when validation fails.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)
@@ -73,7 +87,7 @@ uv run r10n validate \
 | `--schema` | `-s` | string | No | - | JSON schema file |
 | `--output` | `-o` | string | No | - | Report output file |
 | `--strict` | - | flag | No | `false` | Treat warnings as failures |
-| `--clean` | - | flag | No | `false` | Trim whitespace and normalize data |
+| `--clean` | - | flag | No | `false` | Write a cleaned CSV when validation fails |
 | `--format` | `-f` | string | No | `text` | Report format: `text`, `json`, `html` |
 
 ---

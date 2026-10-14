@@ -24,6 +24,24 @@ The Rename Files automation helps you standardize filenames across a folder. Use
 
 ---
 
+## Native execution
+
+Run `r10n rename` for guided native inputs. Preview is the shared default;
+all launchers use the same worker and confirmation rules:
+
+```bash
+r10n rename --input /path/to/files --prefix customer_ --dry-run --yes
+```
+
+After reviewing the preview, explicitly apply the transformation:
+
+```bash
+r10n rename --input /path/to/files --prefix customer_ --no-dry-run --yes
+```
+
+JSON uses `input_directory`, `prefix`, and `dry_run`; inspect `r10n list --json`
+for all supported fields. `--yes` is required without a terminal.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)

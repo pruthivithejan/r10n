@@ -20,6 +20,8 @@ func TestBackendHelperProcess(t *testing.T) {
 		fmt.Print(`{"protocol":1,"automations":[{"id":"contacts","title":"Contacts","input_schema":{"properties":{"path":{"type":"string","default":"a","ui:widget":"file"}}},"field_order":["path"]}]}`)
 	case "bad-catalog":
 		fmt.Print(`{"protocol":2,"automations":[]}`)
+	case "mismatched-catalog-version":
+		fmt.Print(`{"protocol":1,"version":"99.0.0","automations":[{"id":"contacts","input_schema":{"properties":{}},"field_order":[]}]}`)
 	case "duplicate-field":
 		fmt.Print(`{"protocol":1,"automations":[{"id":"x","input_schema":{"properties":{"a":{},"b":{}}},"field_order":["a","a"]}]}`)
 	case "invalid":
@@ -82,9 +84,31 @@ func TestLoadCatalog(t *testing.T) {
 		!strings.Contains(string(catalog.Raw), `"ui:widget":"file"`) {
 		t.Fatalf("unexpected or lossy catalog: %+v", catalog)
 	}
-	for _, scenario := range []string{"bad-catalog", "duplicate-field"} {
+	for _, scenario := range []string{"bad-catalog", "duplicate-field", "mismatched-catalog-version"} {
 		if _, err := helperBackend(t, scenario).LoadCatalog(context.Background()); err == nil {
 			t.Errorf("%s accepted an invalid catalog", scenario)
+		}
+	}
+}
+
+func TestParseCatalogSharedContract(t *testing.T) {
+	raw := []byte(`{"protocol":1,"version":"0.12.2","automations":[{"id":"new-task","input_schema":{"properties":{"path":{"type":"string"}}},"field_order":["path"]}]}`)
+	catalog, err := ParseCatalog(raw)
+	if err != nil || catalog.Version != "0.12.2" || catalog.Automations[0].ID != "new-task" {
+		t.Fatalf("valid registry metadata rejected: %+v, %v", catalog, err)
+	}
+	raw[0] = ' '
+	if !strings.HasPrefix(string(catalog.Raw), "{") {
+		t.Fatal("catalog retained a mutable caller buffer")
+	}
+	for _, invalid := range []string{
+		`not json`,
+		`{"protocol":2,"automations":[]}`,
+		`{"protocol":1,"automations":[]}`,
+		`{"protocol":1,"automations":[{"id":"x","input_schema":{"properties":{"a":{}}},"field_order":[]}]}`,
+	} {
+		if _, err := ParseCatalog([]byte(invalid)); err == nil {
+			t.Errorf("invalid catalog accepted: %s", invalid)
 		}
 	}
 }

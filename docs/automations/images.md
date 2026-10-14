@@ -22,6 +22,20 @@ The Images automation processes images in a folder, converting them to WebP form
 
 ---
 
+## Native execution
+
+Run `r10n images` for guided native inputs. Flagged jobs review inputs and ask
+for confirmation; fully specified scripts must use `--yes`:
+
+```bash
+r10n images --input /path/to/images --output /path/to/optimized \
+  --quality 85 --max-size 1 --preserve-names --yes
+```
+
+Original filenames are preserved by default. Use `--preserve-names=false`
+to request sequential names. JSON input uses registry field names such as
+`input_directory`, `output_directory`, and `preserve_filenames`.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)
@@ -120,7 +134,7 @@ uv run r10n images \
 | `--quality` | `-q` | int | No | `85` | Image quality (1-100) |
 | `--max-size` | `-s` | float | No | `1.0` | Maximum file size in MB |
 | `--prefix` | `-p` | string | No | `img` | Prefix for output filenames |
-| `--preserve-names` | | flag | No | `false` | Keep original filenames |
+| `--preserve-names` | | flag | No | `true` | Keep original filenames; `=false` enables sequential names |
 
 ---
 

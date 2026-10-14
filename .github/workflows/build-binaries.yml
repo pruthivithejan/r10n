@@ -18,6 +18,9 @@ on:
       - "src/**"
       - "tests/**"
       - "scripts/build_native.py"
+      - "scripts/check.py"
+      - "lefthook.yml"
+      - "setup.sh"
       - "pyproject.toml"
       - "uv.lock"
       - "install.sh"
@@ -46,10 +49,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
       - name: Install runtime and test dependencies
-        run: python -m pip install . pytest pytest-cov
-      - name: Test the complete Python automation core
-        run: python -m pytest
+        run: uv sync --locked
+      - name: Check Python lock, formatting, lint, types, versions and tests
+        run: uv run --locked python scripts/check.py python
+      - name: Check Go formatting, modules, vet and tests
+        run: uv run --locked python scripts/check.py go
 
   build:
     name: ${{ matrix.asset }}
@@ -76,19 +85,25 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-      - name: Install build and test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install . pyinstaller pytest
+      - uses: astral-sh/setup-uv@v6
+      - name: Install locked development dependencies
+        run: uv sync --locked
       - name: Test Go shell and compile native executable
         run: |
-          go test ./...
-          go vet ./...
-          go build -o dist/compile-check ./cmd/r10n
-      - name: Test bridge, packaging and upgrade helpers
-        run: python -m pytest -o addopts="" tests/test_backend.py tests/test_build_native.py tests/test_upgrade.py
-      - name: Build native bundle and smoke test contacts outside checkout
-        run: python scripts/build_native.py
+          uv run --locked python scripts/check.py go
+          go build -trimpath -ldflags="-s -w" -o dist/compile-check ./cmd/r10n
+      - name: Test native bridge, packaging and launcher
+        run: uv run --locked pytest -o addopts="" tests/test_backend.py tests/test_build_native.py tests/test_launcher.py tests/test_native_integration.py
+      - name: Isolate frozen runtime from developer dependencies
+        run: uv sync --locked --no-dev --group build
+      - name: Build and smoke test contacts, images and PDF outside checkout
+        run: uv run --locked --no-dev --group build python scripts/build_native.py
+      - name: Upload size and duplicate report
+        uses: actions/upload-artifact@v5
+        with:
+          name: size-report-${{ matrix.os }}
+          path: dist/*.size.json
+          if-no-files-found: error
       - name: Upload build artifact
         uses: actions/upload-artifact@v5
         with:
@@ -104,7 +119,7 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           path: release-assets
-          pattern: r10n-*
+          pattern: "*"
           merge-multiple: true
       - name: Generate SHA256SUMS
         working-directory: release-assets

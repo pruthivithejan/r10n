@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-func configureProcess(cmd *exec.Cmd, legacy bool) {
-	if legacy {
-		// Legacy prompts must remain in the terminal's foreground group.
-		// They already receive terminal signals alongside the Go launcher.
+func configureProcess(cmd *exec.Cmd, foreground bool) {
+	if foreground {
+		// The browser configuration service remains in the foreground group.
+		// It receives terminal signals alongside the Go launcher.
 		cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
 		cmd.WaitDelay = 2 * time.Second
 		return

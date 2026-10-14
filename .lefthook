@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Helper file for lefthook to run project commands in repo root
+# Run developer commands from the repository regardless of caller's directory.
 set -euo pipefail
-ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
-exec uv "$@"
+cd "$(dirname "$0")"
+exec bash setup.sh "$@"

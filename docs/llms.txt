@@ -2,7 +2,7 @@
 
 > CLI toolkit for automating repetitive data and workflow tasks: contacts, fill-pdfs, images, and email.
 
-r10n is a Python automation toolkit with a searchable Textual workspace and a scriptable Typer CLI. Its typed automation registry generates validated forms, and a versioned JSON Lines worker protocol isolates execution. It supports instant execution via `uvx` (no installation required), standalone binaries, and local installation for repeated use.
+r10n uses one native Go CLI and Charm terminal interface with a Python automation backend. Its typed registry generates validated forms, and a versioned JSON Lines worker protocol isolates execution. Binaries, `uv run` and `uvx` share the same native behavior; the thin Python launcher builds/resolves or checksum-downloads a matching Go executable. There is no Python public CLI/TUI framework. Headless execution requires complete inputs and `--yes`, which skips review but not validation.
 
 ## Quick Start
 
@@ -15,8 +15,8 @@ Or install locally:
 ```bash
 git clone https://github.com/pruthivithejan/r10n.git
 cd r10n
-uv sync
-uv run r10n --help
+./setup.sh setup
+go run ./cmd/r10n --help
 ```
 
 ## Available Automations
@@ -66,8 +66,15 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file sty
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10–3.12 for source/package use (not standalone bundles)
+- Go, as specified by go.mod, for source development/unpublished launcher builds
 - [uv](https://docs.astral.sh/uv/) package manager
+
+Architecture: cmd/r10n; internal/cli, internal/tui, internal/backend;
+src/r10n_backend/{__main__.py,registry.py,worker.py,automations/,configure/}.
+The Python backend exposes catalog, worker AUTOMATION_ID (stdin JSON), and configure.
+pyproject.toml is the sole human-edited version; regenerate uv.lock with uv lock.
+Developer checks: ./setup.sh check; native build: ./setup.sh build.
 
 ## Repository
 

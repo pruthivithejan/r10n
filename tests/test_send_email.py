@@ -11,17 +11,17 @@ import smtplib
 import tempfile
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.automations.send_same_email import (
+from r10n_backend.automations.send_same_email import (
     SimpleEmailConfig,
     SimpleEmailSender,
     find_matching_certificate,
     load_simple_config,
-    preview_email_setup,
     normalize_name_for_matching,
+    preview_email_setup,
     send_from_file,
     send_personalized_emails_with_certificates,
     send_same_email_to_all,
@@ -193,6 +193,7 @@ class TestCreateMessage:
         )
 
         captured = capsys.readouterr()
+        assert msg["To"] == "recipient@example.com"
         assert "Attachment not found" in captured.out
 
     def test_create_message_multiple_attachments(self, sender):
@@ -466,8 +467,8 @@ class TestFindMatchingCertificate:
 class TestSendSameEmailToAll:
     """Test the send_same_email_to_all convenience function."""
 
-    @patch("src.automations.send_same_email.SimpleEmailSender")
-    @patch("src.automations.send_same_email.load_simple_config")
+    @patch("r10n_backend.automations.send_same_email.SimpleEmailSender")
+    @patch("r10n_backend.automations.send_same_email.load_simple_config")
     def test_send_same_email_basic(self, mock_load_config, mock_sender_class):
         """Test basic email sending to all recipients."""
         mock_config = SimpleEmailConfig(
@@ -761,7 +762,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import send_same_email as mod
+        from r10n_backend.automations import send_same_email as mod
 
         assert hasattr(mod, "SimpleEmailConfig")
         assert hasattr(mod, "SimpleEmailSender")

@@ -11,14 +11,13 @@ from pathlib import Path
 
 import pytest
 
-from src.automations.convert_colors import (
+from r10n_backend.automations.convert_colors import (
     convert_colors,
     expand_hex,
     find_css_files,
     format_oklch,
     hsl_to_rgb,
     is_within_oklch,
-    linear_to_oklab,
     make_replacement_for_match,
     parse_hsl_params,
     parse_rgb_params,
@@ -83,24 +82,24 @@ class TestParseHslParams:
 
     def test_hsl_with_spaces(self):
         """Test HSL with space syntax."""
-        r, g, b, a = parse_hsl_params("0 100% 50%")
+        r, g, b, _a = parse_hsl_params("0 100% 50%")
         assert r == pytest.approx(1.0, abs=0.01)
         assert g == pytest.approx(0.0, abs=0.01)
         assert b == pytest.approx(0.0, abs=0.01)
 
     def test_hsla_with_alpha(self):
         """Test HSLA with alpha."""
-        r, g, b, a = parse_hsl_params("120, 100%, 50%, 0.5")
+        _r, _g, _b, a = parse_hsl_params("120, 100%, 50%, 0.5")
         assert a == 0.5
 
     def test_hsl_with_slash_alpha(self):
         """Test HSL with slash alpha syntax."""
-        r, g, b, a = parse_hsl_params("120 100% 50% / 50%")
+        _r, _g, _b, a = parse_hsl_params("120 100% 50% / 50%")
         assert a == 0.5
 
     def test_hsl_with_deg_unit(self):
         """Test HSL with deg unit."""
-        r, g, b, a = parse_hsl_params("180deg 100% 50%")
+        r, g, b, _a = parse_hsl_params("180deg 100% 50%")
         # Cyan
         assert r == pytest.approx(0.0, abs=0.01)
         assert g == pytest.approx(1.0, abs=0.01)
@@ -108,7 +107,7 @@ class TestParseHslParams:
 
     def test_hsl_with_turn_unit(self):
         """Test HSL with turn unit."""
-        r, g, b, a = parse_hsl_params("0.5turn 100% 50%")
+        r, g, _b, _a = parse_hsl_params("0.5turn 100% 50%")
         # Cyan (180deg)
         assert r == pytest.approx(0.0, abs=0.01)
         assert g == pytest.approx(1.0, abs=0.01)
@@ -132,26 +131,26 @@ class TestParseRgbParams:
 
     def test_rgb_with_spaces(self):
         """Test RGB with space syntax."""
-        r, g, b, a = parse_rgb_params("0 255 0")
+        r, g, b, _a = parse_rgb_params("0 255 0")
         assert r == 0.0
         assert g == 1.0
         assert b == 0.0
 
     def test_rgba_with_alpha(self):
         """Test RGBA with alpha."""
-        r, g, b, a = parse_rgb_params("255, 0, 0, 0.5")
+        _r, _g, _b, a = parse_rgb_params("255, 0, 0, 0.5")
         assert a == 0.5
 
     def test_rgb_with_percent(self):
         """Test RGB with percent values."""
-        r, g, b, a = parse_rgb_params("100% 0% 0%")
+        r, g, b, _a = parse_rgb_params("100% 0% 0%")
         assert r == 1.0
         assert g == 0.0
         assert b == 0.0
 
     def test_rgb_with_slash_alpha(self):
         """Test RGB with slash alpha."""
-        r, g, b, a = parse_rgb_params("255 0 0 / 50%")
+        _r, _g, _b, a = parse_rgb_params("255 0 0 / 50%")
         assert a == 0.5
 
     def test_empty_params(self):
@@ -214,20 +213,20 @@ class TestColorConversion:
 
     def test_rgba_to_oklch_red(self):
         """Test RGBA to OKLCH for red."""
-        l, c, h, a = rgba_to_oklch(1.0, 0.0, 0.0, 1.0)
-        assert l == pytest.approx(0.628, abs=0.01)
+        lightness, c, _h, a = rgba_to_oklch(1.0, 0.0, 0.0, 1.0)
+        assert lightness == pytest.approx(0.628, abs=0.01)
         assert c > 0.2  # Red has high chroma
         assert a == 1.0
 
     def test_rgba_to_oklch_white(self):
         """Test RGBA to OKLCH for white."""
-        l, c, h, a = rgba_to_oklch(1.0, 1.0, 1.0, 1.0)
-        assert l == pytest.approx(1.0, abs=0.01)
+        lightness, c, _h, _a = rgba_to_oklch(1.0, 1.0, 1.0, 1.0)
+        assert lightness == pytest.approx(1.0, abs=0.01)
         assert c == pytest.approx(0.0, abs=0.01)  # White has no chroma
 
     def test_rgba_to_oklch_with_alpha(self):
         """Test RGBA to OKLCH preserves alpha."""
-        l, c, h, a = rgba_to_oklch(1.0, 0.0, 0.0, 0.5)
+        _lightness, _c, _h, a = rgba_to_oklch(1.0, 0.0, 0.0, 0.5)
         assert a == 0.5
 
 
@@ -320,9 +319,7 @@ class TestMakeReplacementForMatch:
     def test_output_format(self):
         """Test output format regex."""
         result = make_replacement_for_match("#123456")
-        pat = re.compile(
-            r"^oklch\(\d{1,3}(?:\.\d+)?% \d+(?:\.\d+)? \d+deg(?: / \d+(?:\.\d+)?)?\)$"
-        )
+        pat = re.compile(r"^oklch\(\d{1,3}(?:\.\d+)?% \d+(?:\.\d+)? \d+deg(?: / \d+(?:\.\d+)?)?\)$")
         assert pat.match(result)
 
 
@@ -357,7 +354,7 @@ class TestProcessCssContent:
     def test_preserves_structure(self):
         """Test CSS structure is preserved."""
         content = ".class {\n  color: #ff0000;\n  margin: 10px;\n}"
-        new_content, changes = process_css_content(content)
+        new_content, _changes = process_css_content(content)
         assert "margin: 10px" in new_content
         assert new_content.count("{") == 1
         assert new_content.count("}") == 1
@@ -368,9 +365,7 @@ class TestProcessFile:
 
     def test_process_css_file(self):
         """Test processing a CSS file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".css", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".css", delete=False) as f:
             f.write(".class { color: #ff0000; }")
             file_path = f.name
 
@@ -384,9 +379,7 @@ class TestProcessFile:
 
     def test_process_file_writes_backup(self):
         """Test backup file is created."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".css", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".css", delete=False) as f:
             f.write(".class { color: #ff0000; }")
             file_path = f.name
 
@@ -401,9 +394,7 @@ class TestProcessFile:
 
     def test_process_file_no_backup(self):
         """Test no backup with flag."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".css", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".css", delete=False) as f:
             f.write(".class { color: #ff0000; }")
             file_path = f.name
 
@@ -421,9 +412,7 @@ class TestProcessFile:
 
     def test_process_file_not_css(self):
         """Test non-CSS file error."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("not css")
             file_path = f.name
 
@@ -480,16 +469,12 @@ class TestConvertColors:
 
     def test_convert_single_file(self):
         """Test converting a single file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".css", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".css", delete=False) as f:
             f.write(".class { color: #ff0000; background: blue; }")
             file_path = f.name
 
         try:
-            result = convert_colors(
-                path=".", file=file_path, dry_run=True
-            )
+            result = convert_colors(path=".", file=file_path, dry_run=True)
             assert result["files_found"] == 1
             assert result["total_changes"] == 2
         finally:
@@ -544,7 +529,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import convert_colors as mod
+        from r10n_backend.automations import convert_colors as mod
 
         assert hasattr(mod, "convert_colors")
         assert hasattr(mod, "process_file")
@@ -571,9 +556,7 @@ class TestEdgeCases:
 
     def test_empty_css_file(self):
         """Test processing empty CSS file."""
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".css", delete=False
-        ) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".css", delete=False) as f:
             f.write("")
             file_path = f.name
 
@@ -591,14 +574,14 @@ class TestEdgeCases:
             color: #ff0000;
         }
         """
-        new_content, changes = process_css_content(content)
+        new_content, _changes = process_css_content(content)
         # Comment color should also be converted
         assert "oklch(" in new_content
 
     def test_css_variables(self):
         """Test CSS custom properties."""
         content = ":root { --primary: #ff0000; }"
-        new_content, changes = process_css_content(content)
+        new_content, _changes = process_css_content(content)
         assert "oklch(" in new_content
         assert "--primary:" in new_content
 

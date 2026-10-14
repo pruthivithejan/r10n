@@ -46,8 +46,8 @@ local/
 data/
 .plans/
 
-#Templates
-templates/
+# Legacy user templates, not package-owned configure/templates assets.
+/templates/
 
 # Operating System
 .DS_Store
@@ -56,8 +56,7 @@ Thumbs.db
 # Project specific
 *.vcf
 
-# UV lock file (optional - you may want to commit this for reproducibility)
-# uv.lock
+# uv.lock and go.sum are committed reproducibility inputs.
 
 
 # Ruff Cache

@@ -23,6 +23,22 @@ The Fill PDFs automation takes a PDF template and a data file, then generates in
 
 ---
 
+## Native execution
+
+Run `r10n fill-pdfs` for the native input form. Create or adjust a field-placement
+configuration separately with `r10n configure --template /path/to/template.pdf`.
+The Go frontend reviews inputs and confirms the batch; scripts require `--yes`:
+
+```bash
+r10n fill-pdfs --config /path/to/fill-pdfs.json \
+  --recipients /path/to/recipients.csv --yes
+```
+
+JSON input uses `config_file`, `recipients_file`, and `base_dir`.
+Use absolute template/output paths inside custom configuration files when
+running outside a workspace. `--template` on `fill-pdfs` gives instructions for
+the separate configuration step; it does not replace an existing configuration.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)

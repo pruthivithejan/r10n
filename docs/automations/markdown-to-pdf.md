@@ -22,6 +22,20 @@ The Markdown to PDF automation turns Markdown content into print-ready PDFs. It 
 
 ---
 
+## Native execution
+
+Run `r10n md2pdf` for guided native inputs. All launchers use the same worker
+and registry defaults. A fully specified scripted run requires `--yes`:
+
+```bash
+r10n md2pdf --input /path/to/document.md --output /path/to/document.pdf \
+  --page-size A4 --syntax-highlight --yes
+```
+
+Syntax highlighting is enabled by default; use `--syntax-highlight=false`
+to disable it. JSON input uses `input_path`, `output_path`, and other registry
+names exposed by `r10n list --json`.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)
@@ -72,7 +86,7 @@ uv run r10n md2pdf \
 | `--css` | `-c` | string | No | - | Custom CSS file |
 | `--page-size` | - | string | No | `A4` | Page size (`A4`, `Letter`, `Legal`*) |
 | `--toc` | - | flag | No | `false` | Include table of contents |
-| `--syntax-highlight` | - | flag | No | `false` | Enable syntax highlighting |
+| `--syntax-highlight` | - | flag | No | `true` | Enable syntax highlighting; `=false` disables it |
 | `--recursive` | `-r` | flag | No | `false` | Process subdirectories |
 
 \*Note: `Legal` currently falls back to `A4` size.

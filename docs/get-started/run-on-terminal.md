@@ -4,287 +4,128 @@ icon: lucide/square-terminal
 
 # Run on Terminal
 
-Run r10n directly from your terminal without cloning or installing anything. Perfect for quick, one-off automation tasks.
-
----
+Use uv to run r10n without cloning or installing the application yourself.
+All entry points open the same native Go/Charm interface.
 
 ## Prerequisites
 
-You need [uv](https://docs.astral.sh/uv/) installed. If you don't have it:
-
-=== "macOS / Linux"
-
-    ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
-
-=== "Windows"
-
-    ```powershell
-    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-    ```
-
-=== "Homebrew"
-
-    ```bash
-    brew install uv
-    ```
-
-Verify installation:
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and verify:
 
 ```bash
 uv --version
 ```
 
----
+The package launcher needs Python 3.10+ (uv can provision it).
+It resolves/builds a matching Go executable when the Go toolchain is available,
+or downloads the matching published native release and verifies its checksum.
+Unreleased versions and platforms without release assets require Go.
+For no Python tooling at all, [install the standalone bundle](install-binary.md).
 
-## Run Any Automation Instantly
-
-Use `uvx` to run r10n without installing:
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
-```
-
-This downloads r10n temporarily, runs it, and cleans up automatically.
-
-To open the full-screen terminal workspace instead of printing help:
+## Run instantly
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
-```
-
-Search by automation name, category, or role. Select an automation to get a validated form,
-review the resolved inputs, and follow progress and generated files from the same workspace.
-
-| Key | Action |
-|-----|--------|
-| `/` | Focus automation search |
-| Arrow keys | Move through matching automations |
-| `Enter` | Select the highlighted automation |
-| `Ctrl+P` | Open the command palette |
-| `Ctrl+C` | Cancel the active automation |
-| `Q` | Exit when focus is outside a text field |
-
-The form is generated from the same typed automation definition used by the execution
-worker, so values are validated before the review screen appears. Long-running work is
-isolated from the interface and reports logs, progress, results, and artifact paths back to
-the workspace.
-
----
-
-## Available Commands
-
-List all available automations:
-
-```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
 ```
 
-Output:
+The first command opens the native picker; the second lists public commands.
+uv caches the package environment and the launcher may cache the matching native
+executable. It does not run a separate Python command interface.
 
-```
-Usage: r10n [OPTIONS] COMMAND [ARGS]...
+| Key | Action |
+|-----|--------|
+| `/` | Filter automation search |
+| Arrow keys | Move through automations |
+| Enter | Select or advance |
+| Ctrl+C | Exit or cancel active work |
+| Esc | Cancel active progress |
 
-  r10n - Automate repetitive data and workflow tasks
+Select a task for generated forms, validated inputs, review and confirmation.
+Run a bare command such as `r10n contacts` to open its form directly.
+Set `R10N_ACCESSIBLE=1` for plain prompts and static progress.
 
-Options:
-  --help  Show this message and exit.
+## CLI flag examples
 
-Commands:
-  fill-pdfs     Fill PDF templates with data
-  colors        Convert CSS colors to oklch() format
-  contacts      Generate VCF contact cards from phone numbers
-  email         Send bulk personalized emails
-  images        Optimize and convert images to WebP
-```
+The native Go frontend preserves automation flag aliases.
+For scripting/non-terminal input, provide all needed values and `--yes`.
+This authorizes execution without review, not without validation.
 
----
-
-## Quick Examples
-
-### Generate Contact Cards
+### Contacts
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts \
-  --input numbers.txt \
-  --prefix Customer \
-  --output customers.vcf
+  --input /path/to/numbers.txt --prefix Customer \
+  --output /path/to/customers.vcf --yes
 ```
 
-### Optimize Images
+Input text contains one phone number per line:
+
+```text
++94771234567
++94777654321
+```
+
+### Images
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images \
-  --input ./photos \
-  --output ./optimized \
-  --quality 85
+  --input /path/to/photos --output /path/to/optimized --quality 85 --yes
 ```
 
-### Convert Colors to oklch
+### CSS color preview
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
-  --file styles.css
+  --file /path/to/styles.css --dry-run --yes
 ```
+
+Review the preview before opting into writes with `--no-dry-run`.
 
 ### Fill PDFs
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs \
-  --config config.json \
-  --recipients participants.csv
+  --config /path/to/config.json --recipients /path/to/participants.csv --yes
 ```
 
-### Send Bulk Emails
+Generate field placements with `r10n configure --template /path/to/template.pdf`.
+See [Fill PDFs](../automations/fill-pdfs.md) for config format.
+
+### Email
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email \
-  --config email-config.json \
-  --recipients recipients.csv \
-  --body message.txt
+  --config /path/to/email.json --recipients /path/to/recipients.csv \
+  --body /path/to/message.txt --attachments /path/to/attachments --yes
 ```
 
----
+`--yes` can send real email. Verify recipients, credentials and content in
+interactive mode before unattended use.
 
-## Interactive Mode
-
-There are two interactive modes. Run `r10n` by itself for the terminal workspace:
+## JSON workflows
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n list --json
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n run contacts \
+  --input-json '{"input_file":"/path/to/numbers.txt","output_file":"/path/to/contacts.vcf"}' \
+  --json --yes
 ```
 
-Run a specific command without flags for the classic step-by-step prompts:
+Registry field names, not flag aliases, are used in JSON.
+`--input-file PATH` reads a file; `--input-file -` reads stdin.
+See [Native shell](native-shell.md) for protocol events and error codes.
 
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
-```
+## Tips and troubleshooting
 
-The CLI will guide you through each step:
+- Use absolute paths outside the checkout; relative paths follow your current directory.
+- Run `r10n COMMAND --help` to inspect current flags.
+- Missing files are not downloaded or silently generated during execution; prepare inputs first.
+- If there is no matching published release, install Go or use a released version.
+- Behind a firewall, use [local setup](setup-locally.md) with locked dependencies.
+- Cancellation stops subprocesses but may leave partial outputs.
 
-```
-╭─────────────────────────────────────────────────────────────╮
-│                    📇 Contact Generator                      │
-│         Generate VCF contact cards from phone numbers        │
-╰─────────────────────────────────────────────────────────────╯
+## See also
 
-Step 1/3: Select input file
-Enter path to file with phone numbers: numbers.txt
-
-Step 2/3: Set contact name prefix
-Enter prefix for contact names [Contact]: Customer
-
-Step 3/3: Set output file
-Enter output VCF file path [contacts.vcf]: customers.vcf
-
-Summary:
-  Input file: numbers.txt
-  Prefix: Customer
-  Output: customers.vcf
-
-Proceed with contact generation? [y/n]: y
-```
-
----
-
-## Creating Input Files
-
-For most automations, you'll need to create input files first. Here are examples:
-
-### Phone Numbers (for contacts)
-
-Create `numbers.txt`:
-
-```text
-# Phone numbers (comments start with #)
-0771234567
-0781234567
-+94791234567
-```
-
-### Recipient List (for email)
-
-Create `recipients.csv`:
-
-```csv
-Name,Email
-John Doe,john@example.com
-Jane Smith,jane@example.com
-Support Team,support@company.org
-```
-
-### CSV Data (for fill-pdfs)
-
-Create `participants.csv`:
-
-```csv
-name,course,date
-John Doe,Web Development,2025-01-15
-Jane Smith,Data Science,2025-01-15
-```
-
----
-
-## Tips
-
-1. **Create an alias** for frequent use:
-   ```bash
-   alias r10n='uvx --from git+https://github.com/pruthivithejan/r10n.git r10n'
-   ```
-
-   Then run:
-   ```bash
-   r10n contacts --help
-   ```
-
-2. **Use absolute paths** when specifying files:
-   ```bash
-   uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts \
-     --input /Users/you/Desktop/numbers.txt \
-     --output /Users/you/Desktop/contacts.vcf
-   ```
-
-3. **Check command help** for all available options:
-   ```bash
-   uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts --help
-   ```
-
----
-
-## Troubleshooting
-
-### "Command not found: uvx"
-
-Install uv first:
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-Then restart your terminal or run:
-
-```bash
-source ~/.bashrc  # or ~/.zshrc
-```
-
-### "No such file or directory"
-
-Make sure your input file exists and the path is correct:
-
-```bash
-ls -la numbers.txt
-```
-
-### Network Issues
-
-If you're behind a firewall or have slow internet, consider [setting up locally](setup-locally.md) instead.
-
----
-
-## Next Steps
-
-- [Install Binary](install-binary.md) — Install with curl and update via `r10n upgrade`
-- [Setup Locally](setup-locally.md) — For repeated use or development
-- [Automations](../automations/index.md) — Detailed guides for each automation
-- [GitHub Issues](https://github.com/pruthivithejan/r10n/issues) — Get help or report bugs
+- [Install Binary](install-binary.md)
+- [Setup Locally](setup-locally.md)
+- [Automations](../automations/index.md)

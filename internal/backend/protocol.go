@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"io"
 	"os/exec"
+
+	"github.com/pruthivithejan/r10n"
 )
 
 const ProtocolVersion = 1
@@ -16,6 +18,7 @@ const ProtocolVersion = 1
 // Catalog is exported by Python; all forms and task metadata derive from it.
 type Catalog struct {
 	Protocol    int             `json:"protocol"`
+	Version     string          `json:"version"`
 	Automations []Automation    `json:"automations"`
 	Raw         json.RawMessage `json:"-"`
 }
@@ -73,8 +76,20 @@ func (b Backend) LoadCatalog(ctx context.Context) (Catalog, error) {
 	cmd.Stderr = &stderr
 	raw, err := cmd.Output()
 	if err != nil {
+		if ctx.Err() != nil {
+			return Catalog{}, ctx.Err()
+		}
 		return Catalog{}, fmt.Errorf("load automation catalog: %w: %s", err, stderr.String())
 	}
+	catalog, err := ParseCatalog(raw)
+	if err == nil && catalog.Version != "" && catalog.Version != r10n.Version {
+		return catalog, fmt.Errorf("backend version %s does not match native version %s; reinstall the complete bundle or sync the source environment", catalog.Version, r10n.Version)
+	}
+	return catalog, err
+}
+
+// ParseCatalog validates the same registry contract for direct and native probes.
+func ParseCatalog(raw []byte) (Catalog, error) {
 	var catalog Catalog
 	if err := json.Unmarshal(raw, &catalog); err != nil {
 		return catalog, fmt.Errorf("invalid backend catalog: %w", err)

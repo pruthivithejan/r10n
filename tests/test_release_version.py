@@ -9,6 +9,7 @@ from scripts.release_version import (
     _replace_version,
     next_release_version,
     read_declared_versions,
+    update_version_files,
 )
 
 
@@ -32,9 +33,9 @@ class TestVersion:
 
 def write_version_fixture(root: Path, version: str) -> None:
     """Write the minimal synchronized version fixture used by helper tests."""
-    (root / "src").mkdir()
-    (root / "pyproject.toml").write_text(f'version = "{version}"\n', encoding="utf-8")
-    (root / "src" / "cli.py").write_text(f'VERSION = "{version}"\n', encoding="utf-8")
+    (root / "pyproject.toml").write_text(
+        f'[project]\nname = "r10n"\nversion = "{version}"\n', encoding="utf-8"
+    )
     (root / "uv.lock").write_text(
         f'[[package]]\nname = "r10n"\nversion = "{version}"\n',
         encoding="utf-8",
@@ -42,12 +43,11 @@ def write_version_fixture(root: Path, version: str) -> None:
 
 
 def test_read_declared_versions(tmp_path):
-    """All three version declarations are read and parsed consistently."""
+    """The generated lockfile agrees with the single project version source."""
     write_version_fixture(tmp_path, "0.11.1")
 
     assert read_declared_versions(tmp_path) == {
         "pyproject.toml": Version(0, 11, 1),
-        "src/cli.py": Version(0, 11, 1),
         "uv.lock": Version(0, 11, 1),
     }
 
@@ -55,7 +55,9 @@ def test_read_declared_versions(tmp_path):
 def test_read_declared_versions_rejects_mismatch(tmp_path):
     """Mismatched metadata cannot silently produce a release."""
     write_version_fixture(tmp_path, "0.11.1")
-    (tmp_path / "src" / "cli.py").write_text('VERSION = "0.11.0"\n', encoding="utf-8")
+    (tmp_path / "uv.lock").write_text(
+        '[[package]]\nname = "r10n"\nversion = "0.11.0"\n', encoding="utf-8"
+    )
 
     with pytest.raises(ValueError, match="Version mismatch"):
         read_declared_versions(tmp_path)
@@ -81,3 +83,21 @@ def test_replace_version_requires_expected_file_shape():
             Version(0, 11, 2),
             "fixture",
         )
+
+
+def test_update_regenerates_lock_instead_of_editing_it(tmp_path, monkeypatch):
+    """Update only project metadata by hand; uv is the lockfile writer."""
+    write_version_fixture(tmp_path, "0.11.1")
+    with (tmp_path / "pyproject.toml").open("a") as file:
+        file.write('\n[tool.fixture]\nversion = "9.0.0"\n')
+
+    def fake_run(command, **kwargs):
+        assert command == ["uv", "lock"]
+        assert kwargs["cwd"] == tmp_path
+        assert 'version = "0.11.2"' in (tmp_path / "pyproject.toml").read_text()
+        assert 'version = "0.11.1"' in (tmp_path / "uv.lock").read_text()
+        (tmp_path / "uv.lock").write_text('[[package]]\nname = "r10n"\nversion = "0.11.2"\n')
+
+    monkeypatch.setattr("scripts.release_version.subprocess.run", fake_run)
+    update_version_files(Version(0, 11, 2), tmp_path)
+    assert 'version = "9.0.0"' in (tmp_path / "pyproject.toml").read_text()

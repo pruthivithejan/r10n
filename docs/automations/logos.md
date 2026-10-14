@@ -20,6 +20,19 @@ Logos accepts a comma-separated list of company or brand names, searches the SVG
 
 ---
 
+## Native execution
+
+Run `r10n logos` for native guided inputs. All launchers share the same flags;
+scripts must explicitly authorize network/output work with `--yes`:
+
+```bash
+r10n logos --names "OpenAI,Apple" --output /path/to/logos \
+  --timeout 5 --max-candidates 20 --yes
+```
+
+JSON input uses registry names, including `output_directory` and
+`write_manifest`. Existing files are preserved unless `--overwrite` is supplied.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)

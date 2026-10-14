@@ -23,13 +23,13 @@ Automate repetitive data and workflow tasks on your terms — with a beautiful C
 
 ## What is r10n?
 
-**r10n** (routine automation) is a Python CLI toolkit to automate day-to-day tasks without code. Each automation is interactive, safe, and auditable.
+**r10n** (routine automation) is a native Go CLI with a Python automation engine for day-to-day tasks without code. Each automation supports reviewed interactive execution and explicit headless execution.
 
 Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 
 **Features:**
 
-- Searchable Textual workspace with generated, validated forms
+- Searchable native Charm picker with generated, validated forms
 - Review screens, live logs, progress, cancellation, and artifact paths
 - Step-by-step interactive prompts
 - Run instantly with `uvx` or install locally

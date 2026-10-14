@@ -1,16 +1,55 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Show CLI help after rename",
-			"type": "shell",
-			"command": "uv run python -m src.cli --help",
-			"args": [],
-			"isBackground": false,
-			"problemMatcher": [
-				"$gcc"
-			],
-			"group": "build"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "r10n: native CLI",
+      "type": "process",
+      "command": "go",
+      "args": ["run", "./cmd/r10n", "--help"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "r10n: check both toolchains",
+      "type": "process",
+      "command": "uv",
+      "args": ["run", "--locked", "python", "scripts/check.py", "all"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": [],
+      "group": {"kind": "test", "isDefault": true}
+    },
+    {
+      "label": "r10n: Go tests",
+      "type": "process",
+      "command": "go",
+      "args": ["test", "./..."],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": ["$go"]
+    },
+    {
+      "label": "r10n: Python tests",
+      "type": "process",
+      "command": "uv",
+      "args": ["run", "--locked", "pytest"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "r10n: format both toolchains",
+      "type": "process",
+      "command": "bash",
+      "args": ["setup.sh", "format"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": []
+    },
+    {
+      "label": "r10n: build native release",
+      "type": "process",
+      "command": "bash",
+      "args": ["setup.sh", "build"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": [],
+      "group": {"kind": "build", "isDefault": true}
+    }
+  ]
 }

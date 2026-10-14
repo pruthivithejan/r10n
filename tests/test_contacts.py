@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from src.automations.generate_contacts import (
+from r10n_backend.automations.generate_contacts import (
     clean_number,
     generate_vcf,
     generate_vcf_from_file,
@@ -204,7 +204,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import generate_contacts
+        from r10n_backend.automations import generate_contacts
 
         assert hasattr(generate_contacts, "generate_vcf_from_file")
         assert hasattr(generate_contacts, "generate_vcf")

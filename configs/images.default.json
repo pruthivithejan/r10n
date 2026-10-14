@@ -1,26 +1,8 @@
 {
-  "output_dir": "workspace/outputs/images",
-  "max_file_size_mb": 1.0,
+  "input_directory": "local/inputs/images",
+  "output_directory": "local/outputs/images",
   "quality": 85,
-  "max_dimensions": {
-    "width": 1920,
-    "height": 1080
-  },
-  "output_format": "webp",
-  "fallback_format": "jpg",
-  "preserve_metadata": false,
-  "sequential_naming": {
-    "enabled": true,
-    "prefix": "img",
-    "start_number": 1,
-    "padding": 3
-  },
-  "optimization": {
-    "auto_rotate": true,
-    "strip_exif": true,
-    "progressive": true,
-    "optimize": true
-  },
-  "supported_formats": [".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"],
-  "skip_patterns": ["*_thumb.*", ".*", "*.tmp"]
+  "max_size_mb": 1.0,
+  "prefix": "img",
+  "preserve_filenames": true
 }

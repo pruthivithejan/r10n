@@ -19,15 +19,15 @@ from pathlib import Path
 import pytest
 
 # These imports will fail until the module is implemented (TDD red phase)
-from src.automations.validate_csv import (
+from r10n_backend.automations.validate_csv import (
+    CsvValidator,
     ValidationConfig,
     ValidationResult,
-    CsvValidator,
+    clean_csv,
+    generate_report,
+    load_schema,
     validate_csv,
     validate_directory,
-    load_schema,
-    generate_report,
-    clean_csv,
 )
 
 
@@ -128,7 +128,7 @@ class TestLoadSchema:
             file_path = f.name
 
         try:
-            with pytest.raises(Exception):
+            with pytest.raises(json.JSONDecodeError):
                 load_schema(file_path)
         finally:
             Path(file_path).unlink()
@@ -449,7 +449,7 @@ class TestCleanCsv:
             assert result["success"] is True
 
             # Read and verify
-            with open(output_path, "r") as f:
+            with open(output_path) as f:
                 reader = csv.reader(f)
                 next(reader)  # Skip header
                 row = next(reader)
@@ -476,7 +476,7 @@ class TestCleanCsv:
             assert result["rows_removed"] >= 1
 
             # Verify
-            with open(output_path, "r") as f:
+            with open(output_path) as f:
                 reader = csv.reader(f)
                 rows = list(reader)
                 assert len(rows) == 3  # Header + 2 data rows
@@ -609,7 +609,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import validate_csv as mod
+        from r10n_backend.automations import validate_csv as mod
 
         assert hasattr(mod, "ValidationConfig")
         assert hasattr(mod, "ValidationResult")

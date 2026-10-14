@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
-from src.automations.download_website_images import (
+from r10n_backend.automations.download_website_images import (
     build_output_filename,
     convert_image_bytes,
     download_website_images,

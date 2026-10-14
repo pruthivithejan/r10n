@@ -6,14 +6,15 @@ import json
 import os
 import subprocess
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from src.automation_registry import list_automations
-from src.backend import build_catalog
-from src.worker import PROTOCOL_VERSION
+from r10n_backend.__main__ import build_catalog
+from r10n_backend.registry import list_automations
+from r10n_backend.worker import PROTOCOL_VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -38,9 +39,13 @@ def run_backend(
     environment = os.environ.copy()
     environment["R10N_DISABLE_UPDATE_CHECK"] = "1"
     environment["PYTHONPATH"] = os.pathsep.join(
-        filter(None, [str(PROJECT_ROOT), environment.get("PYTHONPATH")])
+        filter(None, [str(PROJECT_ROOT / "src"), environment.get("PYTHONPATH")])
     )
-    entry = [str(PROJECT_ROOT / "src" / "backend.py")] if entry_script else ["-m", "src.backend"]
+    entry = (
+        [str(PROJECT_ROOT / "src" / "r10n_backend" / "__main__.py")]
+        if entry_script
+        else ["-m", "r10n_backend"]
+    )
     return subprocess.run(
         [sys.executable, "-u", *entry, *arguments],
         input=input_text,
@@ -63,6 +68,7 @@ def test_catalog_matches_every_registered_model() -> None:
     catalog = json.loads(result.stdout)
     assert catalog == build_catalog()
     assert catalog["protocol"] == PROTOCOL_VERSION == 1
+    assert catalog["version"] == version("r10n")
     assert len(catalog["automations"]) == len(list_automations())
     for exported, spec in zip(catalog["automations"], list_automations(), strict=True):
         assert exported == {
@@ -102,9 +108,9 @@ def test_catalog_keeps_automation_and_cli_imports_lazy() -> None:
         [
             sys.executable,
             "-c",
-            "import sys; from src.backend import build_catalog; build_catalog(); "
-            "assert 'src.cli' not in sys.modules; "
-            "assert not any(name.startswith('src.automations') for name in sys.modules)",
+            "import sys; from r10n_backend.__main__ import build_catalog; build_catalog(); "
+            "assert not any(name in sys.modules for name in ('typer', 'textual', 'rich')); "
+            "assert not any(name.startswith('r10n_backend.automations') for name in sys.modules)",
         ],
         cwd=PROJECT_ROOT,
         capture_output=True,
@@ -194,30 +200,12 @@ def test_worker_execution_error_preserves_exit_one(tmp_path: Path) -> None:
     assert "missing.txt" in events[-1]["error"]
 
 
-def test_legacy_version_is_unwrapped_python_cli_output() -> None:
-    """Legacy flags bypass argparse and retain the existing CLI's output/status."""
-    expected = subprocess.run(
-        [sys.executable, "-m", "src.cli", "--version"],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-        timeout=30,
-        check=False,
-    )
-    result = run_backend("legacy", "--version")
-
-    assert result.returncode == expected.returncode == 0
-    assert result.stdout == expected.stdout
-    assert result.stderr == expected.stderr
-    assert result.stdout.startswith("r10n, version ")
-
-
-def test_legacy_error_preserves_cli_exit_status() -> None:
-    """An invalid legacy option is handled by Typer, without protocol wrapping."""
+def test_legacy_mode_is_removed() -> None:
+    """There is no Python CLI compatibility command."""
     result = run_backend("legacy", "--not-a-real-option")
 
     assert result.returncode == 2
-    assert "No such option" in result.stderr
+    assert "invalid choice" in result.stderr
     assert "Traceback" not in result.stderr
     assert result.stdout == ""
 
@@ -244,14 +232,14 @@ def test_backend_entry_script_uses_absolute_imports(tmp_path: Path) -> None:
     assert json.loads(result.stdout) == build_catalog()
 
 
-def test_trusted_script_ignores_foreign_src_package(tmp_path: Path) -> None:
+def test_trusted_script_ignores_foreign_backend_package(tmp_path: Path) -> None:
     """Source launches must not import a backend from the caller's directory."""
-    foreign = tmp_path / "src"
+    foreign = tmp_path / "r10n_backend"
     foreign.mkdir()
     (foreign / "__init__.py").write_text(
-        'raise RuntimeError("foreign src package was imported")\n', encoding="utf-8"
+        'raise RuntimeError("foreign backend package was imported")\n', encoding="utf-8"
     )
-    (foreign / "backend.py").write_text(
+    (foreign / "__main__.py").write_text(
         'raise RuntimeError("foreign backend was executed")\n', encoding="utf-8"
     )
     result = run_backend("catalog", cwd=tmp_path, entry_script=True)

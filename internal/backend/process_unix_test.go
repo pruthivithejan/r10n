@@ -7,11 +7,11 @@ import (
 	"testing"
 )
 
-func TestLegacyKeepsTerminalForegroundGroup(t *testing.T) {
+func TestConfigureKeepsTerminalForegroundGroup(t *testing.T) {
 	engine := helperBackend(t, "blocking")
-	legacy := engine.Command(context.Background(), "legacy", "contacts")
-	if legacy.SysProcAttr != nil && legacy.SysProcAttr.Setpgid {
-		t.Fatal("legacy prompts would be stopped by SIGTTIN in a background group")
+	configure := engine.Command(context.Background(), "configure", "--template", "template.pdf")
+	if configure.SysProcAttr != nil && configure.SysProcAttr.Setpgid {
+		t.Fatal("configuration service must share terminal foreground signals")
 	}
 	worker := engine.Command(context.Background(), "worker", "contacts")
 	if worker.SysProcAttr == nil || !worker.SysProcAttr.Setpgid {

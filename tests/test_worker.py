@@ -2,10 +2,8 @@
 
 import json
 
-from typer.testing import CliRunner
-
-from src import cli
-from src.worker import PROTOCOL_VERSION, find_artifacts, run_automation
+from r10n_backend.__main__ import main
+from r10n_backend.worker import PROTOCOL_VERSION, find_artifacts, run_automation
 
 
 class TestWorkerProtocol:
@@ -40,9 +38,8 @@ class TestWorkerProtocol:
         assert events[0]["protocol"] == PROTOCOL_VERSION
         assert events[-1]["result"]["output_file"] == str(output_file)
 
-    def test_hidden_worker_command_writes_json_lines(self, tmp_path, monkeypatch):
-        """The CLI worker command is machine-readable and omitted from help."""
-        monkeypatch.setenv("R10N_DISABLE_UPDATE_CHECK", "1")
+    def test_worker_command_writes_json_lines(self, tmp_path, capsys):
+        """The backend worker command accepts inline input and emits JSONL."""
         input_file = tmp_path / "numbers.txt"
         output_file = tmp_path / "contacts.vcf"
         input_file.write_text("0771234567\n", encoding="utf-8")
@@ -53,17 +50,10 @@ class TestWorkerProtocol:
                 "prefix": "Guest",
             }
         )
-        runner = CliRunner()
-
-        result = runner.invoke(cli.app, ["_worker", "contacts", "--input-json", payload])
-
-        assert result.exit_code == 0
-        events = [json.loads(line) for line in result.output.splitlines()]
+        assert main(["worker", "contacts", "--input-json", payload]) == 0
+        events = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
         assert events[0] == {"type": "hello", "protocol": PROTOCOL_VERSION}
         assert events[-1]["type"] == "completed"
-
-        help_result = runner.invoke(cli.app, ["--help"])
-        assert "_worker" not in help_result.output
 
     def test_artifacts_only_include_existing_output_paths(self, tmp_path):
         """Artifact discovery ignores missing paths and ordinary strings."""

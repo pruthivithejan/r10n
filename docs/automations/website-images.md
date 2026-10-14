@@ -21,6 +21,20 @@ Website Images scans a website for common image references, follows same-site pa
 
 ---
 
+## Native execution
+
+Run `r10n website-images` for native guided inputs. All launchers share the same
+flags and worker. A fully specified headless run requires `--yes`:
+
+```bash
+r10n website-images --url https://example.com \
+  --output /path/to/downloaded --format webp --quality 85 \
+  --timeout 5 --max-pages 50 --yes
+```
+
+JSON input uses registry names such as `output_directory`, `output_format`,
+and `max_pages`; inspect `r10n list --json` for the complete schema.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)

@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from src.automation_registry import get_automation, list_automations
+from r10n_backend.registry import get_automation, list_automations
 
 
 class TestAutomationRegistry:

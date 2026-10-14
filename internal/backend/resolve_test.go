@@ -25,7 +25,7 @@ func TestSourceRootAndInterpreter(t *testing.T) {
 	if err := os.Mkdir(filepath.Join(root, "src"), 0700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(root, "src", "backend.py"), nil, 0600); err != nil {
+	if err := os.Mkdir(filepath.Join(root, "src", "r10n_backend"), 0700); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "pyproject.toml"), []byte("[project]\nname = \"r10n\"\n"), 0600); err != nil {
@@ -40,10 +40,15 @@ func TestSourceRootAndInterpreter(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "PYTHONPATH=" + root + string(os.PathListSeparator) + "existing-path"
-	if strings.Join(engine.Prefix, " ") != "-u "+filepath.Join(root, "src", "backend.py") ||
+	expected := "PYTHONPATH=" + filepath.Join(root, "src") + string(os.PathListSeparator) + "existing-path"
+	entry := filepath.Join(root, "src", "r10n_backend", "__main__.py")
+	if strings.Join(engine.Prefix, " ") != "-u "+entry ||
 		!strings.Contains(strings.Join(engine.Env, "\n"), expected) {
 		t.Fatalf("wrong source launcher: %+v", engine)
+	}
+	command := engine.Command(t.Context(), "worker", "contacts")
+	if command.Dir != "" || strings.Join(command.Args[1:], " ") != "-u "+entry+" worker contacts" {
+		t.Fatalf("source command must preserve caller CWD: %+v", command)
 	}
 	t.Setenv("R10N_PROJECT", filepath.Join(root, "missing"))
 	if _, err := Resolve(); err == nil {

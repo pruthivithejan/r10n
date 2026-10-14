@@ -1,373 +1,125 @@
 ---
-icon: lucide/laptop
+icon: material/folder-cog
 ---
 
-# Setup Locally
+# Setup locally
 
-Clone, install, and run r10n for repeated use or development. This makes all automation features available persistently on your machine.
+Use Go and Python together for native CLI development and repeated automations.
+For a ready-to-run application without toolchains, [install a binary](install-binary.md).
 
----
+## Requirements
 
-## Prerequisites
-
-You need [uv](https://docs.astral.sh/uv/) installed. If you don't have it:
-
-=== "macOS / Linux"
-
-    ```bash
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    ```
-
-=== "Windows"
-
-    ```powershell
-    powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-    ```
-
-=== "Homebrew"
-
-    ```bash
-    brew install uv
-    ```
-
-Verify installation:
-
-```bash
-uv --version
-```
-
----
-
-## Installation
-
-### Step 1: Clone the Repository
+- Go (version specified in `go.mod`)
+- Python 3.10–3.12
+- [uv](https://docs.astral.sh/uv/getting-started/installation/)
+- Git; Bash for the convenience `setup.sh` commands
 
 ```bash
 git clone https://github.com/pruthivithejan/r10n.git
 cd r10n
+./setup.sh setup
+go run ./cmd/r10n init
+go run ./cmd/r10n
 ```
 
-### Step 2: Install Dependencies
+`setup` installs locked Python dependencies, downloads Go modules and enables
+Lefthook. `init` creates ignored user data and examples, without overwriting
+existing files. The old workspace setup/migration scripts are retired.
 
-```bash
-uv sync
-```
+## File layout
 
-This creates a virtual environment and installs all dependencies automatically, including contributor tooling like documentation builders and testing frameworks.
-
-### Step 3: Verify Installation
-
-```bash
-uv run r10n --help
-```
-
-You should see:
-
-```
-Usage: r10n [OPTIONS] COMMAND [ARGS]...
-
-  r10n - Automate repetitive data and workflow tasks
-
-Options:
-  --help  Show this message and exit.
-
-Commands:
-  fill-pdfs     Fill PDF templates with data
-  colors        Convert CSS colors to oklch() format
-  contacts      Generate VCF contact cards from phone numbers
-  email         Send bulk personalized emails
-  images        Optimize and convert images to WebP
-```
-
----
-
-## Project Structure
-
-After installation, your directory looks like this:
-
-```
+```text
 r10n/
-├── src/
-│   ├── cli.py                    # Main CLI entry point
-│   └── automations/              # Automation modules
-├── local/                        # Your working directory (gitignored)
-│   ├── inputs/                   # Place your input files here
-│   │   ├── contacts/
-│   │   ├── fill-pdfs/
-│   │   ├── images/
-│   │   └── email/
-│   ├── outputs/                  # Generated files appear here
-│   │   ├── contacts/
-│   │   ├── fill-pdfs/
-│   │   ├── images/
-│   │   └── email/
-│   └── configs/                  # Configuration files
-├── configs/                      # Default config templates
-├── docs/                         # Documentation
-└── tests/                        # Test suite
+├── cmd/r10n/                    Native executable
+├── internal/
+│   ├── cli/                     Commands, flags and operations
+│   ├── tui/                     Charm picker/forms/progress
+│   └── backend/                 Python client
+├── src/r10n_backend/             Python registry, worker and automations
+├── configs/                     Default init templates
+├── scripts/                     Developer checks and packaging
+├── tests/                       Python tests
+└── local/                       Ignored user data
+    ├── inputs/
+    ├── outputs/
+    └── configs/
 ```
 
----
+Use native `init` to create examples, then edit `local/configs`.
+Keep credentials in ignored environment/config files, never source control.
+Native Go options such as `R10N_ACCESSIBLE` must be exported in your shell.
 
-## Running Automations
+## Run an automation
 
-### Interactive Mode
-
-Run any command without arguments for step-by-step prompts:
+Go is the primary developer entry point:
 
 ```bash
-uv run r10n contacts
+go run ./cmd/r10n contacts
+go run ./cmd/r10n images
+go run ./cmd/r10n configure --template /path/to/template.pdf
 ```
 
-### Command Line Mode
-
-Pass all options directly for scripting:
+The package launcher offers exactly the same native commands:
 
 ```bash
-uv run r10n contacts \
+uv run --locked r10n contacts \
   --input local/inputs/contacts/numbers.txt \
-  --prefix Customer \
-  --output local/outputs/contacts/customers.vcf
+  --output local/outputs/contacts/contacts.vcf \
+  --yes
+uv run --locked r10n run images --input-file local/configs/images.json --yes
 ```
 
----
+Headless executions require `--yes` and all necessary input flags or JSON.
+It skips confirmation, not validation. Bare commands guide you interactively.
+Absolute paths work outside the checkout; relative paths use your current directory.
 
-## Setting Up Your Workspace
+## Developer commands
 
-### Create the Local Folder Structure
+| Command | Purpose |
+|---------|---------|
+| `./setup.sh setup` / `dev` | Sync locked contributor dependencies and install hooks |
+| `./setup.sh run [args]` | Run native Go CLI |
+| `./setup.sh lint` | Read-only Go/Python validation |
+| `./setup.sh test` | Both test suites |
+| `./setup.sh format` | Explicit Black and gofmt rewrites |
+| `./setup.sh check` | Complete toolchain, tests and docs checks |
+| `./setup.sh docs` | Clean Zensical build |
+| `./setup.sh build` | Build-only locked environment and native smoke tests |
+| `./setup.sh version` | Compare Go and Python metadata versions |
+
+The shared checks enforce Go fmt/tidy/vet/test and Python lock/version/Black/Ruff/ty/pytest.
+Pre-commit checks changed Go files without rewriting staging; pre-push checks everything.
+Partially staged code must be fully staged or stashed before checking.
+Build removes developer dependencies from its runtime environment; run `dev` afterward.
+On Windows, use Git Bash for `setup.sh`, or invoke the listed uv/Go commands directly.
+
+## Update
 
 ```bash
-mkdir -p local/inputs/contacts
-mkdir -p local/inputs/fill-pdfs
-mkdir -p local/inputs/images
-mkdir -p local/inputs/email
-mkdir -p local/outputs/contacts
-mkdir -p local/outputs/fill-pdfs
-mkdir -p local/outputs/images
-mkdir -p local/outputs/email
-mkdir -p local/configs
-```
-
-Or run the setup script (if available):
-
-```bash
-uv run python scripts/setup.py
-```
-
-### Example: Contacts Workflow
-
-1. Create your input file:
-
-   ```bash
-   cat > local/inputs/contacts/numbers.txt << 'EOF'
-   # Customer phone numbers
-   0771234567
-   0781234567
-   +94791234567
-   EOF
-   ```
-
-2. Run the automation:
-
-   ```bash
-   uv run r10n contacts \
-     --input local/inputs/contacts/numbers.txt \
-     --prefix Customer \
-     --output local/outputs/contacts/customers.vcf
-   ```
-
-3. Check the output:
-
-   ```bash
-   ls -la local/outputs/contacts/
-   ```
-
-### Example: Fill PDFs Workflow
-
-1. Place your template PDF in `local/inputs/fill-pdfs/`
-
-2. Create your data file:
-
-   ```bash
-   cat > local/inputs/fill-pdfs/participants.csv << 'EOF'
-   name,course,date
-   John Doe,Web Development,2025-01-15
-   Jane Smith,Data Science,2025-01-15
-   EOF
-   ```
-
-3. Run the automation:
-
-   ```bash
-   uv run r10n fill-pdfs \
-     --recipients local/inputs/fill-pdfs/participants.csv
-   ```
-
-### Example: Images Workflow
-
-1. Copy images to process:
-
-   ```bash
-   cp ~/Desktop/photos/* local/inputs/images/
-   ```
-
-2. Run the optimization:
-
-   ```bash
-   uv run r10n images \
-     --input local/inputs/images/ \
-     --output local/outputs/images/ \
-     --quality 85
-   ```
-
----
-
-## Configuration Files
-
-Some automations support configuration files for default settings.
-
-### Email Configuration
-
-Create `local/configs/email.json`:
-
-```json
-{
-  "smtp_server": "smtp.gmail.com",
-  "smtp_port": 587,
-  "email": "your-email@gmail.com",
-  "password": "your-app-password",
-  "subject": "Your Certificate",
-  "use_tls": true
-}
-```
-
-### Images Configuration
-
-Create `local/configs/images.json`:
-
-Note: The current CLI does not load this file directly. This format is provided
-for programmatic use or future CLI support.
-
-```json
-{
-  "input_directory": "local/inputs/images",
-  "output_directory": "local/outputs/images",
-  "prefix": "img",
-  "max_size_mb": 1.0,
-  "quality": 85,
-  "max_width": 1920,
-  "max_height": 1080,
-  "convert_to_webp": true,
-  "preserve_aspect_ratio": true,
-  "auto_orient": true,
-  "preserve_filename": false
-}
-```
-
----
-
-## Updating r10n
-
-Pull the latest changes:
-
-```bash
-cd r10n
 git pull
-uv sync
+uv sync --locked
+go mod download
 ```
 
-If you installed via standalone binary, use:
-
-```bash
-r10n upgrade
-```
-
----
-
-## Development Setup
-
-If you want to contribute or modify r10n:
-
-### Run Tests
-
-```bash
-uv run pytest
-```
-
-### Run Linting
-
-```bash
-uv run ruff check src tests
-```
-
-### Format Code
-
-```bash
-uv run black src tests
-```
-
-### Pre-commit Hooks
-
-The project uses [lefthook](https://github.com/evilmartians/lefthook) for git hooks:
-
-```bash
-# Install lefthook (if not already installed)
-brew install lefthook  # or: npm install -g lefthook
-
-# Enable hooks
-lefthook install
-```
-
-Now tests and linting run automatically before each commit.
-
----
+Installed binaries use `r10n upgrade`. Source builds should update source, not
+overwrite themselves with a binary release.
 
 ## Troubleshooting
 
-### "Command not found: uv"
+**Missing dependencies:** Run `uv sync --locked` and `go mod download`.
 
-Install uv:
+**No matching native release:** An unpublished source checkout requires Go
+for launcher compilation. Published launchers can download checksum-verified binaries.
 
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+**Legacy `workspace/` data:** Run `r10n init`, copy needed inputs/configs manually
+into `local/`, and retain originals until results are checked. No automatic
+migration deletes or moves user files.
 
-Restart your terminal or run:
+**Permission denied:** Choose a writable output directory; never run as root
+just to bypass input/output permissions.
 
-```bash
-source ~/.bashrc  # or ~/.zshrc
-```
+## See also
 
-### "ModuleNotFoundError"
-
-Run `uv sync` to install dependencies:
-
-```bash
-uv sync
-```
-
-### "Permission denied" on outputs
-
-Make sure the output directory exists and is writable:
-
-```bash
-mkdir -p local/outputs/contacts
-chmod 755 local/outputs/contacts
-```
-
-### Tests Failing
-
-Run tests with verbose output to see details:
-
-```bash
-uv run pytest -v
-```
-
----
-
-## Next Steps
-
-- [Run on Terminal](run-on-terminal.md) — For quick one-off tasks without local setup
-- [Automations](../automations/index.md) — Detailed guides for each automation
-- [GitHub Issues](https://github.com/pruthivithejan/r10n/issues) — Get help or report bugs
-- [Contribute](https://github.com/pruthivithejan/r10n/blob/main/AGENTS.md) — Development guidelines
+- [Native shell and packaging](native-shell.md)
+- [Automations](../automations/index.md)
+- [Contributor guidelines](https://github.com/pruthivithejan/r10n/blob/main/AGENTS.md)

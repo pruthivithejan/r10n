@@ -101,7 +101,7 @@ Backup files created with .bak extension
 
 ### Single File Mode
 
-Process a single CSS file:
+Preview a single CSS file without writing changes:
 
 ```bash
 uv run r10n colors --file styles.css
@@ -109,7 +109,7 @@ uv run r10n colors --file styles.css
 
 ### Directory Mode
 
-Process all CSS files in a directory:
+Preview all CSS files in a directory:
 
 ```bash
 uv run r10n colors --path ./src/styles
@@ -117,10 +117,12 @@ uv run r10n colors --path ./src/styles
 
 ### Non-Interactive Mode
 
-Skip confirmation prompts with `-a`:
+Skip confirmation prompts with `--yes` (or the compatibility alias `-a`).
+The shared automation schema defaults to a dry run. Add `--no-dry-run` to write
+changes; backups remain enabled unless `--no-backup` is supplied.
 
 ```bash
-uv run r10n colors --file styles.css --all
+uv run r10n colors --file styles.css --no-dry-run --yes
 ```
 
 ---
@@ -129,10 +131,13 @@ uv run r10n colors --file styles.css --all
 
 | Parameter | Short | Type | Required | Default | Description |
 |-----------|-------|------|----------|---------|-------------|
-| `--path` | `-p` | string | No* | `.` | Directory containing CSS files |
+| `--path` | `-p` | string | No* | `local/inputs/colors` | Directory containing CSS files |
 | `--file` | `-f` | string | No* | - | Single CSS file to process |
 | `--no-backup` | | flag | No | `false` | Don't create `.bak` backup files |
 | `--all` | `-a` | flag | No | `false` | Process without confirmation prompt |
+| `--yes` | `-y` | flag | No | `false` | Skip confirmation; required without a terminal |
+| `--dry-run` | | flag | No | `true` | Preview changes without writing files |
+| `--no-dry-run` | | flag | No | `false` | Write converted colors to files |
 
 *Either `--path` or `--file` should be provided. If neither is given, interactive mode prompts for input.
 
@@ -144,14 +149,14 @@ uv run r10n colors --file styles.css --all
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
-  --file ./src/app.css
+  --file ./src/app.css --no-dry-run
 ```
 
 ### Example 2: Convert Directory
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
-  --path ./src/styles
+  --path ./src/styles --no-dry-run
 ```
 
 ### Example 3: Convert Without Backup
@@ -159,7 +164,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
   --file styles.css \
-  --no-backup
+  --no-backup --no-dry-run
 ```
 
 ### Example 4: Non-Interactive (CI/Scripts)
@@ -167,7 +172,7 @@ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors \
   --path ./src \
-  --all
+  --no-dry-run --yes
 ```
 
 ### Example 5: Interactive Mode

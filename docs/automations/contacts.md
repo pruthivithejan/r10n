@@ -21,6 +21,22 @@ The Contacts automation reads phone numbers from a text file and generates a VCF
 
 ---
 
+## Native execution
+
+All entry points use the same Go commands and Charm forms. Run `r10n contacts`
+for guided inputs. Flagged runs review their resolved inputs before execution;
+scripts must use `--yes` and explicit paths:
+
+```bash
+r10n contacts --input /path/to/numbers.txt \
+  --output /path/to/contacts.vcf --prefix Customer --yes
+```
+
+JSON input uses registry names (`input_file`, `output_file`, `prefix`).
+Inspect `r10n list --json` for authoritative defaults and constraints. The
+default output is `local/outputs/contacts/contacts.vcf`; a bare output filename
+also goes under `local/outputs/contacts/`.
+
 ## Quick Start
 
 ### Run Instantly (No Installation)

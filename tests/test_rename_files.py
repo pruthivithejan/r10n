@@ -18,13 +18,13 @@ from pathlib import Path
 import pytest
 
 # These imports will fail until the module is implemented (TDD red phase)
-from src.automations.rename_files import (
+from r10n_backend.automations.rename_files import (
+    FileRenamer,
     RenameConfig,
     RenameResult,
-    FileRenamer,
-    rename_files,
-    preview_rename,
     apply_pattern,
+    preview_rename,
+    rename_files,
     sanitize_filename,
 )
 
@@ -487,7 +487,7 @@ class TestUvxCompatibility:
 
     def test_module_import(self):
         """Test module can be imported."""
-        from src.automations import rename_files as mod
+        from r10n_backend.automations import rename_files as mod
 
         assert hasattr(mod, "RenameConfig")
         assert hasattr(mod, "RenameResult")

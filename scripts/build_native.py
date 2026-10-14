@@ -7,6 +7,7 @@ Build intermediates stay in dist; Windows' Go embed input is temporary.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import platform
@@ -17,6 +18,7 @@ import sys
 import tarfile
 import tempfile
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = {
@@ -27,30 +29,100 @@ ASSETS = {
 
 
 def declared_version(root: Path) -> str:
-    """Read and validate the synchronized project and CLI versions.
+    """Read the sole human-edited release version from project metadata.
 
     Args:
-        root: Source checkout containing the project and CLI metadata.
+        root: Source checkout containing project metadata.
 
     Returns:
         Stable semantic release version.
 
     Raises:
-        ValueError: If the declarations are missing, invalid, or inconsistent.
+        ValueError: If the declaration is missing or invalid.
     """
     project = (root / "pyproject.toml").read_text(encoding="utf-8")
     section = re.search(r"(?ms)^\[project\]\s*\n(.*?)(?=^\[|\Z)", project)
     metadata = re.search(r'^version\s*=\s*"([^"]+)"', section[1], re.MULTILINE) if section else None
-    cli = re.search(
-        r'^VERSION\s*=\s*"([^"]+)"',
-        (root / "src" / "cli.py").read_text(encoding="utf-8"),
-        re.MULTILINE,
-    )
-    if not metadata or not cli or metadata[1] != cli[1]:
-        raise ValueError("Missing or mismatched pyproject.toml and src/cli.py versions")
+    if not metadata:
+        raise ValueError("Missing pyproject.toml project version")
     if not re.fullmatch(r"\d+\.\d+\.\d+", metadata[1]):
         raise ValueError(f"Unsupported release version: {metadata[1]}")
     return metadata[1]
+
+
+def bundle_report(directory: Path) -> dict[str, Any]:
+    """Describe bundle size without counting symlinks as duplicated libraries.
+
+    Args:
+        directory: Frozen runtime directory to inspect.
+
+    Returns:
+        JSON-compatible size, symlink, and content-duplicate statistics.
+    """
+    files = [path for path in directory.rglob("*") if path.is_file() and not path.is_symlink()]
+    groups: dict[str, list[str]] = {}
+    sizes: dict[str, int] = {}
+    for path in files:
+        digest = hashlib.sha256(path.read_bytes()).hexdigest()
+        groups.setdefault(digest, []).append(str(path.relative_to(directory)))
+        sizes[digest] = path.stat().st_size
+    duplicates = [
+        {"bytes": sizes[digest], "paths": paths}
+        for digest, paths in groups.items()
+        if len(paths) > 1 and sizes[digest] > 0
+    ]
+    return {
+        "bytes": sum(path.stat().st_size for path in files),
+        "files": len(files),
+        "symlinks": sum(path.is_symlink() for path in directory.rglob("*")),
+        "duplicate_bytes": sum(
+            sizes[digest] * (len(paths) - 1) for digest, paths in groups.items() if len(paths) > 1
+        ),
+        "duplicates": duplicates,
+    }
+
+
+def validate_bundle(directory: Path, root: Path) -> None:
+    """Reject missing configure assets and obsolete frozen UI runtimes.
+
+    Args:
+        directory: PyInstaller output, including its analysis archive listing.
+        root: Source checkout supplying declared runtime dependencies.
+
+    Raises:
+        RuntimeError: If required package data is missing or obsolete modules leaked in.
+    """
+    paths = [path.relative_to(directory) for path in directory.rglob("*")]
+    contents = "\n".join(str(path) for path in paths)
+    # Analysis TOCs include modules compressed into PYZ/onefile, not just loose files.
+    analysis = ""
+    for path in directory.rglob("*.toc"):
+        analysis += "\n" + path.read_text(encoding="utf-8")
+    contents += analysis
+    if "picker.html" not in contents:
+        raise RuntimeError("Frozen backend is missing configure/templates/picker.html")
+    if not re.search(r"r10n-[^/\\'\"]+\.dist-info[/\\]METADATA", contents):
+        raise RuntimeError("Frozen backend is missing r10n distribution metadata")
+    project = (root / "pyproject.toml").read_text(encoding="utf-8")
+    dependencies = re.search(r"(?s)dependencies\s*=\s*\[(.*?)\]", project)
+    declared = dependencies[1].lower() if dependencies else ""
+    for package in ("typer", "textual", "rich", "pandas", "numpy"):
+        if re.search(rf'["\']{package}(?:[<>=!~;\["\'])', declared):
+            continue
+        # TOC entries begin with the collected module/destination, followed by its
+        # source path. A vendor shim such as setuptools._distutils.compat.numpy
+        # is not NumPy, even though its source filename happens to be numpy.py.
+        collected_module = re.search(rf"(?i)\(\s*['\"]{package}(?:[./\\'\"])", analysis)
+        loose_package = any(
+            package in path.parts
+            or (
+                path.name == f"{package}.py"
+                and (path.parent == Path(".") or path.parent.name == "_internal")
+            )
+            for path in paths
+        )
+        if collected_module or loose_package:
+            raise RuntimeError(f"Unused runtime dependency leaked into frozen backend: {package}")
 
 
 def asset_name(system: str, machine: str) -> str:
@@ -74,7 +146,7 @@ def asset_name(system: str, machine: str) -> str:
 
 
 def smoke_test(executable: Path, version: str) -> None:
-    """Run the bundled contacts worker from outside the source checkout.
+    """Run contacts, image optimization and PDF conversion outside the checkout.
 
     Args:
         executable: Absolute path to the built native executable.
@@ -147,8 +219,63 @@ def smoke_test(executable: Path, version: str) -> None:
             text=True,
             timeout=120,
         )
-        if not any(task["id"] == "contacts" for task in json.loads(catalog.stdout)["automations"]):
+        catalog_data = json.loads(catalog.stdout)
+        if catalog_data.get("version") != version:
+            raise RuntimeError(f"Frozen Python metadata version mismatch: {catalog_data!r}")
+        if not any(task["id"] == "contacts" for task in catalog_data["automations"]):
             raise RuntimeError("Bundled registry did not contain contacts")
+        from PIL import Image
+        from pypdf import PdfReader
+
+        images = directory / "images"
+        images.mkdir()
+        optimized = directory / "optimized"
+        Image.new("RGB", (32, 24), color=(42, 80, 140)).save(images / "sample.png")
+        markdown = directory / "document.md"
+        markdown.write_text("# Bundle smoke\n\nGenerated outside the checkout.\n", encoding="utf-8")
+        pdf = directory / "document.pdf"
+        jobs = [
+            (
+                "images",
+                {"input_directory": str(images), "output_directory": str(optimized)},
+            ),
+            ("md2pdf", {"input_path": str(markdown), "output_path": str(pdf)}),
+        ]
+        for automation, inputs in jobs:
+            completed = subprocess.run(
+                [
+                    str(executable),
+                    "run",
+                    automation,
+                    "--input-json",
+                    json.dumps(inputs),
+                    "--json",
+                    "--yes",
+                ],
+                cwd=directory,
+                env=environment,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            events = [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
+            results = [event for event in events if event["type"] == "completed"]
+            if (
+                not results
+                or not results[-1].get("success")
+                or results[-1].get("automation") != automation
+            ):
+                raise RuntimeError(f"{automation} smoke failed: {events!r}")
+        webp = list(optimized.glob("*.webp"))
+        if len(webp) != 1:
+            raise RuntimeError("Image worker did not produce one WebP")
+        with Image.open(webp[0]) as image:
+            if image.format != "WEBP" or image.size != (32, 24):
+                raise RuntimeError("Image worker produced an invalid WebP")
+        reader = PdfReader(pdf)
+        if len(reader.pages) != 1 or "Bundle smoke" not in (reader.pages[0].extract_text() or ""):
+            raise RuntimeError("PDF worker did not produce expected content")
 
 
 def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
@@ -156,7 +283,7 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
 
     Args:
         root: Source checkout with Go and Python dependencies available.
-        smoke: Whether to execute the bundled contacts verification.
+        smoke: Whether to execute bundled worker and artifact verification.
 
     Returns:
         Path to the host's installer-compatible release asset.
@@ -191,18 +318,26 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
                 "--specpath",
                 str(staging),
                 "--paths",
-                str(root),
+                str(root / "src"),
+                "--copy-metadata",
+                "r10n",
+                "--add-data",
+                f"{root / 'src/r10n_backend/configure/templates'}{os.pathsep}r10n_backend/configure/templates",
                 "--collect-all",
                 "pypdfium2",
                 "--collect-all",
                 "PIL",
                 "--collect-data",
                 "certifi",
-                str(root / "src" / "backend.py"),
+                str(root / "src" / "r10n_backend" / "__main__.py"),
             ],
             cwd=root,
+            env={**os.environ, "PYTHONPATH": str(root / "src")},
             check=True,
         )
+        validate_bundle(staging, root)
+        report = bundle_report(staging / "python")
+        print("Frozen runtime report:", json.dumps(report, indent=2))
         if windows:
             payload = root / "internal" / "backend" / "payload" / "backend.bin"
             if payload.exists():
@@ -263,6 +398,10 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
         if not windows:
             with tarfile.open(archive_path, "w:gz") as archive:
                 archive.add(dist / "r10n", arcname="r10n")
+        report["asset_bytes"] = archive_path.stat().st_size
+        (dist / f"{asset}.size.json").write_text(
+            json.dumps(report, indent=2) + "\n", encoding="utf-8"
+        )
     return archive_path
 
 

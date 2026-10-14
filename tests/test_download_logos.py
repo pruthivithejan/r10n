@@ -12,7 +12,7 @@ from unittest.mock import patch
 import pytest
 from PIL import Image
 
-from src.automations.download_logos import (
+from r10n_backend.automations.download_logos import (
     LogoCandidate,
     collect_svgl_candidates,
     download_logo_candidate,
@@ -144,7 +144,7 @@ class TestSvglHelpers:
             },
         ]
 
-        with patch("src.automations.download_logos.fetch_json", return_value=records):
+        with patch("r10n_backend.automations.download_logos.fetch_json", return_value=records):
             candidates = collect_svgl_candidates("OpenAI")
 
         assert [candidate.url for candidate in candidates] == [
@@ -159,7 +159,7 @@ class TestSvglHelpers:
 
         with (
             patch(
-                "src.automations.download_logos.fetch_json",
+                "r10n_backend.automations.download_logos.fetch_json",
                 return_value=[{"title": "OpenAI", "route": "https://svgl.app/openai.svg"}],
             ),
             patch("urllib.request.urlopen", return_value=FakeResponse(svg_bytes, "image/svg+xml")),
@@ -175,7 +175,7 @@ class TestSvglHelpers:
 
     def test_download_logos_errors_when_svgl_has_no_match(self, tmp_path):
         """Missing SVGL records should produce a failed logo result."""
-        with patch("src.automations.download_logos.fetch_json", return_value=[]):
+        with patch("r10n_backend.automations.download_logos.fetch_json", return_value=[]):
             result = download_logos(
                 "Unknown Brand",
                 output_dir=str(tmp_path),
@@ -281,7 +281,8 @@ class TestDownloadLogos:
         progress_results = []
         with (
             patch(
-                "src.automations.download_logos.collect_logo_candidates", side_effect=fake_collect
+                "r10n_backend.automations.download_logos.collect_logo_candidates",
+                side_effect=fake_collect,
             ),
             patch("urllib.request.urlopen", side_effect=fake_urlopen),
         ):
@@ -306,7 +307,7 @@ class TestDownloadLogos:
         existing_logo.write_text("<svg></svg>", encoding="utf-8")
 
         with patch(
-            "src.automations.download_logos.collect_logo_candidates",
+            "r10n_backend.automations.download_logos.collect_logo_candidates",
             side_effect=AssertionError("network search should not run"),
         ):
             result = download_logos(
@@ -342,7 +343,8 @@ class TestDownloadLogos:
 
         with (
             patch(
-                "src.automations.download_logos.collect_logo_candidates", side_effect=fake_collect
+                "r10n_backend.automations.download_logos.collect_logo_candidates",
+                side_effect=fake_collect,
             ),
             patch("urllib.request.urlopen", side_effect=fake_urlopen),
         ):
