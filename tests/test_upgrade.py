@@ -3,10 +3,101 @@
 import ssl
 import tarfile
 import urllib.error
+from pathlib import Path
 
 import pytest
 
 from src import cli
+
+
+class TestNativeExecutableResolution:
+    """Keep upgrades pointed at the native app, not its Python backend."""
+
+    def test_native_env_overrides_backend_argv(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Native executable and launcher overrides take priority over Python argv."""
+        executable = tmp_path / "app" / "r10n"
+        executable.parent.mkdir()
+        executable.write_bytes(b"\x7fELF")
+        command = tmp_path / "r10n"
+        monkeypatch.setenv("R10N_EXECUTABLE", str(executable))
+        monkeypatch.setenv("R10N_COMMAND_PATH", str(command))
+        monkeypatch.setattr(cli.sys, "argv", [str(tmp_path / "r10n-python")])
+        monkeypatch.setattr(cli.shutil, "which", lambda _: None)
+        assert cli.resolve_current_executable_path() == executable
+        assert cli.resolve_command_entry_path() == command
+        assert cli.is_standalone_binary(cli.resolve_current_executable_path())
+
+    @pytest.mark.skipif(cli.os.name == "nt", reason="Unix launcher symlink layout")
+    def test_override_preserves_launcher_symlink(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The command path keeps the symlink while the native path resolves it."""
+        app = tmp_path / ".r10n"
+        app.mkdir()
+        executable = app / "r10n"
+        executable.write_bytes(b"\x7fELF")
+        command = tmp_path / "r10n"
+        command.symlink_to(executable)
+        monkeypatch.setenv("R10N_EXECUTABLE", str(command))
+        monkeypatch.setenv("R10N_COMMAND_PATH", str(command))
+        assert cli.resolve_current_executable_path() == executable
+        assert cli.resolve_command_entry_path() == command
+
+    def test_empty_overrides_keep_legacy_resolution(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Empty overrides retain installed Python script behavior."""
+        executable = tmp_path / "r10n"
+        executable.write_bytes(b"#!/usr/bin/python\n")
+        monkeypatch.setenv("R10N_EXECUTABLE", "")
+        monkeypatch.setenv("R10N_COMMAND_PATH", "")
+        monkeypatch.setattr(cli.sys, "argv", [str(executable)])
+        assert cli.resolve_current_executable_path() == executable
+        assert cli.resolve_command_entry_path() == executable
+        assert not cli.is_standalone_binary(executable)
+
+    def test_source_go_shell_does_not_upgrade(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """A go run/source build must not upgrade a temporary native executable."""
+        executable = tmp_path / "r10n"
+        executable.write_bytes(b"\x7fELF")
+        monkeypatch.setenv("R10N_EXECUTABLE", str(executable))
+        monkeypatch.setenv("R10N_COMMAND_PATH", str(executable))
+        monkeypatch.setenv("R10N_SOURCE", "1")
+        monkeypatch.setattr(
+            cli,
+            "fetch_release_data",
+            lambda _: pytest.fail("source builds must not contact the release API"),
+        )
+        cli.upgrade(target_version=None, check=False)
+        assert "only for standalone binary installs" in capsys.readouterr().out
+
+    @pytest.mark.skipif(cli.os.name == "nt", reason="Windows in-place upgrade is unsupported")
+    def test_upgrade_replaces_entire_native_bundle(self, tmp_path: Path) -> None:
+        """Replace both native app and backend while keeping the launcher."""
+        install_dir = tmp_path / "bin"
+        old_app = install_dir / ".r10n"
+        old_app.mkdir(parents=True)
+        (old_app / "r10n").write_bytes(b"old-native")
+        (old_app / "old-dependency").write_bytes(b"old")
+        command = install_dir / "r10n"
+        command.symlink_to(".r10n/r10n")
+        new_app = tmp_path / "release" / "r10n"
+        backend = new_app / "libexec" / "r10n-python"
+        backend.mkdir(parents=True)
+        (new_app / "r10n").write_bytes(b"new-native")
+        (backend / "r10n-python").write_bytes(b"new-backend")
+        cli.replace_installed_app(command, new_app)
+        assert command.is_symlink()
+        assert command.read_bytes() == b"new-native"
+        assert (old_app / "libexec/r10n-python/r10n-python").read_bytes() == b"new-backend"
+        assert not (old_app / "old-dependency").exists()
 
 
 class TestDetectPlatformAssetName:

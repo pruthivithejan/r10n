@@ -286,11 +286,18 @@ def compute_file_sha256(file_path: Path) -> str:
 
 def resolve_current_executable_path() -> Path:
     """Resolve the currently running executable path."""
+    native_executable = os.environ.get("R10N_EXECUTABLE")
+    if native_executable:
+        return Path(native_executable).resolve()
     return resolve_command_entry_path().resolve()
 
 
 def resolve_command_entry_path() -> Path:
     """Return the command path the user runs, preserving launcher symlinks."""
+    native_command = os.environ.get("R10N_COMMAND_PATH")
+    if native_command:
+        return Path(native_command).absolute()
+
     argv0 = Path(sys.argv[0])
     if argv0.exists() and argv0.name in {"r10n", "r10n.exe"}:
         argv_path = argv0.absolute()
@@ -2459,7 +2466,7 @@ def upgrade(
     try:
         command_path = resolve_command_entry_path()
         current_executable = resolve_current_executable_path()
-        if not is_standalone_binary(current_executable):
+        if os.environ.get("R10N_SOURCE") == "1" or not is_standalone_binary(current_executable):
             console.print("[yellow]Upgrade is available only for standalone binary installs.[/]")
             console.print("[dim]Use [cyan]uv sync[/] and [cyan]git pull[/] for source installs.[/]")
             return

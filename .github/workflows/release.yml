@@ -1,0 +1,123 @@
+name: Release
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  push:
+    branches: [main]
+    paths: [pyproject.toml]
+    tags: ["v*"]
+  workflow_dispatch:
+  workflow_call:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Resolve release commit and version
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+      tag: ${{ steps.version.outputs.tag }}
+      commit: ${{ steps.version.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Validate versions and detect actual version bump
+        id: version
+        env:
+          BEFORE: ${{ github.event.before }}
+        shell: python
+        run: |
+          import os
+          import subprocess
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          sys.path.insert(0, str(Path.cwd()))
+          from scripts.build_native import declared_version
+
+          version = declared_version(Path.cwd())
+          tag = f"v{version}"
+          commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          ref = os.environ["GITHUB_REF"]
+          publish = True
+          if ref.startswith("refs/tags/"):
+              if os.environ["GITHUB_REF_NAME"] != tag:
+                  raise SystemExit(f"Tag does not match declared version {version}")
+          elif os.environ["GITHUB_EVENT_NAME"] == "push":
+              before = os.environ["BEFORE"]
+              if before and set(before) != {"0"}:
+                  previous = subprocess.check_output(
+                      ["git", "show", f"{before}:pyproject.toml"], text=True
+                  )
+                  old = str(tomllib.loads(previous)["project"]["version"])
+                  publish = old != version
+                  if publish and tuple(map(int, version.split("."))) <= tuple(map(int, old.split("."))):
+                      raise SystemExit(f"Release version must increase: {old} -> {version}")
+          existing = subprocess.run(
+              ["git", "rev-parse", "--verify", f"refs/tags/{tag}^{{commit}}"],
+              capture_output=True, text=True
+          )
+          if publish and existing.returncode == 0 and existing.stdout.strip() != commit:
+              raise SystemExit(f"{tag} already points at a different commit; refusing to overwrite")
+          with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
+              output.write(f"publish={str(publish).lower()}\ntag={tag}\ncommit={commit}\n")
+
+  build:
+    needs: prepare
+    if: needs.prepare.outputs.publish == 'true'
+    uses: ./.github/workflows/build-binaries.yml
+    with:
+      ref: ${{ needs.prepare.outputs.commit }}
+
+  release:
+    name: Publish GitHub release
+    needs: [prepare, build]
+    runs-on: ubuntu-latest
+    if: needs.prepare.outputs.publish == 'true'
+    steps:
+      - uses: actions/download-artifact@v5
+        with:
+          path: release-assets
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          target_commitish: ${{ needs.prepare.outputs.commit }}
+          body: Automated release for ${{ needs.prepare.outputs.tag }}.
+          generate_release_notes: true
+          prerelease: false
+          make_latest: true
+          overwrite_files: true
+          files: |
+            release-assets/r10n-*
+            release-assets/SHA256SUMS
+
+  smoke-test-install:
+    name: Verify checksum-checked installer
+    needs: [prepare, release]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.commit }}
+      - name: Install this release using its checked-in installer
+        env:
+          R10N_VERSION: ${{ needs.prepare.outputs.tag }}
+        run: |
+          set -eu
+          sh install.sh --version "$R10N_VERSION"
+          "$HOME/.local/bin/r10n" --version
