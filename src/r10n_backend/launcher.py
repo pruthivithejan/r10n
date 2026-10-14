@@ -189,8 +189,9 @@ def _extract(archive_path: Path, destination: Path) -> None:
         for path, member in paths.items():
             if member.issym():
                 target = destination / path.parent / member.linkname
+                # TAR targets are POSIX paths; Windows relative links need native separators.
                 destination.joinpath(*path.parts).symlink_to(
-                    member.linkname, target_is_directory=target.is_dir()
+                    Path(member.linkname), target_is_directory=target.is_dir()
                 )
         # Resolve again with the complete link graph, rejecting chained escapes.
         for path, member in paths.items():

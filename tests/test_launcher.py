@@ -109,7 +109,9 @@ def test_release_preserves_relative_directory_symlinks(release: dict[str, Any]) 
     link = binary.parent / "libexec/framework/Versions/Current"
     assert link.is_symlink()
     assert link.is_dir()
-    assert (binary.parent / "libexec/framework/library").read_bytes() == b"library"
+    library = binary.parent / "libexec/framework/library"
+    assert os.readlink(library) == str(Path("Versions/Current/library"))
+    assert library.read_bytes() == b"library"
     assert launcher._cached_native("0.12.2") == binary
 
 
