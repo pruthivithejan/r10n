@@ -49,9 +49,10 @@ Run the terminal UI:
 r10n
 ```
 
-The terminal workspace lets you search by automation or role, complete a validated form,
-review the exact inputs, and follow live results. Use `r10n --help` or a direct subcommand
-such as `r10n contacts --input numbers.txt` when you prefer the traditional CLI.
+The native Charm picker lets you search by automation or role, complete a validated form,
+review inputs, and follow live results. Existing flags such as
+`r10n contacts --input numbers.txt` still use the Python CLI and its prompts. See the
+[Native Charm shell](native-shell.md) guide for JSON-driven runs and keyboard controls.
 
 If `r10n` is not found, add this to your shell profile:
 

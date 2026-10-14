@@ -14,6 +14,7 @@ nav = [
         "get-started/index.md",
         "get-started/run-on-terminal.md",
         "get-started/install-binary.md",
+        "get-started/native-shell.md",
         "get-started/setup-locally.md",
     ]},
     { "Automations" = [

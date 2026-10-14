@@ -3,6 +3,7 @@
 **Routine Automation** - Automate repetitive tasks with a beautiful CLI.
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Go](https://img.shields.io/badge/Go-1.24+-00ADD8.svg)](https://go.dev/)
 [![uv](https://img.shields.io/badge/uv-Package%20Manager-green.svg)](https://docs.astral.sh/uv/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -13,7 +14,8 @@
 - **Images** - Optimize and convert images to WebP format
 - **Logos** - Download company logos from SVGL
 - **Email** - Send bulk personalized emails with attachments
-- **Full-screen terminal workspace** - Search by task or role, complete validated forms, review inputs, and follow live results
+- **Native Charm shell** - Prebuilt installs use Go, huh forms, and Bubble Tea progress around the existing Python engine
+- **Terminal workspace** - Search by task or role, complete validated forms, review inputs, and follow live results
 - **Interactive commands** - Step-by-step prompts guide you through each automation
 - **Scriptable commands** - Existing Typer subcommands remain available for shell scripts and CI
 - **Colors** - Convert CSS color codes (hex, hsl/hsla) to `oklch()` for perceptual color consistency
@@ -81,8 +83,10 @@ uv run python scripts/release_version.py major --publish
 ```
 
 The helper updates `pyproject.toml`, `src/cli.py`, and `uv.lock`, then creates
-an annotated `vX.Y.Z` tag. GitHub Actions builds and publishes binaries only
-when that tag is pushed.
+an annotated `vX.Y.Z` tag. `.github/workflows/release.yml` builds and publishes
+native binaries and `SHA256SUMS` after a version bump on `main`, or a matching
+`vX.Y.Z` tag. Unrelated metadata changes do not trigger publication.
+The Go shell embeds the version from `pyproject.toml`; there is no separate Go version to update.
 
 Launch the installed terminal UI:
 
@@ -92,8 +96,9 @@ r10n
 
 ## Usage
 
-Run without arguments for the searchable Textual workspace, or use a subcommand for the
-traditional interactive and scriptable CLI:
+Prebuilt installs open the native Charm picker; `uvx` and `uv run r10n` retain the
+Python/Textual workspace. Both use the same automation registry and Python engine.
+Existing subcommand flags continue to work unchanged:
 
 ```bash
 # Open the terminal workspace
@@ -123,11 +128,24 @@ inputs; then follow progress, logs, and generated artifact paths without leaving
 
 Keyboard shortcuts:
 
-- `/` focuses search
+- `/` filters the native picker (or focuses search in Textual)
 - Arrow keys move through the automation catalog
-- `Ctrl+P` opens Textual's command palette
+- Enter selects a task or advances the native form
 - `Ctrl+C` cancels the active automation
-- `Q` exits when focus is outside an input
+- Esc cancels native progress; `Ctrl+P` and `Q` remain Textual-only shortcuts
+
+Native installs also support JSON-driven execution:
+
+```bash
+r10n run contacts \
+  --input-json '{"input_file":"/path/to/numbers.txt","output_file":"/path/to/contacts.vcf"}' \
+  --json --yes
+```
+
+Use `r10n list --json` to inspect input schemas. `--json` emits the original worker
+events without terminal decoration; headless runs require `--yes`. Use
+`r10n legacy --help` for the original command list. See the
+[native shell guide](docs/get-started/native-shell.md) for development and packaging details.
 
 ## CLI Example
 
@@ -172,6 +190,7 @@ Full documentation is available at [pruthivithejan.github.io/r10n](https://pruth
 
 - For `uvx` / local source install: Python 3.10+ and [uv](https://docs.astral.sh/uv/)
 - For prebuilt binary install: `curl` (macOS/Linux)
+- For native shell development: Go 1.24+ and the local Python environment
 
 ## Local Development
 
@@ -202,9 +221,21 @@ uv run zensical serve
 ### Automation architecture
 
 Automations are registered in `src/automation_registry.py` with a Pydantic input model,
-role metadata, and an execution adapter. The TUI renders the model's JSON Schema, while
-`src/worker.py` runs the automation through a versioned JSON Lines event protocol. This
-keeps automation code independent from Textual and leaves room for other frontends later.
+role metadata, and an execution adapter. `src/backend.py` exports that catalog to Go;
+both terminal interfaces render the model's JSON Schema. `src/worker.py` runs the automation
+through the existing v1 JSON Lines protocol. No task metadata or automation logic is
+duplicated in Go.
+
+```bash
+uv sync
+go run ./cmd/r10n               # Native Charm picker
+go test ./...                  # Native shell tests (no Python/network needed)
+uv run --with pyinstaller python scripts/build_native.py
+```
+
+Unix release archives contain the native executable and a frozen Python sidecar under
+`libexec/`. Windows embeds a frozen backend in the existing single `.exe` asset and
+extracts it to a verified, private cache. End users need neither Python nor uv.
 
 ## License
 
