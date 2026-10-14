@@ -232,6 +232,16 @@ def test_bundle_allows_vendor_numpy_shim(tmp_path: Path) -> None:
     build_native.validate_bundle(tmp_path, tmp_path)
 
 
+def test_bundle_accepts_escaped_windows_metadata_path(tmp_path: Path) -> None:
+    """Onefile metadata exists only in TOCs whose Windows paths are repr-escaped."""
+    make_project(tmp_path)
+    metadata = repr("r10n-1.2.3.dist-info\\METADATA")
+    (tmp_path / "Analysis.toc").write_text(
+        f"picker.html\n({metadata}, 'source', 'DATA')\n", encoding="utf-8"
+    )
+    build_native.validate_bundle(tmp_path, tmp_path)
+
+
 def test_bundle_allows_declared_dependency(tmp_path: Path) -> None:
     """Do not ban a genuine runtime dependency solely because it was once unused."""
     make_project(tmp_path)

@@ -101,7 +101,8 @@ def validate_bundle(directory: Path, root: Path) -> None:
     contents += analysis
     if "picker.html" not in contents:
         raise RuntimeError("Frozen backend is missing configure/templates/picker.html")
-    if not re.search(r"r10n-[^/\\'\"]+\.dist-info[/\\]METADATA", contents):
+    # Windows TOCs store repr strings, so a separator may appear as "\\\\".
+    if not re.search(r"r10n-[^/\\'\"]+\.dist-info[/\\]+METADATA", contents):
         raise RuntimeError("Frozen backend is missing r10n distribution metadata")
     project = (root / "pyproject.toml").read_text(encoding="utf-8")
     dependencies = re.search(r"(?s)dependencies\s*=\s*\[(.*?)\]", project)

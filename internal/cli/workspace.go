@@ -72,7 +72,8 @@ func status(args []string) error {
 		entries, _ := os.ReadDir(dir)
 		for _, entry := range entries {
 			if !entry.IsDir() {
-				paths = append(paths, filepath.Join(dir, entry.Name()))
+				// JSON status keys are stable across hosts, like the base paths above.
+				paths = append(paths, filepath.ToSlash(filepath.Join(dir, entry.Name())))
 			}
 		}
 	}

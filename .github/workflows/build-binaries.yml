@@ -88,10 +88,10 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Install locked development dependencies
         run: uv sync --locked
-      - name: Test Go shell and compile native executable
-        run: |
-          uv run --locked python scripts/check.py go
-          go build -trimpath -ldflags="-s -w" -o dist/compile-check ./cmd/r10n
+      - name: Check Go formatting, modules, vet and tests
+        run: uv run --locked python scripts/check.py go
+      - name: Compile native executable
+        run: go build -trimpath -ldflags="-s -w" -o dist/compile-check ./cmd/r10n
       - name: Test native bridge, packaging and launcher
         run: uv run --locked pytest -o addopts="" tests/test_backend.py tests/test_build_native.py tests/test_launcher.py tests/test_native_integration.py
       - name: Isolate frozen runtime from developer dependencies
