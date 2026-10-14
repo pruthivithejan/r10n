@@ -69,3 +69,7 @@ htmlcov/
 
 # Test coverage
 .coverage
+
+# Native shell and generated frozen backend
+/r10n
+internal/backend/payload/backend.bin
