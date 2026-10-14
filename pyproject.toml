@@ -1,6 +1,6 @@
 [project]
 name = "r10n"
-version = "0.11.3"
+version = "0.12.0"
 description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
@@ -30,21 +30,21 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "pandas>=2.0.0",
-    "pypdf>=6.16.1",
-    "reportlab>=4.0.0",
+    "pandas>=2.3.3",
+    "pypdf>=6.20.1",
+    "reportlab>=5.0.1",
     "pillow>=12.3.0",
-    "rich>=13.0.0",
-    "pydantic>=2.0.0",
-    "python-dotenv>=1.0.0",
-    "openpyxl>=3.0.0",
-    "markdown>=3.10.1",
-    "flask>=3.0.0",
-    "pypdfium2>=4.0.0",
-    "typer>=0.26.2",
-    "click>=8.0.0",
-    "certifi>=2024.8.30",
-    "textual>=1.0.0",
+    "rich>=15.0.0",
+    "pydantic>=2.14.1",
+    "python-dotenv>=1.2.4",
+    "openpyxl>=3.1.5",
+    "markdown>=3.10.3",
+    "flask>=3.1.3",
+    "pypdfium2>=5.14.0",
+    "typer>=0.27.3",
+    "click>=8.5.0",
+    "certifi>=2026.7.22",
+    "textual>=8.2.8",
 ]
 
 [project.urls]
@@ -104,12 +104,12 @@ packages = ["src"]
 
 [dependency-groups]
 dev = [
-    "zensical>=0.0.8",
-    "ty>=0.0.29",
-    "black>=26.3.1",
-    "lefthook>=2.0.15",
-    "pytest>=9.0.2",
-    "pytest-cov>=7.0.0",
-    "ruff>=0.12.12",
-    "pymdown-extensions>=11.0.1",
+    "zensical>=0.0.67",
+    "ty>=0.0.87",
+    "black>=26.10.1",
+    "lefthook>=2.2.2",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.0",
+    "pymdown-extensions>=12.2",
 ]
