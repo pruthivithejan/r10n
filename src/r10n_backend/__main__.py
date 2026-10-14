@@ -50,6 +50,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     Raises:
         SystemExit: For argparse usage errors or help.
     """
+    # JSON and diagnostics use UTF-8 even when Windows redirects streams through
+    # a legacy code page. Capture/mocked streams may not support reconfiguration.
+    for stream in (sys.stdin, sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("catalog", help="Emit registry metadata as JSON")

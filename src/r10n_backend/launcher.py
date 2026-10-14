@@ -188,7 +188,10 @@ def _extract(archive_path: Path, destination: Path) -> None:
                 target.chmod(member.mode & 0o777)
         for path, member in paths.items():
             if member.issym():
-                destination.joinpath(*path.parts).symlink_to(member.linkname)
+                target = destination / path.parent / member.linkname
+                destination.joinpath(*path.parts).symlink_to(
+                    member.linkname, target_is_directory=target.is_dir()
+                )
         # Resolve again with the complete link graph, rejecting chained escapes.
         for path, member in paths.items():
             if member.issym() and not (destination / path).resolve().is_relative_to(

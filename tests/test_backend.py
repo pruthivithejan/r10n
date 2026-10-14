@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import subprocess
@@ -12,6 +13,7 @@ from typing import Any
 
 import pytest
 
+from r10n_backend import __main__ as backend
 from r10n_backend.__main__ import build_catalog
 from r10n_backend.registry import list_automations
 from r10n_backend.worker import PROTOCOL_VERSION
@@ -50,7 +52,7 @@ def run_backend(
         [sys.executable, "-u", *entry, *arguments],
         input=input_text,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         cwd=cwd or PROJECT_ROOT,
         env=environment,
         timeout=30,
@@ -81,6 +83,20 @@ def test_catalog_matches_every_registered_model() -> None:
             "input_schema": spec.input_model.model_json_schema(),
             "field_order": list(spec.input_model.model_fields),
         }
+
+
+def test_backend_reconfigures_legacy_pipe_encoding(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The machine protocol is UTF-8 even if its initial streams use CP1252."""
+    raw = io.BytesIO()
+    output = io.TextIOWrapper(raw, encoding="cp1252")
+    input_stream = io.TextIOWrapper(io.BytesIO("日本語".encode()), encoding="cp1252")
+    monkeypatch.setattr(sys, "stdin", input_stream)
+    monkeypatch.setattr(sys, "stdout", output)
+    monkeypatch.setattr(backend, "build_catalog", lambda: {"title": "日本語 ✓"})
+    assert backend.main(["catalog"]) == 0
+    output.flush()
+    assert json.loads(raw.getvalue().decode("utf-8"))["title"] == "日本語 ✓"
+    assert input_stream.read() == "日本語"
 
 
 def test_catalog_preserves_defaults_nullables_enums_and_required_fields() -> None:

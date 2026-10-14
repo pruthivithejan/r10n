@@ -59,6 +59,7 @@ def test_build_layout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, system: s
         commands.append(command)
         if "PyInstaller" in command:
             assert command[command.index("--paths") + 1] == str(tmp_path / "src")
+            assert command[command.index("--python-option") + 1] == "X utf8"
             assert command[command.index("--copy-metadata") + 1] == "r10n"
             assert command[-1] == str(tmp_path / "src/r10n_backend/__main__.py")
             environment = kwargs["env"]
@@ -149,7 +150,10 @@ def test_smoke_runs_worker_outside_checkout(
         automation = command[2]
         if automation == "contacts":
             output = Path(payload["output_file"])
-            output.write_text("BEGIN:VCARD\nEND:VCARD\n" * 2, encoding="utf-8")
+            output.write_text(
+                f"BEGIN:VCARD\nFN:{payload['prefix']}\nEND:VCARD\n" * 2,
+                encoding="utf-8",
+            )
         elif automation == "images":
             output = Path(payload["output_directory"])
             output.mkdir()

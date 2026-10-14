@@ -168,7 +168,7 @@ def smoke_test(executable: Path, version: str) -> None:
             env=environment,
             check=True,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=30,
         )
         if reported.stdout.strip() != f"r10n, version {version}":
@@ -179,7 +179,7 @@ def smoke_test(executable: Path, version: str) -> None:
         payload = {
             "input_file": str(input_file),
             "output_file": str(output_file),
-            "prefix": "Bundle",
+            "prefix": "Bundle ✓",
         }
         completed = subprocess.run(
             [
@@ -195,7 +195,7 @@ def smoke_test(executable: Path, version: str) -> None:
             env=environment,
             check=True,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=120,
         )
         events = [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
@@ -208,6 +208,7 @@ def smoke_test(executable: Path, version: str) -> None:
         if (
             not output_file.exists()
             or output_file.read_text(encoding="utf-8").count("BEGIN:VCARD") != 2
+            or payload["prefix"] not in output_file.read_text(encoding="utf-8")
         ):
             raise RuntimeError("Contacts worker did not produce the expected VCF")
         catalog = subprocess.run(
@@ -216,7 +217,7 @@ def smoke_test(executable: Path, version: str) -> None:
             env=environment,
             check=True,
             capture_output=True,
-            text=True,
+            encoding="utf-8",
             timeout=120,
         )
         catalog_data = json.loads(catalog.stdout)
@@ -256,7 +257,7 @@ def smoke_test(executable: Path, version: str) -> None:
                 env=environment,
                 check=True,
                 capture_output=True,
-                text=True,
+                encoding="utf-8",
                 timeout=120,
             )
             events = [json.loads(line) for line in completed.stdout.splitlines() if line.strip()]
@@ -311,6 +312,8 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
                 "--name",
                 "r10n-python",
                 "--onefile" if windows else "--onedir",
+                "--python-option",
+                "X utf8",
                 "--distpath",
                 str(staging / "python"),
                 "--workpath",

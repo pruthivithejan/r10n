@@ -74,16 +74,16 @@ func Resolve() (Backend, error) {
 		if err != nil {
 			return Backend{}, fmt.Errorf("R10N_PYTHON: %w", err)
 		}
-		return Backend{path, []string{"-u", entry}, env}, nil
+		return Backend{path, []string{"-u", "-X", "utf8", entry}, env}, nil
 	}
 	if uv, err := exec.LookPath("uv"); err == nil {
-		return Backend{uv, []string{"run", "--locked", "--project", root, "python", "-u", entry}, env}, nil
+		return Backend{uv, []string{"run", "--locked", "--project", root, "python", "-u", "-X", "utf8", entry}, env}, nil
 	}
 	python, err := exec.LookPath("python3")
 	if err != nil {
 		return Backend{}, fmt.Errorf("source installs require uv or Python 3.10+: %w", err)
 	}
-	return Backend{python, []string{"-u", entry}, env}, nil
+	return Backend{python, []string{"-u", "-X", "utf8", entry}, env}, nil
 }
 
 func sourceRoot(executable string) (string, error) {

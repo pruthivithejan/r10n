@@ -9,6 +9,7 @@ import os
 import ssl
 import tarfile
 import urllib.error
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
@@ -18,6 +19,20 @@ import pytest
 from r10n_backend import launcher
 
 ASSET = "r10n-linux-x86_64.tar.gz"
+
+
+def mock_handoff(
+    monkeypatch: pytest.MonkeyPatch,
+    execute: Callable[[str, list[str], dict[str, str]], None],
+) -> None:
+    """Mock both native handoff paths; synthetic binaries must never be executed."""
+    monkeypatch.setattr(launcher.os, "execve", execute)
+
+    def call(arguments: list[str], *, env: dict[str, str]) -> int:
+        execute(arguments[0], arguments, env)
+        return 0
+
+    monkeypatch.setattr(launcher.subprocess, "call", call)
 
 
 def make_archive(entries: list[tuple[str, bytes | str]]) -> bytes:
@@ -265,12 +280,13 @@ def test_source_build_keeps_caller_cwd_and_forwards_all_args(
         handoffs.append((path, args, env))
 
     monkeypatch.setattr(launcher.subprocess, "run", build)
-    monkeypatch.setattr(launcher.os, "execve", execute)
+    mock_handoff(monkeypatch, execute)
     arguments = ["contacts", "--input", "relative.txt", "--prefix", "A B"]
     assert launcher.main(arguments) == 0
     assert launcher.main(arguments) == 0
     assert len(builds) == 2
-    assert handoffs[0][1] == [str(root / "dist/r10n-dev"), *arguments]
+    name = "r10n-dev.exe" if os.name == "nt" else "r10n-dev"
+    assert handoffs[0][1] == [str(root / "dist" / name), *arguments]
     assert handoffs[0][2]["R10N_PROJECT"] == str(root)
     assert "R10N_MANAGED" not in handoffs[0][2]
     assert Path.cwd() == caller
@@ -297,7 +313,7 @@ def test_installed_launcher_uses_metadata_and_managed_handoff(
         captured.update(path=path, args=args, env=env)
 
     monkeypatch.setattr(launcher, "_cached_native", cached)
-    monkeypatch.setattr(launcher.os, "execve", execute)
+    mock_handoff(monkeypatch, execute)
     assert launcher.main(["--help", "unknown"]) == 0
     assert captured["args"] == [str(binary), "--help", "unknown"]
     assert captured["env"]["R10N_MANAGED"] == "python"
@@ -321,7 +337,7 @@ def test_explicit_native_override_does_not_bootstrap(
         return str(binary)
 
     monkeypatch.setattr(launcher.shutil, "which", which)
-    monkeypatch.setattr(launcher.os, "execve", lambda *args: executed.append(args))
+    mock_handoff(monkeypatch, lambda *args: executed.append(args))
     assert launcher.main(["--version"]) == 0
     assert lookups == [str(binary)]
     assert executed[0][1] == [str(binary), "--version"]

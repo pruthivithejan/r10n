@@ -68,7 +68,7 @@ def invoke(
         env=environment,
         input=json.dumps(payload) if payload is not None else None,
         capture_output=True,
-        text=True,
+        encoding="utf-8",
         timeout=60,
         check=False,
     )
@@ -144,6 +144,34 @@ def test_source_backend_cannot_be_shadowed_by_caller_package(
     process = invoke(native_binary, tmp_path, native_environment, "list", "--json")
     assert process.returncode == 0, process.stdout + process.stderr
     assert json.loads(process.stdout)["version"] == version("r10n")
+
+
+def test_worker_protocol_and_files_use_utf8(
+    native_binary: Path, native_environment: dict[str, str], tmp_path: Path
+) -> None:
+    """Unicode input/output must not depend on the Windows pipe's code page."""
+    (tmp_path / "numbers.txt").write_text("+94771234567\n", encoding="utf-8")
+    prefix = "日本語 ✓"
+    process = invoke(
+        native_binary,
+        tmp_path,
+        native_environment,
+        "contacts",
+        "-i",
+        "numbers.txt",
+        "-o",
+        "exports/unicode.vcf",
+        "-p",
+        prefix,
+        "--yes",
+        "--json",
+    )
+    completed_result(process)
+    events = [json.loads(line) for line in process.stdout.splitlines()]
+    assert (
+        next(event for event in events if event["type"] == "started")["inputs"]["prefix"] == prefix
+    )
+    assert prefix in (tmp_path / "exports" / "unicode.vcf").read_text(encoding="utf-8")
 
 
 def test_images_flags_produce_webp(

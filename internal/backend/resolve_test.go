@@ -42,12 +42,12 @@ func TestSourceRootAndInterpreter(t *testing.T) {
 	}
 	expected := "PYTHONPATH=" + filepath.Join(root, "src") + string(os.PathListSeparator) + "existing-path"
 	entry := filepath.Join(root, "src", "r10n_backend", "__main__.py")
-	if strings.Join(engine.Prefix, " ") != "-u "+entry ||
+	if strings.Join(engine.Prefix, " ") != "-u -X utf8 "+entry ||
 		!strings.Contains(strings.Join(engine.Env, "\n"), expected) {
 		t.Fatalf("wrong source launcher: %+v", engine)
 	}
 	command := engine.Command(t.Context(), "worker", "contacts")
-	if command.Dir != "" || strings.Join(command.Args[1:], " ") != "-u "+entry+" worker contacts" {
+	if command.Dir != "" || strings.Join(command.Args[1:], " ") != "-u -X utf8 "+entry+" worker contacts" {
 		t.Fatalf("source command must preserve caller CWD: %+v", command)
 	}
 	t.Setenv("R10N_PROJECT", filepath.Join(root, "missing"))
