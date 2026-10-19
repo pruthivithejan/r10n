@@ -1,0 +1,59 @@
+:root {
+  --r10n-neon: #67d5ff;
+  --r10n-neon-on-light: #006b87;
+  --r10n-dark-ink: #062a38;
+  --r10n-dark-background: #0c1017;
+  --r10n-dark-surface: #101721;
+  --r10n-dark-text: #dce7f5;
+  --r10n-dark-muted: #80a4c3;
+}
+
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--r10n-neon-on-light);
+  --md-accent-fg-color: var(--r10n-neon-on-light);
+  --md-typeset-a-color: var(--r10n-neon-on-light);
+  --r10n-focus: var(--r10n-neon-on-light);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-default-bg-color: var(--r10n-dark-background);
+  --md-default-fg-color: var(--r10n-dark-text);
+  --md-primary-fg-color: var(--r10n-dark-background);
+  --md-primary-bg-color: var(--r10n-dark-text);
+  --md-accent-fg-color: var(--r10n-neon);
+  --md-typeset-a-color: var(--r10n-neon);
+  --r10n-focus: var(--r10n-neon);
+}
+
+.md-header__button.md-logo {
+  padding: 0.35rem;
+  border-radius: 0.35rem;
+  background: var(--r10n-dark-background);
+}
+
+.md-header__button.md-logo img {
+  width: 5rem;
+  height: auto;
+}
+
+:focus-visible {
+  outline: 2px solid var(--r10n-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: CanvasText;
+  }
+}
