@@ -1,198 +1,57 @@
 ---
-icon: material/vector-square
+icon: lucide/briefcase-business
 ---
 
-# Logos
+# Download logos
 
-Download company logos from the SVGL API into a local folder.
+Find and download logos for a list of companies or brands.
 
----
-
-## Overview
-
-Logos accepts a comma-separated list of company or brand names, searches the SVGL API, and saves one SVG file per matched name. If SVGL does not have a usable logo for a name, that name is reported as failed.
-
-**Key Features:**
-- Accepts names such as `OpenAI, Apple, Google`
-- Uses SVGL as the only logo source
-- Saves predictable filenames such as `openai.svg`
-- Skips existing files by default and supports `--overwrite`
-
----
-
-## Native execution
-
-Run `r10n logos` for native guided inputs. All launchers share the same flags;
-scripts must explicitly authorize network/output work with `--yes`:
+## Run
 
 ```bash
-r10n logos --names "OpenAI,Apple" --output /path/to/logos \
-  --timeout 5 --max-candidates 20 --yes
+r10n logos
 ```
 
-JSON input uses registry names, including `output_directory` and
-`write_manifest`. Existing files are preserved unless `--overwrite` is supplied.
-
-## Quick Start
-
-### Run Instantly (No Installation)
+The form accepts comma-separated names. For scripting, specify an output
+directory and review the selected brands:
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n logos \
-  --names "OpenAI, Apple, Google" \
+r10n logos \
+  --names "Example Co,Northwind" \
+  --output /path/to/logos \
   --yes
 ```
 
-### Run Locally
-
-```bash
-git clone https://github.com/pruthivithejan/r10n.git
-cd r10n
-uv sync
-uv run r10n logos --names "OpenAI, Apple, Google"
-```
-
----
-
-## Usage
-
-### Interactive Mode
-
-Run without arguments for step-by-step prompts:
-
-```bash
-uv run r10n logos
-```
-
-### Command Line Mode
-
-Pass all options directly:
-
-```bash
-uv run r10n logos \
-  --names "OpenAI, Apple, Google" \
-  --output local/outputs/logos \
-  --max-candidates 20 \
-  --yes
-```
-
----
+The default destination is `r10n-output/logos`; use `r10n setup` to change the
+default output root.
 
 ## Parameters
 
-| Parameter | Type | Required | Default | Description |
-|-----------|------|----------|---------|-------------|
-| `--names` / `-n` | string | Yes | - | Comma-separated company or brand names |
-| `--output` / `-o` | string | No | `local/outputs/logos` | Output directory |
-| `--timeout` | integer | No | `5` | Request timeout in seconds |
-| `--max-candidates` | integer | No | `20` | Maximum ranked logo URLs to try per name |
-| `--overwrite` | flag | No | `false` | Replace existing logo files |
-| `--no-manifest` | flag | No | `false` | Do not write `logos_manifest.json` |
-| `--yes` / `-y` | flag | No | `false` | Skip confirmation prompt |
-
----
-
-## Examples
-
-### Example 1: Basic Usage
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n logos \
-  --names "OpenAI, Apple, Google" \
-  --yes
-```
-
-### Example 2: Save to a Custom Folder
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n logos \
-  --names "Stripe, Shopify, Notion" \
-  --output downloads/company-logos \
-  --yes
-```
-
-### Example 3: Replace Existing Logos
-
-```bash
-uv run r10n logos \
-  --names "Microsoft, GitHub, Figma" \
-  --output local/outputs/logos \
-  --overwrite \
-  --yes
-```
-
----
-
-## Input Format
-
-The input is a comma-separated list of logo names:
-
-```text
-OpenAI, Apple, Google, Microsoft
-```
-
-Names are trimmed, empty entries are ignored, and duplicates are removed while preserving the original order.
-
----
+| Parameter | Short | Required | Default | Description |
+|-----------|-------|----------|---------|-------------|
+| `--names` | `-n` | Yes | — | Comma-separated company or brand names |
+| `--output` | `-o` | No | `r10n-output/logos` | Download destination |
+| `--timeout` | — | No | `5` seconds | Request timeout |
+| `--max-candidates` | — | No | `20` | Maximum candidates checked per logo |
+| `--overwrite` | — | No | `false` | Replace existing output files |
+| `--no-manifest` | — | No | `false` | Do not write a JSON manifest |
+| `--yes` | `-y` | No | `false` | Skip interactive confirmation |
 
 ## Output
 
-- Output location: `local/outputs/logos/`
-- Output format: SVG
-- Manifest: `logos_manifest.json`
-
-Example output:
-
-```text
-local/outputs/logos/
-├── apple.svg
-├── google.svg
-├── openai.svg
-└── logos_manifest.json
-```
-
-The manifest includes the source URL, saved file path, format, and download result for each requested name.
-
----
-
-## Source
-
-The downloader queries the SVGL API only:
-
-```text
-https://api.svgl.app?search=<name>
-```
-
-Broken or unsupported SVGL candidates are skipped until a working SVG is found. If no SVGL candidate works, the logo is marked as failed.
-
----
+The automation writes each successfully retrieved logo and a JSON manifest
+unless `--no-manifest` is set. Failed names appear in the completion summary.
 
 ## Troubleshooting
 
-### Common Issues
+**Logo not found:** Try the company's shorter brand name, check network access,
+or increase `--max-candidates`.
 
-**Issue: A logo could not be found**
-- Cause: SVGL does not have a matching logo for that name.
-- Solution: Try the exact brand name, product name, or parent company name.
+**Existing files were kept:** Use `--overwrite` only after reviewing the
+destination directory.
 
-**Issue: The downloaded logo is an icon instead of a full wordmark**
-- Cause: SVGL may publish a brand mark instead of a wordmark for that brand.
-- Solution: Increase `--max-candidates` or try a more specific name such as `OpenAI logo` or `Google Cloud`.
+## See also
 
-**Issue: A logo was skipped**
-- Cause: A file with the same name already exists.
-- Solution: Use `--overwrite` to replace existing files.
-
-**Issue: Download timed out**
-- Cause: The SVGL API responded slowly.
-- Solution: Increase `--timeout`.
-
-Always verify brand usage rights before publishing downloaded logos.
-
----
-
-## See Also
-
-- [Website Images](./website-images.md)
-- [Images](./images.md)
-- [Get Started Guide](../get-started/index.md)
+- [Optimize images](images.md)
+- [Download website images](website-images.md)
+- [Get started](../get-started/index.md)

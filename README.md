@@ -1,153 +1,105 @@
 # r10n
 
-**Routine Automation** — automate repetitive tasks with one native CLI.
+**Routine automation in an accessible, keyboard-first terminal.**
+
+![r10n ASCII wordmark](docs/assets/brand/r10n.svg)
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Go](https://img.shields.io/badge/Go-native-00ADD8.svg)](https://go.dev/)
 [![uv](https://img.shields.io/badge/uv-Package%20Manager-green.svg)](https://docs.astral.sh/uv/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## Features
+r10n combines a native Go terminal interface with Python automations. It helps
+you generate contacts, personalize PDFs, optimize images, send email, validate
+CSV data, and handle other repetitive tasks.
 
-- Generate VCF contacts, fill PDF templates and convert Markdown to PDF
-- Optimize images, download website images and company logos
-- Send personalized email, validate CSV data and batch rename files
-- Convert CSS colors to perceptually consistent `oklch()`
-- Searchable Charm picker, validated forms, input review and cancellable progress
-- Scriptable native flags and JSON execution with explicit headless safety
-- One Go frontend and Python execution engine across binaries, `uv run` and `uvx`
+## Install
 
-## Quick start
-
-### Install a self-contained binary
-
-No Python or uv is required:
+The standalone installer is the recommended way to use r10n. It verifies the
+release checksum and shows real download progress:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh -o install.sh
-sh install.sh
+curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh
 r10n
 ```
 
-The installer verifies release checksums. Update an installed bundle with
-`r10n upgrade`; Windows users download the replacement executable.
+The installer currently supports Linux x86_64 and macOS arm64. Windows x86_64
+users can download the standalone `.exe` from the
+[releases page](https://github.com/pruthivithejan/r10n/releases). The installed
+application includes its Python worker; Python and uv are not needed at runtime.
 
-### Run instantly
+To use a released version without a persistent standalone install:
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
 ```
 
-The thin Python launcher resolves a matching native executable: it builds a
-source checkout when Go is available, or downloads the matching published
-release with checksum verification. It never substitutes a Python CLI/UI.
-An unreleased source version requires Go if no matching release is available.
+## Use
 
-### Develop locally
-
-Install Go (see `go.mod`), Python 3.10–3.12 and uv:
+Run `r10n` to open the searchable automation picker, or start an automation
+directly:
 
 ```bash
-git clone https://github.com/pruthivithejan/r10n.git
-cd r10n
-./setup.sh setup
-go run ./cmd/r10n init
-go run ./cmd/r10n
-# The same native behavior through the package launcher:
-uv run --locked r10n --help
+r10n contacts
+r10n images
+r10n list
 ```
 
-`init` creates ignored `local/inputs`, `local/outputs` and `local/configs`
-with examples. It does not overwrite existing user files.
+Forms validate inputs and review the operation before running. `r10n --help`
+lists command-line options. Noninteractive execution requires complete inputs
+and `--yes`; that skips confirmation, not validation.
 
-## Usage
-
-Run `r10n` or `r10n tui` to open the picker, or a bare automation command
-such as `r10n contacts` for guided inputs. `/` filters tasks; arrows navigate;
-Enter advances; Ctrl+C exits. Ctrl+C or Esc cancels active jobs.
-Set `R10N_ACCESSIBLE=1` for plain prompts and static progress.
-
-Public commands and aliases are handled by Go:
+Set up terminal preferences, reusable profiles, and secure credentials from
+the terminal:
 
 ```bash
-r10n --help
-r10n contacts --input /path/to/numbers.txt --output /path/to/contacts.vcf --yes
-r10n images --input /path/to/images --output /path/to/optimized --yes
+r10n setup
+r10n config path
 r10n configure --template /path/to/template.pdf
-r10n status
-r10n upgrade --check
+r10n config add-smtp-profile work
 ```
 
-Every headless execution requires `--yes` and fully specified inputs.
-It authorizes running without interactive review; it does not bypass validation.
-Keep email and destructive operations interactive until their inputs are verified.
+Settings and named profiles are saved in the operating system's per-user config
+directory. SMTP passwords are stored in the OS credential manager, not in the
+settings file. `r10n config edit` changes preferences; use `r10n config
+edit-smtp-profile NAME` or `r10n configure` to update profiles.
 
-Use registry field names for JSON rather than flag aliases:
+Use `r10n --accessible` for plain linear prompts and static progress, or
+`r10n --no-motion` to disable animated progress. These options can also be set
+as terminal preferences with `r10n setup`.
+
+## Configuration and outputs
+
+`r10n config path` prints the system settings file location. The file can be
+edited directly, or through `r10n setup` and the profile commands. Imports and
+exports use explicit paths; exports never include credential values.
+
+Inputs and outputs are ordinary paths that you choose. The default output root
+is `./r10n-output`; change it in `r10n setup` to use another directory. r10n
+does not create a project-local configuration tree or load project `.env` files.
+
+## Developer checks
+
+The following commands are for contributors working in a source checkout, not
+for setting up the installed application:
 
 ```bash
-r10n list --json
-r10n run contacts \
-  --input-json '{"input_file":"/path/to/numbers.txt","output_file":"/path/to/contacts.vcf"}' \
-  --json --yes
-r10n run images --input-file local/configs/images.json --yes
+./setup.sh setup
+./setup.sh test
+./setup.sh check
+./setup.sh build
 ```
 
-`--input-file -` reads one JSON object from stdin. `--json` emits versioned worker
-events on stdout and diagnostics on stderr. Cancellation may leave partial outputs.
-
-## Architecture and tooling
-
-```text
-cmd/r10n/                         Native executable
-internal/cli/                     Routing, flags and operations
-internal/tui/                     Charm UI
-internal/backend/                 Python process client
-src/r10n_backend/                 Registry, worker, automations and configure web service
-scripts/                          Shared checks, native packaging and version preparation
-```
-
-The Python package has no public CLI/TUI framework. Registry schemas are the
-source of automation defaults and validation. Python backend modes are `catalog`,
-`worker AUTOMATION_ID` and `configure`; the public command surface belongs to Go.
-
-```bash
-./setup.sh lint                  # Format, lint, type, lock and Go checks (read-only)
-./setup.sh test                  # Go + Python tests
-./setup.sh format                # Explicit Black + gofmt rewrites
-./setup.sh check                 # Complete checks and documentation build
-./setup.sh build                 # Host-native bundle and real artifact smoke tests
-./setup.sh dev                   # Restore dev tooling after isolated build sync
-```
-
-Lefthook checks changed Go files with gofmt before commit without altering staged
-changes. Pre-push and CI enforce full Go/Python checks, including module/lock
-consistency. Python CI covers 3.10, 3.11 and 3.12. Native bundles use target-platform
-build runners; Unix sidecar symlinks are preserved and Windows embeds the backend.
-Builds validate contacts, image optimization and PDF generation outside the checkout
-and produce JSON size/duplicate reports.
-
-## Releases
-
-`pyproject.toml` is the only human-edited version. Go embeds it; Python uses
-installed distribution metadata. The generated `uv.lock` package version must agree.
-
-```bash
-uv run --locked python scripts/release_version.py --check
-uv run --locked python scripts/release_version.py patch --dry-run
-# Prepare, review, and commit separately; this never publishes:
-uv run --locked python scripts/release_version.py patch
-```
-
-A version bump committed on main triggers `.github/workflows/release.yml`,
-which builds native assets, SHA256SUMS and the GitHub release. Do not publish
-manually through local scripts. Architecture batch 0.12.2 is explicitly requested;
-the completed 0.12.1 release remains unchanged.
+Go owns command routing, Charm forms, progress, and release downloads. Python
+owns the registry and automation worker. Both communicate through a versioned
+JSON Lines contract. The native build packages the matching worker and smoke
+tests the bundle outside the checkout.
 
 ## Documentation
 
 - [Get started](https://pruthivithejan.github.io/r10n/get-started/)
+- [Terminal configuration](https://pruthivithejan.github.io/r10n/get-started/terminal-configuration/)
 - [Automations](https://pruthivithejan.github.io/r10n/automations/)
-- [Native shell and packaging](docs/get-started/native-shell.md)
 - [Contributor guidelines](AGENTS.md)
 
 MIT — see [LICENSE](LICENSE). By [Pruthivi Thejan](https://github.com/pruthivithejan).

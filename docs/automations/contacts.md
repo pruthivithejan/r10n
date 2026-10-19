@@ -4,190 +4,68 @@ icon: lucide/book-user
 
 # Contacts
 
-Generate VCF contact cards from a list of phone numbers. Perfect for bulk importing contacts into your phone or CRM.
-
----
+Generate VCF contact cards from a text file of phone numbers.
 
 ## Overview
 
-The Contacts automation reads phone numbers from a text file and generates a VCF (vCard) file that can be imported into any contacts app or address book.
+The contacts automation reads one number per line, validates Sri Lankan mobile
+formats, removes duplicates, and writes a standard vCard 3.0 file.
 
-**Key Features:**
+## Run
 
-- Supports Sri Lankan phone formats (`+94` and `0xxxxxxxxx`)
-- Adds custom prefix to contact names (e.g., "Customer 1", "Customer 2")
-- Removes duplicate numbers automatically
-- Validates phone number formats
-
----
-
-## Native execution
-
-All entry points use the same Go commands and Charm forms. Run `r10n contacts`
-for guided inputs. Flagged runs review their resolved inputs before execution;
-scripts must use `--yes` and explicit paths:
+The recommended setup is the standalone terminal app:
 
 ```bash
-r10n contacts --input /path/to/numbers.txt \
-  --output /path/to/contacts.vcf --prefix Customer --yes
+r10n contacts
 ```
 
-JSON input uses registry names (`input_file`, `output_file`, `prefix`).
-Inspect `r10n list --json` for authoritative defaults and constraints. The
-default output is `local/outputs/contacts/contacts.vcf`; a bare output filename
-also goes under `local/outputs/contacts/`.
+The guided form asks for an input file, a contact-name prefix, and an output
+path. To run noninteractively, supply all required values and `--yes`:
 
-## Quick Start
+```bash
+r10n contacts \
+  --input /path/to/numbers.txt \
+  --prefix Customer \
+  --output /path/to/customers.vcf \
+  --yes
+```
 
-### Run Instantly (No Installation)
+`uvx` can run a released version without a persistent binary installation:
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
 ```
-
-### Run Locally
-
-```bash
-git clone https://github.com/pruthivithejan/r10n.git
-cd r10n
-uv sync
-uv run r10n contacts
-```
-
----
-
-## Usage
-
-### Interactive Mode
-
-Run without arguments for step-by-step prompts:
-
-```bash
-uv run r10n contacts
-```
-
-Example session:
-
-```
-╭───────────────────────────────────────────────────────────────╮
-│               Contact Card Generator                           │
-│        Convert phone numbers to VCF contact cards              │
-╰───────────────────────────────────────────────────────────────╯
-
-Step 1/3: Select input file
-  Enter path to file with phone numbers [local/inputs/contacts/numbers.txt]: numbers.txt
-
-Step 2/3: Set contact name prefix
-  Enter prefix for contact names [Contact]: Customer
-
-Step 3/3: Set output file
-  Enter output VCF file path [local/outputs/contacts/customer_contacts.vcf]: customers.vcf
-
-Summary:
-  Input file:  numbers.txt
-  Prefix:      Customer
-  Output file: customers.vcf
-
-Proceed with contact generation? [y/n]: y
-
-Generating contacts...
-
-Done!
-┌─────────────────────┬──────────────┐
-│ Total numbers       │ 150          │
-│ Valid contacts      │ 145          │
-│ Duplicates removed  │ 3            │
-│ Invalid numbers     │ 2            │
-│ Output file         │ customers.vcf│
-└─────────────────────┴──────────────┘
-```
-
-### Command Line Mode
-
-Pass all options directly for scripting:
-
-```bash
-uv run r10n contacts \
-  --input numbers.txt \
-  --prefix Customer \
-  --output customers.vcf
-```
-
----
 
 ## Parameters
 
-| Parameter | Short | Type | Required | Default | Description |
-|-----------|-------|------|----------|---------|-------------|
-| `--input` | `-i` | string | Yes | `local/inputs/contacts/numbers.txt` | Path to file with phone numbers |
-| `--prefix` | `-p` | string | No | `Contact` | Prefix for contact names |
-| `--output` | `-o` | string | No | `local/outputs/contacts/{prefix}_contacts.vcf` | Output VCF file path |
+| Parameter | Short | Required | Default | Description |
+|-----------|-------|----------|---------|-------------|
+| `--input` | `-i` | Yes | — | Text file containing one phone number per line |
+| `--prefix` | `-p` | No | `Contact` | Prefix used in generated contact names |
+| `--output` | `-o` | No | `r10n-output/contacts.vcf` | VCF output file |
+| `--yes` | `-y` | No | `false` | Skip interactive confirmation |
 
----
+The default output root can be changed with `r10n setup`. Input and explicitly
+specified output paths are used as given; r10n does not create project-local
+configuration folders.
 
-## Examples
+## Input format
 
-### Example 1: Basic Usage with uvx
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts \
-  --input numbers.txt \
-  --output contacts.vcf
-```
-
-### Example 2: With Custom Prefix
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts \
-  --input ~/Desktop/phone-list.txt \
-  --prefix "Lead" \
-  --output ~/Desktop/leads.vcf
-```
-
-### Example 3: Local Installation
-
-```bash
-uv run r10n contacts \
-  --input local/inputs/contacts/numbers.txt \
-  --prefix Customer \
-  --output local/outputs/contacts/customers.vcf
-```
-
-### Example 4: Minimal (Interactive)
-
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
-```
-
----
-
-## Input Format
-
-Create a text file with one phone number per line. Comments start with `#`.
+Put one number per line. Lines beginning with `#` and blank lines are ignored.
 
 ```text
 # Customer phone numbers
-# Supports various formats
-
 0771234567
-0781234567
 +94791234567
 94761234567
 ```
 
-**Supported Formats:**
-
-| Format | Example | Description |
-|--------|---------|-------------|
-| Local 10-digit | `0771234567` | Sri Lankan mobile |
-| With country code | `+94771234567` | Sri Lankan mobile with country code |
-| Without plus | `94771234567` | Country code without + |
-
----
+Supported formats include `0771234567`, `+94771234567`, and `94771234567`.
 
 ## Output
 
-The automation generates a standard VCF (vCard 3.0) file:
+The output is a VCF file that can be imported into phone contacts, Gmail,
+Outlook, and other address books:
 
 ```vcf
 BEGIN:VCARD
@@ -195,58 +73,21 @@ VERSION:3.0
 FN:Customer 1
 TEL;TYPE=CELL:+94771234567
 END:VCARD
-BEGIN:VCARD
-VERSION:3.0
-FN:Customer 2
-TEL;TYPE=CELL:+94781234567
-END:VCARD
 ```
-
-**Import locations:**
-
-- **iPhone**: AirDrop the file or email it to yourself
-- **Android**: Open with Contacts app
-- **Gmail**: Import via Google Contacts
-- **Outlook**: Import via People > Manage > Import contacts
-
----
 
 ## Troubleshooting
 
-### "File not found" Error
+**Input file not found:** Check the path with `ls -l /path/to/numbers.txt` and
+select the file in the guided form or pass its path with `--input`.
 
-Make sure your input file exists:
+**Invalid phone number:** Use a Sri Lankan mobile number in a supported format.
+The completion summary reports invalid entries and duplicates.
 
-```bash
-ls -la numbers.txt
-```
+**Output permission error:** Choose a writable destination, or set another
+default output directory in `r10n setup`.
 
-The automation will offer to create an example file if it doesn't exist.
+## See also
 
-### "Invalid number" Warnings
-
-Numbers must be valid Sri Lankan mobile formats:
-
-- `0xxxxxxxxx` (10 digits)
-- `+94xxxxxxxxx` or `94xxxxxxxxx`
-- No spaces or special characters
-
-### "Output directory does not exist"
-
-The automation creates the output directory automatically. If you get permission errors, check folder permissions:
-
-```bash
-mkdir -p local/outputs/contacts
-chmod 755 local/outputs/contacts
-```
-
-### Duplicates in Output
-
-The automation automatically removes duplicates. The summary shows how many were removed.
-
----
-
-## See Also
-
-- [Email Automation](email.md) — Send emails to contacts
-- [Get Started Guide](../get-started/index.md) — Setup instructions
+- [Terminal configuration](../get-started/terminal-configuration.md)
+- [Email automation](email.md)
+- [Get started](../get-started/index.md)

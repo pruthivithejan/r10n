@@ -1,182 +1,58 @@
 ---
-icon: lucide/clipboard-check
+icon: lucide/list-checks
 ---
 
 # Validate CSV
 
-Validate CSV files against a schema and generate readable reports. Optionally clean data for consistent formatting.
+Check a CSV file for missing values, malformed rows, and schema violations.
 
----
+## Run
 
-## Overview
-
-The Validate CSV automation checks rows and columns for type errors, missing fields, and rule violations. It supports schema-based validation and report generation in multiple formats.
-
-**Key Features:**
-
-- Validate against JSON schemas
-- Check required fields and data types
-- Enforce ranges, patterns, and enums
-- Generate reports in text, JSON, or HTML
-- Clean and normalize data
-
----
-
-## Native execution
-
-Run `r10n validate` for guided native inputs. All entry points use Go routing
-and the same Python validation schema. Fully specified scripts require `--yes`:
+Validate a CSV using built-in checks:
 
 ```bash
-r10n validate --input /path/to/data.csv --schema /path/to/schema.json \
-  --output /path/to/report.json --format json --yes
+r10n validate --input /path/to/data.csv
 ```
 
-JSON input uses `input_file`, `schema_file`, `report_file`, and `report_format`.
-Whitespace trimming is enabled by default; `--clean` additionally writes a
-cleaned CSV when validation fails.
-
-## Quick Start
-
-### Run Instantly (No Installation)
+For stricter rules, provide a JSON schema and choose a report destination:
 
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n validate
-```
-
-### Run Locally
-
-```bash
-git clone https://github.com/pruthivithejan/r10n.git
-cd r10n
-uv sync
-uv run r10n validate
-```
-
----
-
-## Usage
-
-### Interactive Mode
-
-Run without arguments for step-by-step prompts:
-
-```bash
-uv run r10n validate
-```
-
-### Command Line Mode
-
-Pass all options directly:
-
-```bash
-uv run r10n validate \
-  --input ./data/users.csv \
-  --schema ./schemas/users.json \
+r10n validate \
+  --input /path/to/data.csv \
+  --schema /path/to/schema.json \
+  --strict \
   --format json \
-  --output ./reports/users.json
+  --output /path/to/report.json \
+  --yes
 ```
-
----
 
 ## Parameters
 
-| Parameter | Short | Type | Required | Default | Description |
-|-----------|-------|------|----------|---------|-------------|
-| `--input` | `-i` | string | Yes | `local/inputs/validate/data.csv` | Input CSV file |
-| `--schema` | `-s` | string | No | - | JSON schema file |
-| `--output` | `-o` | string | No | - | Report output file |
-| `--strict` | - | flag | No | `false` | Treat warnings as failures |
-| `--clean` | - | flag | No | `false` | Write a cleaned CSV when validation fails |
-| `--format` | `-f` | string | No | `text` | Report format: `text`, `json`, `html` |
-
----
-
-## Examples
-
-### Example 1: Validate with Schema
-
-```bash
-uv run r10n validate \
-  --input ./data/users.csv \
-  --schema ./schemas/users.json
-```
-
-### Example 2: Generate an HTML Report
-
-```bash
-uv run r10n validate \
-  --input ./data/users.csv \
-  --schema ./schemas/users.json \
-  --format html \
-  --output ./reports/users.html
-```
-
-### Example 3: Clean Data During Validation
-
-```bash
-uv run r10n validate \
-  --input ./data/users.csv \
-  --schema ./schemas/users.json \
-  --clean
-```
-
----
-
-## Input Format
-
-Your CSV should include headers in the first row:
-
-```
-name,email,age,department
-John Doe,john@example.com,30,Engineering
-Jane Smith,jane@example.com,25,Marketing
-```
-
-### Schema Format
-
-Create a JSON schema with validation rules:
-
-```json
-{
-  "fields": {
-    "name": {"type": "string", "required": true, "min_length": 1},
-    "email": {"type": "email", "required": true},
-    "age": {"type": "integer", "min": 0, "max": 150},
-    "department": {"type": "string", "enum": ["Engineering", "Marketing", "Sales"]}
-  }
-}
-```
-
----
+| Parameter | Short | Required | Default | Description |
+|-----------|-------|----------|---------|-------------|
+| `--input` | `-i` | Yes | — | CSV file to validate |
+| `--schema` | `-s` | No | — | Optional JSON validation schema |
+| `--strict` | — | No | `false` | Treat warnings as failures |
+| `--trim-whitespace` | — | No | `true` | Trim values before checks |
+| `--output` | `-o` | No | — | Optional report file path |
+| `--format` | `-f` | No | `text` | Report format: text, JSON, or HTML |
+| `--clean` | — | No | `false` | Write a cleaned CSV if validation fails |
+| `--yes` | `-y` | No | `false` | Skip confirmation |
 
 ## Output
 
-- Validation summary printed to the terminal
-- Optional report file in text, JSON, or HTML
-- Optional cleaned CSV file when prompted
-
----
-
-## Configuration
-
-No configuration file is required. Validation rules are provided via schema files.
-
----
+Without `--output`, the report is shown in the terminal. When supplied,
+`--output` writes the selected report format to the path you choose.
 
 ## Troubleshooting
 
-**Issue: Schema file not found**
-- Cause: Incorrect path or filename.
-- Solution: Provide the correct path with `--schema`.
+**Schema rejected:** Confirm that the schema is valid JSON and that its column
+names match the CSV header.
 
-**Issue: Report not saved**
-- Cause: Missing `--output` path.
-- Solution: Provide an output file path with `--output`.
+**Warnings but no failures:** Use `--strict` if warnings should stop the
+workflow, or inspect the detailed report before using `--clean`.
 
----
+## See also
 
-## See Also
-
-- [Contacts](./contacts.md)
-- [Rename Files](./rename-files.md)
+- [Terminal configuration](../get-started/terminal-configuration.md)
+- [Get started](../get-started/index.md)

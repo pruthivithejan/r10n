@@ -4,7 +4,7 @@ icon: lucide/cloud-download
 
 # Install Binary
 
-Install `r10n` as a standalone binary using `curl`, then run it directly from your terminal.
+Install the complete standalone r10n application, then run it directly from your terminal.
 
 ---
 
@@ -30,7 +30,11 @@ curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh
 sh install.sh
 ```
 
-The installer downloads the correct app archive for your OS/architecture, verifies checksums, installs the extracted app under `~/.local/bin/.r10n`, and creates the `~/.local/bin/r10n` launcher.
+The installer prints the r10n logo, reports the release's expected size, and
+shows actual transfer progress. It verifies the downloaded archive against
+`SHA256SUMS`, installs the complete app under `~/.local/bin/.r10n`, and creates
+the `~/.local/bin/r10n` launcher. The bundle contains the Python automation
+worker; Python is not required to run it.
 
 The release workflow publishes the binaries and `SHA256SUMS` automatically after a version bump on `main`, so `install.sh` always targets the latest published release.
 
@@ -66,7 +70,7 @@ Then restart the terminal.
 
 ## Upgrade
 
-Update to the latest release:
+Update a standalone Unix installation to the latest release:
 
 ```bash
 r10n upgrade
@@ -78,14 +82,15 @@ Check only (no install):
 r10n upgrade --check
 ```
 
-Install a specific version:
+Install a specific version (for example, the 0.13.0 release):
 
 ```bash
-r10n upgrade --version v0.12.2
+r10n upgrade --version v0.13.0
 ```
 
-The updater asks before replacing the complete application bundle. For scripts,
-review the target with `upgrade --check`, then explicitly authorize installation:
+The updater shows the r10n logo and byte-based progress with received and total
+megabytes. It asks before replacing the complete application bundle. For
+scripts, review the target with `upgrade --check`, then explicitly authorize:
 
 ```bash
 r10n upgrade --yes
@@ -103,7 +108,7 @@ package through its package manager instead.
 Install a specific version:
 
 ```bash
-sh install.sh --version v0.12.2
+sh install.sh --version v0.13.0
 ```
 
 Install to a custom directory:
@@ -142,18 +147,19 @@ r10n --version
 
 ### Unsupported platform
 
-Current prebuilt binaries support:
+The installer supports:
 
 - Linux x86_64
 - macOS arm64
-- Windows x86_64 (release artifact only)
 
-For other platforms, use [source development](setup-locally.md) with Go and Python. `uvx` can build source when Go is available; it cannot download a binary for an unsupported platform.
+Windows x86_64 users can install the standalone executable from
+[GitHub Releases](https://github.com/pruthivithejan/r10n/releases). Other
+platforms do not currently have a prebuilt artifact.
 
 ---
 
 ## Next Steps
 
 - [Run on Terminal](run-on-terminal.md) — Use r10n without installing
-- [Setup Locally](setup-locally.md) — Full local source setup
+- [Terminal configuration](terminal-configuration.md) — Save preferences and profiles
 - [Automations](../automations/index.md) — Explore all commands
