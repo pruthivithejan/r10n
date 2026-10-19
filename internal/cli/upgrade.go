@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/charmbracelet/huh"
@@ -28,7 +29,16 @@ import (
 
 var releasesAPI = "https://api.github.com/repos/pruthivithejan/r10n/releases"
 var upgradeHTTP = &http.Client{Timeout: 60 * time.Second}
+var upgradeDownloadHTTP = newStreamingDownloadClient()
 var executablePath = os.Executable
+
+const downloadIdleTimeout = 2 * time.Minute
+
+func newStreamingDownloadClient() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.ResponseHeaderTimeout = 60 * time.Second
+	return &http.Client{Transport: transport}
+}
 
 type release struct {
 	Tag    string `json:"tag_name"`
@@ -142,14 +152,29 @@ func (r release) asset(name string) (string, int64, error) {
 }
 
 func download(ctx context.Context, address, destination string, limit, expectedSize int64, label string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
+	downloadCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	var idleTimeout atomic.Bool
+	idleTimer := time.AfterFunc(downloadIdleTimeout, func() {
+		idleTimeout.Store(true)
+		cancel()
+	})
+	defer idleTimer.Stop()
+
+	req, err := http.NewRequestWithContext(downloadCtx, http.MethodGet, address, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("User-Agent", "r10n-upgrade")
 	// Never send GITHUB_TOKEN to an asset host.
-	res, err := upgradeHTTP.Do(req)
+	res, err := upgradeDownloadHTTP.Do(req)
 	if err != nil {
+		if idleTimeout.Load() {
+			return fmt.Errorf("download stalled before receiving %s", tui.SafeText(label))
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		return err
 	}
 	defer res.Body.Close()
@@ -177,6 +202,7 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 	for {
 		read, readErr := res.Body.Read(buffer)
 		if read > 0 {
+			idleTimer.Reset(downloadIdleTimeout)
 			n += int64(read)
 			if n > limit {
 				_ = out.Close()
@@ -210,6 +236,16 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 		if readErr != nil {
 			_ = out.Close()
 			_ = os.Remove(destination)
+			if idleTimeout.Load() {
+				return fmt.Errorf(
+					"download stalled while receiving %s for %s",
+					tui.SafeText(label),
+					downloadIdleTimeout,
+				)
+			}
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
 			return readErr
 		}
 	}
