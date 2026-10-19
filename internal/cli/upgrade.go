@@ -22,6 +22,7 @@ import (
 	"github.com/charmbracelet/huh"
 	"github.com/pruthivithejan/r10n"
 	"github.com/pruthivithejan/r10n/internal/backend"
+	"github.com/pruthivithejan/r10n/internal/brand"
 	"github.com/pruthivithejan/r10n/internal/tui"
 )
 
@@ -34,6 +35,7 @@ type release struct {
 	Assets []struct {
 		Name string `json:"name"`
 		URL  string `json:"browser_download_url"`
+		Size int64  `json:"size"`
 	} `json:"assets"`
 }
 
@@ -117,27 +119,29 @@ func getRelease(ctx context.Context, target string) (release, error) {
 	return result, nil
 }
 
-func (r release) asset(name string) (string, error) {
+func (r release) asset(name string) (string, int64, error) {
 	found := ""
+	var size int64
 	for _, asset := range r.Assets {
 		if asset.Name == name {
 			if found != "" {
-				return "", fmt.Errorf("duplicate release asset: %s", name)
+				return "", 0, fmt.Errorf("duplicate release asset: %s", name)
 			}
 			u, err := url.Parse(asset.URL)
 			if err != nil || u.Host == "" || (u.Scheme != "https" && !(u.Scheme == "http" && strings.HasPrefix(releasesAPI, "http://"))) {
-				return "", fmt.Errorf("invalid release asset URL")
+				return "", 0, fmt.Errorf("invalid release asset URL")
 			}
 			found = asset.URL
+			size = asset.Size
 		}
 	}
 	if found == "" {
-		return "", fmt.Errorf("release asset not found: %s", name)
+		return "", 0, fmt.Errorf("release asset not found: %s", name)
 	}
-	return found, nil
+	return found, size, nil
 }
 
-func download(ctx context.Context, address, destination string, limit int64) error {
+func download(ctx context.Context, address, destination string, limit, expectedSize int64, label string) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, address, nil)
 	if err != nil {
 		return err
@@ -152,22 +156,102 @@ func download(ctx context.Context, address, destination string, limit int64) err
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf("asset download HTTP %d", res.StatusCode)
 	}
+	total := expectedSize
+	if res.ContentLength > 0 {
+		if total > 0 && total != res.ContentLength {
+			total = 0
+		} else {
+			total = res.ContentLength
+		}
+	}
 	out, err := os.OpenFile(destination, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
-	n, err := io.Copy(out, io.LimitReader(res.Body, limit+1))
-	closeErr := out.Close()
-	if err != nil {
-		return err
+	buffer := make([]byte, 64*1024)
+	var n int64
+	var lastReportedBytes int64
+	lastReport := time.Time{}
+	interactive := tui.Interactive()
+	reducedMotion := os.Getenv("R10N_NO_MOTION") == "1"
+	for {
+		read, readErr := res.Body.Read(buffer)
+		if read > 0 {
+			n += int64(read)
+			if n > limit {
+				_ = out.Close()
+				_ = os.Remove(destination)
+				return fmt.Errorf("download exceeds size limit")
+			}
+			written, writeErr := out.Write(buffer[:read])
+			if writeErr != nil {
+				_ = out.Close()
+				return writeErr
+			}
+			if written != read {
+				_ = out.Close()
+				return io.ErrShortWrite
+			}
+			if interactive && reducedMotion &&
+				(n-lastReportedBytes >= 4*1024*1024 || (total > 0 && n == total)) {
+				fmt.Fprintln(stderr, formatDownloadProgress(label, n, total))
+				lastReportedBytes = n
+			} else if interactive && (time.Since(lastReport) >= 100*time.Millisecond || (total > 0 && n == total)) {
+				fmt.Fprintf(stderr, "\r%s", formatDownloadProgress(label, n, total))
+				lastReport = time.Now()
+			} else if !interactive && n-lastReportedBytes >= 4*1024*1024 {
+				fmt.Fprintf(stderr, "%s\n", formatDownloadProgress(label, n, total))
+				lastReportedBytes = n
+			}
+		}
+		if readErr == io.EOF {
+			break
+		}
+		if readErr != nil {
+			_ = out.Close()
+			_ = os.Remove(destination)
+			return readErr
+		}
 	}
-	if closeErr != nil {
-		return closeErr
+	if err := out.Close(); err != nil {
+		_ = os.Remove(destination)
+		return err
 	}
 	if n > limit {
 		return fmt.Errorf("download exceeds size limit")
 	}
+	if total > 0 && n != total {
+		_ = os.Remove(destination)
+		return fmt.Errorf("download ended at %d of %d bytes", n, total)
+	}
+	if interactive && !reducedMotion {
+		fmt.Fprintf(stderr, "\r%s\n", formatDownloadProgress(label, n, total))
+	} else {
+		fmt.Fprintln(stderr, formatDownloadProgress(label, n, total))
+	}
 	return nil
+}
+
+func formatDownloadProgress(label string, received, total int64) string {
+	const width = 24
+	receivedMB := float64(received) / 1_000_000
+	if total <= 0 {
+		return fmt.Sprintf("%s %.1f MB downloaded · total unknown", tui.SafeText(label), receivedMB)
+	}
+	ratio := float64(received) / float64(total)
+	if ratio > 1 {
+		ratio = 1
+	}
+	filled := int(ratio * width)
+	return fmt.Sprintf(
+		"%s [%s%s] %.1f MB / %.1f MB · %d%%",
+		tui.SafeText(label),
+		strings.Repeat("#", filled),
+		strings.Repeat("-", width-filled),
+		receivedMB,
+		float64(total)/1_000_000,
+		int(ratio*100),
+	)
 }
 
 func verifyChecksum(archive, sums, name string) error {
@@ -283,11 +367,14 @@ func upgrade(ctx context.Context, args []string) error {
 	if err := confirmUpgrade(ctx, yes); err != nil {
 		return err
 	}
-	assetURL, err := r.asset(asset)
+	if err := tui.ApplySettings(); err != nil {
+		return err
+	}
+	assetURL, assetSize, err := r.asset(asset)
 	if err != nil {
 		return err
 	}
-	sumsURL, err := r.asset("SHA256SUMS")
+	sumsURL, _, err := r.asset("SHA256SUMS")
 	if err != nil {
 		return err
 	}
@@ -297,10 +384,11 @@ func upgrade(ctx context.Context, args []string) error {
 	}
 	defer os.RemoveAll(tmp)
 	archive, sums := filepath.Join(tmp, asset), filepath.Join(tmp, "SHA256SUMS")
-	if err := download(ctx, assetURL, archive, 1024*1024*1024); err != nil {
+	fmt.Fprintln(stderr, brand.Banner(os.Getenv("R10N_ACCESSIBLE") == "1"))
+	if err := download(ctx, assetURL, archive, 1024*1024*1024, assetSize, asset); err != nil {
 		return err
 	}
-	if err := download(ctx, sumsURL, sums, 4*1024*1024); err != nil {
+	if err := download(ctx, sumsURL, sums, 4*1024*1024, 0, "SHA256SUMS"); err != nil {
 		return err
 	}
 	if err := verifyChecksum(archive, sums, asset); err != nil {
@@ -333,9 +421,8 @@ func confirmUpgrade(ctx context.Context, yes bool) error {
 	var approved bool
 	form := huh.NewForm(huh.NewGroup(huh.NewConfirm().
 		Title("Replace the installed r10n bundle?").
-		Affirmative("Upgrade").Negative("Cancel").Value(&approved))).
-		WithInput(stdin).WithOutput(stderr).WithAccessible(os.Getenv("R10N_ACCESSIBLE") == "1")
-	if err := form.RunWithContext(ctx); err != nil {
+		Affirmative("Upgrade").Negative("Cancel").Value(&approved)))
+	if err := tui.RunForm(ctx, form); err != nil {
 		return err
 	}
 	if !approved {
