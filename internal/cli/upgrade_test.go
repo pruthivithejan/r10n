@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 )
 
 type archiveEntry struct {
@@ -234,6 +235,43 @@ func TestReleaseAssetCarriesItsAdvertisedByteSize(t *testing.T) {
 	}
 }
 
+func TestDownloadUsesStreamingTimeoutNotMetadataDeadline(t *testing.T) {
+	oldMetadataClient, oldDownloadClient := upgradeHTTP, upgradeDownloadHTTP
+	defer func() {
+		upgradeHTTP, upgradeDownloadHTTP = oldMetadataClient, oldDownloadClient
+	}()
+	upgradeHTTP = &http.Client{Timeout: 10 * time.Millisecond}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Length", "3")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			t.Error("test server does not support streaming")
+			return
+		}
+		for _, chunk := range []byte("abc") {
+			if _, err := w.Write([]byte{chunk}); err != nil {
+				return
+			}
+			flusher.Flush()
+			time.Sleep(30 * time.Millisecond)
+		}
+	}))
+	defer server.Close()
+	upgradeDownloadHTTP = server.Client()
+	destination := filepath.Join(t.TempDir(), "asset")
+
+	if err := download(context.Background(), server.URL, destination, 1024, 3, "asset"); err != nil {
+		t.Fatal(err)
+	}
+	contents, err := os.ReadFile(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(contents) != "abc" {
+		t.Fatalf("downloaded bytes = %q, want %q", contents, "abc")
+	}
+}
+
 func TestPlatformVersionChecksum(t *testing.T) {
 	for _, test := range []struct{ os, arch, want string }{
 		{"linux", "amd64", "r10n-linux-x86_64.tar.gz"}, {"darwin", "arm64", "r10n-macos-arm64.tar.gz"}, {"windows", "amd64", "r10n-windows-x86_64.exe"},
@@ -283,8 +321,12 @@ func TestUpgradeMetadataCheckAndInstall(t *testing.T) {
 		t.Skip(err)
 	}
 	_, native := installedFixture(t)
-	oldExecutable, oldAPI, oldClient, oldOutput := executablePath, releasesAPI, upgradeHTTP, stdout
-	defer func() { executablePath, releasesAPI, upgradeHTTP, stdout = oldExecutable, oldAPI, oldClient, oldOutput }()
+	oldExecutable, oldAPI, oldClient, oldDownloadClient, oldOutput :=
+		executablePath, releasesAPI, upgradeHTTP, upgradeDownloadHTTP, stdout
+	defer func() {
+		executablePath, releasesAPI, upgradeHTTP, upgradeDownloadHTTP, stdout =
+			oldExecutable, oldAPI, oldClient, oldDownloadClient, oldOutput
+	}()
 	executablePath = func() (string, error) { return native, nil }
 	stdout = io.Discard
 	t.Setenv("R10N_SOURCE", "")
@@ -317,6 +359,7 @@ func TestUpgradeMetadataCheckAndInstall(t *testing.T) {
 	defer server.Close()
 	releasesAPI = server.URL + "/releases"
 	upgradeHTTP = server.Client()
+	upgradeDownloadHTTP = server.Client()
 	if err := upgrade(context.Background(), []string{"--check", "--version", "99.0.0"}); err != nil {
 		t.Fatal(err)
 	}
