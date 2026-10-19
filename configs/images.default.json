@@ -1,8 +1,0 @@
-{
-  "input_directory": "local/inputs/images",
-  "output_directory": "local/outputs/images",
-  "quality": 85,
-  "max_size_mb": 1.0,
-  "prefix": "img",
-  "preserve_filenames": true
-}

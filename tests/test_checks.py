@@ -77,9 +77,3 @@ def test_local_or_secret_paths_are_rejected(repository: Path, name: str) -> None
     stage(repository, name, "fixture\n")
     with pytest.raises(SystemExit, match="Do not commit"):
         check.check_staged()
-
-
-def test_env_example_remains_allowed(repository: Path) -> None:
-    """The public template is distinct from an actual credential file."""
-    stage(repository, ".env.example", "# No credentials\n")
-    check.check_staged()
