@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	// Neon is the r10n wordmark's accessible foreground on dark surfaces.
-	Neon = "#67D5FF"
+	// Neon is r10n's green brand foreground on dark surfaces.
+	Neon = "#39FF14"
 	// LightAccent is its text/link variant for light backgrounds.
-	LightAccent = "#006B87"
+	LightAccent = "#176B2C"
 )
 
 // Accent returns the configured terminal-safe accent or adapts to the terminal.
@@ -32,11 +32,11 @@ func Accent() lipgloss.TerminalColor {
 func OnAccent() lipgloss.TerminalColor {
 	switch os.Getenv("R10N_THEME") {
 	case "dark":
-		return lipgloss.Color("#062A38")
+		return lipgloss.Color("#062A12")
 	case "light":
 		return lipgloss.Color("#FFFFFF")
 	default:
-		return lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#062A38"}
+		return lipgloss.AdaptiveColor{Light: "#FFFFFF", Dark: "#062A12"}
 	}
 }
 

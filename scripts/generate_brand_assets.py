@@ -79,7 +79,7 @@ def render_wordmark(lines: list[str], color: str) -> str:
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '
         f'{width} {height}" role="img" aria-labelledby="title desc">'
         '<title id="title">r10n routine automation</title>'
-        '<desc id="desc">Neon cyan block-letter r10n wordmark.</desc>'
+        '<desc id="desc">Neon green block-letter r10n wordmark.</desc>'
         f'<g fill="{color}" stroke="{color}" stroke-width="0.13" '
         f'stroke-linecap="square">{rectangles}{strokes}</g></svg>\n'
     )
