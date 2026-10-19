@@ -4,6 +4,7 @@ import csv
 import json
 import smtplib
 import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from email import encoders
 from email.mime.base import MIMEBase
@@ -205,12 +206,18 @@ def send_same_email_to_all(
 
 
 def send_personalized_emails_with_certificates(
-    email_list_file: str, subject: str, body_template: str, config_file: str, certificates_dir: str
+    email_list_file: str,
+    subject: str,
+    body_template: str,
+    config_file: str,
+    certificates_dir: str,
+    smtp_config: SimpleEmailConfig | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> dict:
     """Send personalized emails with individual certificate attachments"""
     try:
         # Load configuration
-        config = load_simple_config(config_file)
+        config = smtp_config or load_simple_config(config_file)
 
         # Parse email list from CSV
         recipients = []
@@ -287,6 +294,9 @@ def send_personalized_emails_with_certificates(
                 results["failed"] += 1
                 results["failed_emails"].append(email)
                 print(f"❌ Failed to send email: {e!s}")
+
+            if progress_callback:
+                progress_callback(i, len(recipients))
 
             print()
             # Gentle throttle to avoid rate limiting
@@ -376,6 +386,52 @@ def send_from_file(
     except Exception as e:
         print(f"❌ Error reading files: {e!s}")
         return {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
+
+
+def send_from_profile(
+    email_list_file: str,
+    body_file: str,
+    profile: Mapping[str, object],
+    password: str,
+    certificates_dir: str,
+    progress_callback: Callable[[int, int], None] | None = None,
+) -> dict:
+    """Send personalized messages with a system-saved profile and secure password."""
+    server, port, sender = (
+        profile.get("smtp_server"),
+        profile.get("smtp_port"),
+        profile.get("email"),
+    )
+    subject, use_tls = profile.get("subject"), profile.get("use_tls", True)
+    if not isinstance(server, str) or not server:
+        raise ValueError("SMTP profile server is required")
+    if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+        raise ValueError("SMTP profile port must be between 1 and 65535")
+    if not isinstance(sender, str) or not sender:
+        raise ValueError("SMTP profile sender email is required")
+    if not isinstance(subject, str):
+        raise ValueError("SMTP profile subject must be a string")
+    if not isinstance(use_tls, bool):
+        raise ValueError("SMTP profile TLS setting must be a boolean")
+    config = SimpleEmailConfig(
+        smtp_server=server,
+        smtp_port=port,
+        email=sender,
+        password=password,
+        subject=subject,
+        use_tls=use_tls,
+    )
+    with open(body_file, encoding="utf-8") as body:
+        body_template = body.read()
+    return send_personalized_emails_with_certificates(
+        email_list_file=email_list_file,
+        subject=config.subject,
+        body_template=body_template,
+        config_file="",
+        certificates_dir=certificates_dir,
+        smtp_config=config,
+        progress_callback=progress_callback,
+    )
 
 
 def preview_email_setup(

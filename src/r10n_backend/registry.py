@@ -14,6 +14,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from r10n_backend.settings import load_settings
+
 EventCallback = Callable[[str, dict[str, Any]], None]
 Executor = Callable[[BaseModel, EventCallback], Any]
 
@@ -28,12 +30,13 @@ class ContactsInput(AutomationInput):
     """Inputs for contact-card generation."""
 
     input_file: str = Field(
-        "local/inputs/contacts/numbers.txt",
+        ...,
+        min_length=1,
         description="Text file containing one phone number per line",
         json_schema_extra={"ui:widget": "file"},
     )
     output_file: str = Field(
-        "local/outputs/contacts/contacts.vcf",
+        "r10n-output/contacts.vcf",
         description="VCF file to create",
         json_schema_extra={"ui:widget": "save_file"},
     )
@@ -44,28 +47,27 @@ class FillPdfsInput(AutomationInput):
     """Inputs for filling PDF templates."""
 
     recipients_file: str = Field(
-        "local/inputs/fill-pdfs/data.csv",
+        ...,
+        min_length=1,
         description="CSV or TXT recipient data",
         json_schema_extra={"ui:widget": "file"},
     )
-    config_file: str = Field(
-        "local/configs/fill-pdfs.json",
-        description="Field placement configuration from r10n configure",
-        json_schema_extra={"ui:widget": "file"},
+    config_profile: str = Field(
+        "default", min_length=1, description="Saved PDF template profile name"
     )
-    base_dir: str = Field("local", description="Base directory for relative config paths")
 
 
 class ImagesInput(AutomationInput):
     """Inputs for image optimization."""
 
     input_directory: str = Field(
-        "local/inputs/images",
+        ...,
+        min_length=1,
         description="Directory containing source images",
         json_schema_extra={"ui:widget": "directory"},
     )
     output_directory: str = Field(
-        "local/outputs/images",
+        "r10n-output/images",
         description="Directory for optimized WebP images",
         json_schema_extra={"ui:widget": "directory"},
     )
@@ -80,7 +82,7 @@ class WebsiteImagesInput(AutomationInput):
 
     url: str = Field(..., min_length=1, description="Website URL to crawl")
     output_directory: str = Field(
-        "local/outputs/website-images",
+        "r10n-output/website-images",
         description="Directory for downloaded images",
         json_schema_extra={"ui:widget": "directory"},
     )
@@ -97,7 +99,7 @@ class LogosInput(AutomationInput):
 
     names: str = Field(..., min_length=1, description="Comma-separated company or brand names")
     output_directory: str = Field(
-        "local/outputs/logos",
+        "r10n-output/logos",
         description="Directory for downloaded SVG files",
         json_schema_extra={"ui:widget": "directory"},
     )
@@ -110,23 +112,21 @@ class LogosInput(AutomationInput):
 class EmailInput(AutomationInput):
     """Inputs for sending personalized email."""
 
-    config_file: str = Field(
-        "local/configs/email.json",
-        description="SMTP and message configuration",
-        json_schema_extra={"ui:widget": "file"},
-    )
+    smtp_profile: str = Field("default", min_length=1, description="Saved system SMTP profile")
     recipients_file: str = Field(
-        "local/inputs/email/recipients.csv",
+        ...,
+        min_length=1,
         description="CSV containing Name and Email columns",
         json_schema_extra={"ui:widget": "file"},
     )
     body_file: str = Field(
-        "local/inputs/email/body.txt",
+        ...,
+        min_length=1,
         description="Plain-text email body template",
         json_schema_extra={"ui:widget": "file"},
     )
     attachments_directory: str = Field(
-        "local/outputs/fill-pdfs",
+        "r10n-output/fill-pdfs",
         description="Directory containing personalized PDF attachments",
         json_schema_extra={"ui:widget": "directory"},
     )
@@ -136,7 +136,7 @@ class ColorsInput(AutomationInput):
     """Inputs for CSS color conversion."""
 
     path: str = Field(
-        "local/inputs/colors",
+        ".",
         description="Directory containing CSS files",
         json_schema_extra={"ui:widget": "directory"},
     )
@@ -153,7 +153,8 @@ class RenameInput(AutomationInput):
     """Inputs for batch file renaming."""
 
     input_directory: str = Field(
-        "local/inputs/rename",
+        ...,
+        min_length=1,
         description="Directory containing files to rename",
         json_schema_extra={"ui:widget": "directory"},
     )
@@ -175,7 +176,8 @@ class ValidateCsvInput(AutomationInput):
     """Inputs for CSV validation."""
 
     input_file: str = Field(
-        "local/inputs/validate/data.csv",
+        ...,
+        min_length=1,
         description="CSV file to validate",
         json_schema_extra={"ui:widget": "file"},
     )
@@ -201,7 +203,8 @@ class MarkdownToPdfInput(AutomationInput):
     """Inputs for Markdown-to-PDF conversion."""
 
     input_path: str = Field(
-        "local/inputs/markdown",
+        ...,
+        min_length=1,
         description="Markdown file or directory",
         json_schema_extra={"ui:widget": "path"},
     )
@@ -234,6 +237,44 @@ class AutomationSpec:
     executor: Executor
     confirmation: str | None = None
 
+    def input_schema(self) -> dict[str, Any]:
+        """Return the form schema with named profiles and user output defaults."""
+        schema = self.input_model.model_json_schema()
+        settings = load_settings()
+        properties = schema.get("properties", {})
+        if self.id == "email":
+            names = sorted(settings.smtp_profiles)
+            field = properties.get("smtp_profile", {})
+            if names:
+                field["enum"] = names
+                field["default"] = (
+                    settings.active_smtp_profile
+                    if settings.active_smtp_profile in names
+                    else names[0]
+                )
+        elif self.id == "fill-pdfs":
+            names = sorted(settings.pdf_profiles)
+            field = properties.get("config_profile", {})
+            if names:
+                field["enum"] = names
+                field["default"] = (
+                    settings.active_pdf_profile
+                    if settings.active_pdf_profile in names
+                    else names[0]
+                )
+
+        root = (
+            Path(settings.output_directory).expanduser().resolve()
+            if settings.output_directory
+            else Path("r10n-output")
+        )
+        for name in ("output_directory", "report_file", "output_path", "output_file"):
+            field = properties.get(name, {})
+            default = field.get("default")
+            if isinstance(default, str) and default.startswith("r10n-output/"):
+                field["default"] = str(root / Path(default).relative_to("r10n-output"))
+        return schema
+
     def validate(self, payload: dict[str, Any]) -> AutomationInput:
         """Validate a raw payload using this automation's input model.
 
@@ -246,7 +287,19 @@ class AutomationSpec:
         Raises:
             pydantic.ValidationError: If the payload is invalid.
         """
-        return self.input_model.model_validate(payload)
+        normalized = dict(payload)
+        schema = self.input_schema()
+        defaults = self.input_model.model_json_schema().get("properties", {})
+        for name in ("output_directory", "report_file", "output_path", "output_file"):
+            original = defaults.get(name, {}).get("default")
+            resolved = schema.get("properties", {}).get(name, {}).get("default")
+            if (
+                resolved is not None
+                and resolved != original
+                and normalized.get(name, original) == original
+            ):
+                normalized[name] = resolved
+        return self.input_model.model_validate(normalized)
 
 
 def normalize_result(result: Any) -> dict[str, Any]:
@@ -274,19 +327,41 @@ def _run_contacts(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
     emit("progress", {"current": 0, "total": 1, "message": "Generating VCF contacts"})
     result = generate_vcf_from_file(values.input_file, values.output_file, values.prefix)
     emit("progress", {"current": 1, "total": 1, "message": "Contacts generated"})
+    result["success"] = result.get("invalid", 0) == 0
+    if not result["success"]:
+        result["status"] = "partial"
     return result
 
 
 def _run_fill_pdfs(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
-    from r10n_backend.automations.fill_pdfs import fill_certificates_from_file
+    from r10n_backend.automations.fill_pdfs import fill_certificates_from_config
+    from r10n_backend.settings import load_settings
 
     values = FillPdfsInput.model_validate(inputs)
-    emit("log", {"message": "Loading PDF configuration and recipient data"})
-    return fill_certificates_from_file(
-        values.recipients_file,
-        values.config_file,
-        base_dir=values.base_dir,
+    preferences = load_settings()
+    profile_name = (
+        preferences.active_pdf_profile
+        if values.config_profile == "default" and preferences.active_pdf_profile
+        else values.config_profile
     )
+    profile = preferences.pdf_profiles.get(profile_name)
+    if profile is None:
+        raise ValueError(
+            f"PDF profile {profile_name!r} was not found; configure it with `r10n configure`"
+        )
+    config = profile.model_dump(mode="json")
+    emit("log", {"message": "Loading PDF configuration and recipient data"})
+
+    def progress(current: int, total: int) -> None:
+        emit("progress", {"current": current, "total": total, "message": "Generating PDFs"})
+
+    result = fill_certificates_from_config(
+        values.recipients_file, config, progress_callback=progress
+    )
+    result["success"] = result.get("failed", 0) == 0 and result.get("total", 0) > 0
+    if not result["success"]:
+        result["status"] = "partial" if result.get("generated", 0) else "failed"
+    return result
 
 
 def _run_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
@@ -294,6 +369,10 @@ def _run_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
 
     values = ImagesInput.model_validate(inputs)
     emit("log", {"message": "Optimizing images"})
+
+    def progress(current: int, total: int) -> None:
+        emit("progress", {"current": current, "total": total, "message": "Optimizing images"})
+
     return optimize_images(
         input_dir=values.input_directory,
         output_dir=values.output_directory,
@@ -301,6 +380,7 @@ def _run_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
         max_size_mb=values.max_size_mb,
         prefix=values.prefix,
         preserve_filename=values.preserve_filenames,
+        progress_callback=progress,
     )
 
 
@@ -309,6 +389,18 @@ def _run_website_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any
 
     values = WebsiteImagesInput.model_validate(inputs)
     emit("log", {"message": f"Crawling {values.url}"})
+
+    def progress(stage: str, current: int, total: int | None, message: str) -> None:
+        emit(
+            "progress",
+            {
+                "stage": stage,
+                "current": current,
+                "total": total,
+                "message": message,
+            },
+        )
+
     return download_website_images(
         url=values.url,
         output_dir=values.output_directory,
@@ -316,19 +408,32 @@ def _run_website_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any
         quality=values.quality,
         timeout=values.timeout,
         max_pages=None if values.max_pages == 0 else values.max_pages,
+        progress_callback=progress,
     )
 
 
 def _run_logos(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
-    from r10n_backend.automations.download_logos import download_logos
+    from r10n_backend.automations.download_logos import download_logos, parse_logo_names
 
     values = LogosInput.model_validate(inputs)
+    names = parse_logo_names(values.names)
+    processed = 0
 
     def on_progress(item: dict[str, Any]) -> None:
+        nonlocal processed
+        processed += 1
+        emit(
+            "progress",
+            {
+                "current": processed,
+                "total": len(names),
+                "message": f"Processed logo {processed} of {len(names)}",
+            },
+        )
         emit("log", {"message": f"Processed {item.get('company_name', 'logo')}"})
 
     return download_logos(
-        names=values.names,
+        names=names,
         output_dir=values.output_directory,
         timeout=values.timeout,
         max_candidates=values.max_candidates,
@@ -339,16 +444,52 @@ def _run_logos(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
 
 
 def _run_email(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
-    from r10n_backend.automations.send_same_email import send_from_file
+    from r10n_backend.automations.send_same_email import send_from_profile
+    from r10n_backend.secrets import get_secret
+    from r10n_backend.settings import load_settings
 
     values = EmailInput.model_validate(inputs)
+    preferences = load_settings()
+    profile_name = (
+        preferences.active_smtp_profile
+        if values.smtp_profile == "default" and preferences.active_smtp_profile
+        else values.smtp_profile
+    )
+    profile = preferences.smtp_profiles.get(profile_name)
+    if profile is None:
+        raise ValueError(
+            f"SMTP profile {profile_name!r} was not found; configure one with `r10n config add-smtp-profile`"
+        )
+    password = get_secret(profile_name)
+    if password is None:
+        raise ValueError(
+            f"No secure credential is saved for {profile_name!r}; enter it with `r10n config set-secret {profile_name}`"
+        )
     emit("log", {"message": "Connecting to the configured SMTP server"})
-    return send_from_file(
+    result = send_from_profile(
         email_list_file=values.recipients_file,
         body_file=values.body_file,
-        config_file=values.config_file,
+        profile=profile.model_dump(mode="json"),
+        password=password,
         certificates_dir=values.attachments_directory,
+        progress_callback=lambda current, total: emit(
+            "progress",
+            {
+                "current": current,
+                "total": total,
+                "message": "Sending personalized email",
+            },
+        ),
     )
+    total, sent, failed = (
+        result.get("total", 0),
+        result.get("sent", 0),
+        result.get("failed", 0),
+    )
+    result["success"] = total > 0 and sent == total and failed == 0
+    if not result["success"]:
+        result["status"] = "partial" if sent else "failed"
+    return result
 
 
 def _run_colors(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
@@ -406,6 +547,9 @@ def _run_validate(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
         cleaned_path = str(Path(values.input_file).with_suffix(".cleaned.csv"))
         clean_csv(values.input_file, cleaned_path, trim_whitespace=True)
         normalized["cleaned_file"] = cleaned_path
+    normalized["success"] = result.is_valid
+    if not result.is_valid:
+        normalized["status"] = "invalid"
     return normalized
 
 

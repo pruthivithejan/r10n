@@ -1,6 +1,7 @@
 """Image optimization and format conversion automation."""
 
 import json
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -28,8 +29,13 @@ class ImageOptimizationConfig:
 class ImageOptimizer:
     """Optimize and rename images for web use"""
 
-    def __init__(self, config: ImageOptimizationConfig):
+    def __init__(
+        self,
+        config: ImageOptimizationConfig,
+        progress_callback: Callable[[int, int], None] | None = None,
+    ):
         self.config = config
+        self.progress_callback = progress_callback
         self.supported_formats = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tiff", ".webp"}
         self.results: dict[str, Any] = {
             "processed": 0,
@@ -224,6 +230,8 @@ class ImageOptimizer:
                 if output_file_path.exists():
                     print(f"⏭️  Skipping {image_file.name} (output exists)")
                     self.results["skipped"] += 1
+                    if self.progress_callback:
+                        self.progress_callback(index, len(image_files))
                     continue
 
                 # Process the image
@@ -237,6 +245,8 @@ class ImageOptimizer:
                     self.results["failed"] += 1
 
                 self.results["files"].append(result)
+                if self.progress_callback:
+                    self.progress_callback(index, len(image_files))
                 print()
 
             # Print summary
@@ -295,6 +305,7 @@ def optimize_images(
     max_height: int = 1080,
     preserve_filename: bool = False,
     config_file: str | None = None,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> dict[str, Any]:
     """Main function to optimize images"""
     try:
@@ -323,7 +334,7 @@ def optimize_images(
             )
 
         # Create optimizer and process
-        optimizer = ImageOptimizer(config)
+        optimizer = ImageOptimizer(config, progress_callback=progress_callback)
         results = optimizer.process_directory()
 
         return results

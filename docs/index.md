@@ -25,40 +25,23 @@ Automate repetitive data and workflow tasks on your terms — with a beautiful C
 
 **r10n** (routine automation) is a native Go CLI with a Python automation engine for day-to-day tasks without code. Each automation supports reviewed interactive execution and explicit headless execution.
 
-Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
+Install the standalone application once for regular use, or run a released
+version with [uvx](https://docs.astral.sh/uv/).
 
 **Features:**
 
 - Searchable native Charm picker with generated, validated forms
 - Review screens, live logs, progress, cancellation, and artifact paths
 - Step-by-step interactive prompts
-- Run instantly with `uvx` or install locally
+- Checksum-verified standalone installer with real download progress
+- Per-user system settings and profiles; no project-local setup folders
 - Generate contacts, fill PDFs, optimize images, send emails, and more
 
 ---
 
 ## Quick Start
 
-=== "Run Instantly (uvx)"
-
-    Run any automation without installation:
-
-    ```bash
-    uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
-    ```
-
-=== "Install Locally"
-
-    Clone for repeated use:
-
-    ```bash
-    git clone https://github.com/pruthivithejan/r10n.git
-    cd r10n
-    uv sync
-    uv run r10n
-    ```
-
-=== "Install Binary (curl)"
+=== "Install Binary"
 
     Install the standalone binary:
 
@@ -76,6 +59,25 @@ Run anywhere using [uv](https://docs.astral.sh/uv/) — no install needed!
 
     ```bash
     r10n
+    ```
+
+=== "Run with uvx"
+
+    Run the released application without a persistent standalone install:
+
+    ```bash
+    uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
+    ```
+
+    uvx requires Python 3.10+ and may need Go for unreleased source versions.
+
+=== "Configure in the terminal"
+
+    Save accessibility and output preferences to your system settings:
+
+    ```bash
+    r10n setup
+    r10n config path
     ```
 
 ---
@@ -98,49 +100,19 @@ Browse all: [Automations](automations/)
 ## Example: Generate Contacts
 
 ```bash
-$ uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts
-
-╭───────────────────────────────────────────────────────────────╮
-│               Contact Card Generator                           │
-│        Convert phone numbers to VCF contact cards              │
-╰───────────────────────────────────────────────────────────────╯
-
-Step 1/3: Select input file
-  Enter path to file with phone numbers: numbers.txt
-
-Step 2/3: Set contact name prefix
-  Enter prefix for contact names [Contact]: Customer
-
-Step 3/3: Set output file
-  Enter output VCF file path: customers.vcf
-
-Summary:
-  Input file:  numbers.txt
-  Prefix:      Customer
-  Output file: customers.vcf
-
-Proceed with contact generation? [y/n]: y
-
-Generating contacts...
-
-Done!
-┌─────────────────────┬──────────────┐
-│ Total numbers       │ 150          │
-│ Valid contacts      │ 145          │
-│ Duplicates removed  │ 3            │
-│ Invalid numbers     │ 2            │
-│ Output file         │ customers.vcf│
-└─────────────────────┴──────────────┘
+$ r10n contacts --input /path/to/numbers.txt --output /path/to/customers.vcf
+Review the resolved paths in the terminal form, then confirm to run.
 ```
 
 ---
 
 ## Requirements
 
-- Python 3.10+
-- [uv](https://docs.astral.sh/uv/) package manager
+- Standalone installer: `curl` on Linux x86_64 or macOS arm64; Python is not required
+- uvx: [uv](https://docs.astral.sh/uv/) and Python 3.10+ (uv can provision Python)
+- Windows x86_64: download the standalone `.exe` from GitHub Releases
 
-**Install uv:**
+Install uv only when you plan to use `uvx`:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh

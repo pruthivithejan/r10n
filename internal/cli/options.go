@@ -3,7 +3,6 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -16,14 +15,14 @@ import (
 // always come from the Python catalog.
 var aliases = map[string]string{
 	"contacts":       "input,i=input_file output,o=output_file prefix,p=prefix",
-	"fill-pdfs":      "config,c=config_file recipients,r=recipients_file template,t=@template",
+	"fill-pdfs":      "config,c=config_profile recipients,r=recipients_file",
 	"images":         "input,i=input_directory output,o=output_directory quality,q=quality max-size,s=max_size_mb prefix,p=prefix preserve-names=preserve_filenames",
 	"website-images": "url,u=url output,o=output_directory format,f=output_format quality,q=quality timeout=timeout max-pages=max_pages",
 	"logos":          "names,n=names output,o=output_directory timeout=timeout max-candidates=max_candidates overwrite=overwrite no-manifest=!write_manifest",
-	"email":          "config,c=config_file recipients,r=recipients_file body,b=body_file attachments-dir,d=attachments_directory",
+	"email":          "smtp-profile=smtp_profile recipients,r=recipients_file body,b=body_file attachments-dir,d=attachments_directory",
 	"colors":         "path,p=path file,f=file no-backup=!create_backups all,a=@all dry-run=dry_run no-dry-run=!dry_run",
 	"rename":         "input,i=input_directory pattern,p=pattern prefix=prefix suffix=suffix replace-from=replace_from replace-to=replace_to lowercase=lowercase uppercase=uppercase add-date=add_date add-sequence=add_sequence recursive,r=recursive dry-run,n=dry_run no-dry-run=!dry_run file-pattern=file_pattern",
-	"validate":       "input,i=input_file schema,s=schema_file output,o=report_file strict=strict clean=clean_invalid format,f=report_format",
+	"validate":       "input,i=input_file schema,s=schema_file output,o=report_file strict=strict clean=clean_invalid format,f=report_format trim-whitespace=trim_whitespace",
 	"md2pdf":         "input,i=input_path output,o=output_path css,c=css_file page-size=page_size toc=include_toc syntax-highlight=syntax_highlighting recursive,r=recursive",
 }
 
@@ -31,7 +30,8 @@ var booleanFields = map[string]bool{
 	"preserve_filenames": true, "overwrite": true, "write_manifest": true,
 	"create_backups": true, "dry_run": true, "lowercase": true, "uppercase": true,
 	"add_date": true, "add_sequence": true, "recursive": true, "strict": true,
-	"clean_invalid": true, "include_toc": true, "syntax_highlighting": true, "@all": true,
+	"clean_invalid": true, "trim_whitespace": true, "include_toc": true,
+	"syntax_highlighting": true, "@all": true,
 }
 
 func flagMap(id string) map[string]string {
@@ -71,7 +71,6 @@ func printTaskHelp(id string) {
 type flagOptions struct {
 	values    map[string]string
 	yes, json bool
-	template  string
 }
 
 func parseFlags(id string, args []string) (flagOptions, error) {
@@ -128,10 +127,6 @@ func parseFlags(id string, args []string) (flagOptions, error) {
 			}
 			value = args[i]
 		}
-		if field == "@template" {
-			o.template = value
-			continue
-		}
 		if field == "@all" {
 			if value == "true" {
 				o.yes = true
@@ -177,20 +172,4 @@ func (o flagOptions) payload(task backend.Automation) (map[string]any, error) {
 		}
 	}
 	return result, nil
-}
-
-func checkPDFConfig(task backend.Automation, payload map[string]any, template string) error {
-	config, _ := payload["config_file"].(string)
-	if config == "" {
-		config, _ = task.InputSchema.Properties["config_file"].Default.(string)
-	}
-	if template != "" {
-		return fmt.Errorf("--template is a configuration helper, not a task input; first run: r10n configure --template %q --output %q; then run fill-pdfs --config %q", template, config, config)
-	}
-	if config != "" {
-		if _, err := os.Stat(config); err != nil {
-			return fmt.Errorf("PDF config not found: %s; create it with r10n configure --template template.pdf --output %q", config, config)
-		}
-	}
-	return nil
 }

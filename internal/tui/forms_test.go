@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/pruthivithejan/r10n/internal/backend"
@@ -95,6 +96,21 @@ func TestProgressStateAndCancellation(t *testing.T) {
 	model = next.(executionModel)
 	if !model.done || model.status != "Cancelled" || backend.ExitCode(model.err) != 130 {
 		t.Fatal(model)
+	}
+}
+
+func TestReducedMotionOmitsTheAnimatedSpinner(t *testing.T) {
+	indicator := spinner.New(spinner.WithSpinner(spinner.Dot))
+	model := executionModel{
+		title: "Contacts", status: "Running", spinner: indicator, animate: false, width: 40,
+	}
+	view := model.View()
+	if !strings.Contains(view, "Running") || strings.Contains(view, indicator.View()) {
+		t.Fatalf("reduced-motion view should show static status without a spinner: %q", view)
+	}
+	model.animate = true
+	if !strings.Contains(model.View(), indicator.View()) {
+		t.Fatal("standard motion should show the spinner")
 	}
 }
 

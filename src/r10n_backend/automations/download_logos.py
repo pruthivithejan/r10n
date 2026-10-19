@@ -21,7 +21,7 @@ from typing import Any
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 DEFAULT_USER_AGENT = "r10n-logo-downloader/1.0"
-DEFAULT_OUTPUT_DIR = "local/outputs/logos"
+DEFAULT_OUTPUT_DIR = "r10n-output/logos"
 DEFAULT_TIMEOUT_SECONDS = 5
 SVGL_API_URL = "https://api.svgl.app"
 MAX_DOWNLOAD_BYTES = 15 * 1024 * 1024

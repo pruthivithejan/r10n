@@ -652,26 +652,27 @@ class TestGenerateCertificates:
         assert result["total"] == 2
         assert result["generated"] == 2
 
-    def test_generate_certificates_keeps_project_relative_paths(self, monkeypatch, tmp_path):
-        """Test anchored relative paths are resolved from the workspace, not base_dir."""
+    def test_generate_certificates_resolves_paths_from_explicit_base(self, monkeypatch, tmp_path):
+        """Relative paths resolve only from the explicitly selected base directory."""
         monkeypatch.chdir(tmp_path)
 
         from reportlab.lib.pagesizes import letter
         from reportlab.pdfgen import canvas
 
-        (tmp_path / "templates").mkdir()
-        (tmp_path / "workspace").mkdir()
-        (tmp_path / "configs").mkdir()
+        base_dir = tmp_path / "elsewhere"
+        (base_dir / "templates").mkdir(parents=True)
+        (base_dir / "workspace").mkdir()
+        (base_dir / "configs").mkdir()
 
-        template_path = tmp_path / "templates" / "template.pdf"
+        template_path = base_dir / "templates" / "template.pdf"
         c = canvas.Canvas(str(template_path), pagesize=letter)
         c.drawString(100, 700, "Certificate Template")
         c.save()
 
-        recipients_path = tmp_path / "workspace" / "recipients.txt"
+        recipients_path = base_dir / "workspace" / "recipients.txt"
         recipients_path.write_text("Alice Smith\n", encoding="utf-8")
 
-        config_path = tmp_path / "configs" / "fill-pdfs.json"
+        config_path = base_dir / "configs" / "fill-pdfs.json"
         config_path.write_text(
             json.dumps(
                 {
@@ -686,12 +687,12 @@ class TestGenerateCertificates:
         result = generate_certificates(
             recipients_file="workspace/recipients.txt",
             config_file="configs/fill-pdfs.json",
-            base_dir=str(tmp_path / "elsewhere"),
+            base_dir=str(base_dir),
         )
 
         assert result["generated"] == 1
-        assert (tmp_path / "workspace" / "output").exists()
-        assert len(list((tmp_path / "workspace" / "output").glob("*.pdf"))) == 1
+        assert (base_dir / "workspace" / "output").exists()
+        assert len(list((base_dir / "workspace" / "output").glob("*.pdf"))) == 1
 
 
 class TestUvxCompatibility:

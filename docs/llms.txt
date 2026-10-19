@@ -1,80 +1,86 @@
 # r10n
 
-> CLI toolkit for automating repetitive data and workflow tasks: contacts, fill-pdfs, images, and email.
+> Routine automation in a native, accessible terminal application.
 
-r10n uses one native Go CLI and Charm terminal interface with a Python automation backend. Its typed registry generates validated forms, and a versioned JSON Lines worker protocol isolates execution. Binaries, `uv run` and `uvx` share the same native behavior; the thin Python launcher builds/resolves or checksum-downloads a matching Go executable. There is no Python public CLI/TUI framework. Headless execution requires complete inputs and `--yes`, which skips review but not validation.
+r10n provides contacts, PDF personalization, image optimization, website image
+downloads, logo downloads, email, CSS conversion, file renaming, CSV validation,
+and Markdown-to-PDF conversion. A Go/Charm frontend provides searchable task
+selection, validated prompts, review, cancellation, and progress. Python runs
+the automation worker through a versioned JSON Lines protocol.
 
-## Quick Start
+## Install
 
-Run any automation instantly without installation:
+The recommended installation is the checksum-verified standalone bundle:
+
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n --help
+curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh
+r10n
 ```
 
-Or install locally:
+The installer supports Linux x86_64 and macOS arm64. Windows x86_64 users can
+download the standalone executable from GitHub Releases. A standalone bundle
+does not require Python or uv at runtime.
+
+Run a released version with uvx:
+
 ```bash
-git clone https://github.com/pruthivithejan/r10n.git
-cd r10n
-./setup.sh setup
-go run ./cmd/r10n --help
+uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
 ```
 
-## Available Automations
+## Preferences and profiles
 
-### Contacts
-Generate VCF contact cards from phone numbers.
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n contacts --input numbers.txt --prefix Customer --output contacts.vcf
+r10n setup
+r10n config path
+r10n configure --template /path/to/template.pdf
+r10n config add-smtp-profile work
 ```
 
-### Fill PDFs
-Fill PDF templates with data from CSV/TXT files. Features a visual field picker and preview-approve loop.
+Settings and named profiles are stored in the OS per-user configuration
+directory. SMTP passwords use the OS credential manager, not the JSON settings
+file. No project-local config tree or `.env` discovery is used. `r10n --accessible`
+selects linear prompts; `r10n --no-motion` disables animated progress.
+
+## Automations
+
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs --recipients data.csv
+r10n contacts --input /path/to/numbers.txt --output /path/to/contacts.vcf --yes
+r10n fill-pdfs --config conference --recipients /path/to/data.csv --yes
+r10n images --input /path/to/photos --output /path/to/optimized --yes
+r10n email --smtp-profile work --recipients /path/to/people.csv --body /path/to/message.txt --yes
+r10n list --json
 ```
 
-### Images
-Optimize and convert images to WebP format.
+Headless execution needs complete inputs and `--yes`. The flag skips
+confirmation, not validation. See [automation guides](automations/index.md) for
+parameters and formats.
+
+## Architecture and development
+
+Go packages: `cmd/r10n`, `internal/cli`, `internal/tui`, `internal/backend`,
+`internal/settings`, `internal/brand`. Python packages:
+`src/r10n_backend/{__main__.py,registry.py,worker.py,settings.py,secrets.py,automations/}`.
+The native package launcher and standalone binary use the same backend contract.
+
+Developer-only checks from a source checkout:
+
 ```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n images --input ./photos --output ./optimized --quality 85
+./setup.sh test
+./setup.sh check
+./setup.sh build
 ```
 
-### Email
-Send bulk personalized emails with attachments.
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email --config email-config.json --recipients recipients.csv --body body.txt
-```
-
-### Colors
-Convert CSS color codes to oklch() format.
-```bash
-uvx --from git+https://github.com/pruthivithejan/r10n.git r10n colors --file styles.css
-```
+`pyproject.toml` is the human-edited package version; use
+`uv run --locked python scripts/release_version.py --check` to verify generated
+release metadata.
 
 ## Documentation
 
-- [Home](index.md): Overview and quick start guide
-- [Get Started](get-started/index.md): Step-by-step setup instructions
-  - [Run on Terminal](get-started/run-on-terminal.md): Instant execution with uvx
-  - [Setup Locally](get-started/setup-locally.md): Local installation guide
-- [Automations](automations/index.md): All available automations
-  - [Contacts](automations/contacts.md): VCF contact card generation
-  - [Fill PDFs](automations/fill-pdfs.md): PDF template filling
-  - [Images](automations/images.md): Image optimization and WebP conversion
-  - [Email](automations/email.md): Bulk email sending
-  - [Colors](automations/colors.md): CSS color conversion to oklch()
-
-## Requirements
-
-- Python 3.10–3.12 for source/package use (not standalone bundles)
-- Go, as specified by go.mod, for source development/unpublished launcher builds
-- [uv](https://docs.astral.sh/uv/) package manager
-
-Architecture: cmd/r10n; internal/cli, internal/tui, internal/backend;
-src/r10n_backend/{__main__.py,registry.py,worker.py,automations/,configure/}.
-The Python backend exposes catalog, worker AUTOMATION_ID (stdin JSON), and configure.
-pyproject.toml is the sole human-edited version; regenerate uv.lock with uv lock.
-Developer checks: ./setup.sh check; native build: ./setup.sh build.
+- [Get started](get-started/index.md)
+- [Install Binary](get-started/install-binary.md)
+- [Terminal configuration](get-started/terminal-configuration.md)
+- [Native terminal UI](get-started/native-shell.md)
+- [Automations](automations/index.md)
 
 ## Repository
 

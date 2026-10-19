@@ -9,7 +9,7 @@ case "$command" in
     uv sync --locked
     go mod download
     uv run --locked lefthook install
-    echo "Ready. Run: go run ./cmd/r10n init"
+    echo "Ready. Run: go run ./cmd/r10n"
     ;;
   run) go run ./cmd/r10n "$@" ;;
   lint)
@@ -38,7 +38,7 @@ case "$command" in
   help)
     echo "Usage: ./setup.sh {setup|dev|run|lint|test|format|build|check|docs|version}"
     echo "setup/dev: locked Python dependencies, Go modules, and Git hooks"
-    echo "run: native CLI (arguments passed through); init creates local/ data directories"
+    echo "run: native CLI (arguments passed through); setup edits per-user preferences"
     echo "lint/check: read-only checks; format: explicitly rewrites Go/Python formatting"
     echo "test: Go and Python suites; build: host-native frozen release and outside-checkout smoke"
     echo "After build, run ./setup.sh dev to restore contributor tools."

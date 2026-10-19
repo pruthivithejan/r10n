@@ -23,6 +23,7 @@ from r10n_backend.automations.send_same_email import (
     normalize_name_for_matching,
     preview_email_setup,
     send_from_file,
+    send_from_profile,
     send_personalized_emails_with_certificates,
     send_same_email_to_all,
 )
@@ -693,6 +694,68 @@ class TestSendFromFile:
 
         assert results["sent"] == 1
         assert results["total"] == 1
+
+
+class TestSendFromProfile:
+    """Test the secure-profile adapter without contacting an SMTP server."""
+
+    def test_passes_the_profile_and_secret_to_the_existing_sender(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        """Read the body, then reuse the established sender with an in-memory config."""
+        body_path = tmp_path / "body.txt"
+        body_path.write_text("Dear {name}.", encoding="utf-8")
+        captured: dict[str, object] = {}
+
+        def fake_send(**kwargs: object) -> dict[str, int]:
+            captured.update(kwargs)
+            return {"sent": 1}
+
+        monkeypatch.setattr(
+            "r10n_backend.automations.send_same_email.send_personalized_emails_with_certificates",
+            fake_send,
+        )
+        progress_calls: list[tuple[int, int]] = []
+        result = send_from_profile(
+            email_list_file="/private/recipients.csv",
+            body_file=str(body_path),
+            profile={
+                "smtp_server": "smtp.example.test",
+                "smtp_port": 587,
+                "email": "sender@example.test",
+                "subject": "Update",
+                "use_tls": True,
+            },
+            password="test-only-secret",
+            certificates_dir="/private/pdfs",
+            progress_callback=lambda current, total: progress_calls.append((current, total)),
+        )
+
+        config = captured["smtp_config"]
+        assert isinstance(config, SimpleEmailConfig)
+        assert config.smtp_server == "smtp.example.test"
+        assert config.smtp_port == 587
+        assert config.password == "test-only-secret"
+        assert captured["body_template"] == "Dear {name}."
+        assert captured["config_file"] == ""
+        assert result == {"sent": 1}
+        assert progress_calls == []
+
+    def test_rejects_invalid_profile_values(self, tmp_path: Path) -> None:
+        """Reject malformed profile data before opening files or network connections."""
+        with pytest.raises(ValueError, match="port must be"):
+            send_from_profile(
+                email_list_file="unused.csv",
+                body_file=str(tmp_path / "missing.txt"),
+                profile={
+                    "smtp_server": "smtp.example.test",
+                    "smtp_port": True,
+                    "email": "sender@example.test",
+                    "subject": "Update",
+                },
+                password="test-only-secret",
+                certificates_dir="unused",
+            )
 
 
 class TestPreviewEmailSetup:

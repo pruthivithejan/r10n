@@ -95,10 +95,6 @@ def generate_vcf_from_file(
     # Handle output path
     output_path = Path(output_name)
 
-    # If it's just a filename, put it in local/outputs/contacts
-    if not output_path.is_absolute() and len(output_path.parts) == 1:
-        output_path = Path("local/outputs/contacts") / output_name
-
     # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -158,10 +154,6 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
 
     # Handle output path
     output_path = Path(output_name)
-
-    # If it's just a filename, put it in local/outputs/contacts
-    if not output_path.is_absolute() and len(output_path.parts) == 1:
-        output_path = Path("local/outputs/contacts") / output_name
 
     # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)

@@ -17,10 +17,13 @@ import (
 	"github.com/charmbracelet/lipgloss/table"
 	"github.com/charmbracelet/x/ansi"
 	"github.com/pruthivithejan/r10n/internal/backend"
+	"github.com/pruthivithejan/r10n/internal/brand"
 	"golang.org/x/term"
 )
 
-var heading = lipgloss.NewStyle().Bold(true)
+var heading = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(lipgloss.AdaptiveColor{Light: brand.LightAccent, Dark: brand.Neon})
 
 // SafeText removes terminal control sequences from untrusted automation output.
 func SafeText(text string) string {
@@ -104,6 +107,7 @@ type executionModel struct {
 	err        error
 	done       bool
 	cancelling bool
+	animate    bool
 	width      int
 }
 
@@ -117,6 +121,9 @@ func (m executionModel) nextEvent() tea.Cmd {
 }
 
 func (m executionModel) Init() tea.Cmd {
+	if !m.animate {
+		return m.nextEvent()
+	}
 	return tea.Batch(m.spinner.Tick, m.nextEvent())
 }
 
@@ -167,6 +174,9 @@ func (m executionModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, tea.Quit
 	case spinner.TickMsg:
+		if !m.animate {
+			return m, nil
+		}
 		var command tea.Cmd
 		m.spinner, command = m.spinner.Update(msg)
 		return m, command
@@ -176,7 +186,7 @@ func (m executionModel) Update(message tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m executionModel) View() string {
 	status := m.status
-	if !m.done {
+	if !m.done && m.animate {
 		status = m.spinner.View() + " " + status
 	}
 	lines := []string{heading.Render(m.title), status}
@@ -220,7 +230,8 @@ func executeInteractive(ctx context.Context, engine backend.Backend, task backen
 	s := spinner.New(spinner.WithSpinner(spinner.Dot))
 	model := executionModel{
 		title: task.Title, status: "Starting Python worker…", spinner: s,
-		progress: progress.New(), events: events, resultErr: resultErr, cancel: cancel, width: 76,
+		progress: progress.New(), events: events, resultErr: resultErr, cancel: cancel,
+		animate: os.Getenv("R10N_NO_MOTION") != "1", width: 76,
 	}
 	final, err := tea.NewProgram(model, tea.WithContext(parentCtx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
 	cancel()

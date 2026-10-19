@@ -85,18 +85,19 @@ Review the preview before opting into writes with `--no-dry-run`.
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n fill-pdfs \
-  --config /path/to/config.json --recipients /path/to/participants.csv --yes
+  --config conference --recipients /path/to/participants.csv --yes
 ```
 
-Generate field placements with `r10n configure --template /path/to/template.pdf`.
-See [Fill PDFs](../automations/fill-pdfs.md) for config format.
+Create a named profile with `r10n configure --template /path/to/template.pdf`.
+See [Terminal configuration](terminal-configuration.md) and
+[Fill PDFs](../automations/fill-pdfs.md).
 
 ### Email
 
 ```bash
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n email \
-  --config /path/to/email.json --recipients /path/to/recipients.csv \
-  --body /path/to/message.txt --attachments /path/to/attachments --yes
+  --smtp-profile work --recipients /path/to/recipients.csv \
+  --body /path/to/message.txt --attachments-dir /path/to/attachments --yes
 ```
 
 `--yes` can send real email. Verify recipients, credentials and content in
@@ -121,11 +122,11 @@ See [Native shell](native-shell.md) for protocol events and error codes.
 - Run `r10n COMMAND --help` to inspect current flags.
 - Missing files are not downloaded or silently generated during execution; prepare inputs first.
 - If there is no matching published release, install Go or use a released version.
-- Behind a firewall, use [local setup](setup-locally.md) with locked dependencies.
+- Behind a firewall, configure your network's proxy and certificate trust for the installer or uv.
 - Cancellation stops subprocesses but may leave partial outputs.
 
 ## See also
 
 - [Install Binary](install-binary.md)
-- [Setup Locally](setup-locally.md)
+- [Terminal configuration](terminal-configuration.md)
 - [Automations](../automations/index.md)

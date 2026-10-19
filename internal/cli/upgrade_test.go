@@ -208,6 +208,32 @@ func TestRollbackFailureRetainsRecoveryBundle(t *testing.T) {
 	}
 }
 
+func TestDownloadProgressShowsDecimalMegabytesAndUnknownTotals(t *testing.T) {
+	known := formatDownloadProgress("release.tar.gz", 12_000_000, 24_000_000)
+	if known != "release.tar.gz [############------------] 12.0 MB / 24.0 MB · 50%" {
+		t.Fatalf("known-size progress = %q", known)
+	}
+	unknown := formatDownloadProgress("release.tar.gz", 12_400_000, 0)
+	if !strings.Contains(unknown, "12.4 MB downloaded") ||
+		!strings.Contains(unknown, "total unknown") ||
+		strings.Contains(unknown, "%") {
+		t.Fatalf("unknown-size progress fabricated a total: %q", unknown)
+	}
+}
+
+func TestReleaseAssetCarriesItsAdvertisedByteSize(t *testing.T) {
+	r := release{Assets: []struct {
+		Name string `json:"name"`
+		URL  string `json:"browser_download_url"`
+		Size int64  `json:"size"`
+	}{{Name: "bundle.tar.gz", URL: "https://example.test/bundle", Size: 12_400_000}}}
+
+	address, size, err := r.asset("bundle.tar.gz")
+	if err != nil || address != "https://example.test/bundle" || size != 12_400_000 {
+		t.Fatalf("asset() = %q, %d, %v", address, size, err)
+	}
+}
+
 func TestPlatformVersionChecksum(t *testing.T) {
 	for _, test := range []struct{ os, arch, want string }{
 		{"linux", "amd64", "r10n-linux-x86_64.tar.gz"}, {"darwin", "arm64", "r10n-macos-arm64.tar.gz"}, {"windows", "amd64", "r10n-windows-x86_64.exe"},

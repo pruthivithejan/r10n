@@ -15,7 +15,7 @@ nav = [
         "get-started/run-on-terminal.md",
         "get-started/install-binary.md",
         "get-started/native-shell.md",
-        "get-started/setup-locally.md",
+        "get-started/terminal-configuration.md",
     ]},
     { "Automations" = [
         "automations/index.md",
@@ -31,8 +31,11 @@ nav = [
         "automations/markdown-to-pdf.md",
     ]},
 ]
+extra_css = ["stylesheets/extra.css"]
 
 [project.theme]
+logo = "assets/brand/r10n.svg"
+favicon = "assets/brand/favicon.svg"
 features = [
     "navigation.instant",
     "navigation.tracking",
@@ -51,16 +54,16 @@ repo = "fontawesome/brands/github"
 # Light Mode (Default)
 [[project.theme.palette]]
 scheme = "default"
-primary = "indigo"
-accent = "indigo"
+primary = "light-blue"
+accent = "cyan"
 toggle.icon = "material/brightness-7"
 toggle.name = "Switch to dark mode"
 
 # Dark Mode
 [[project.theme.palette]]
 scheme = "slate"
-primary = "indigo"
-accent = "indigo"
+primary = "cyan"
+accent = "light-blue"
 toggle.icon = "material/brightness-4"
 toggle.name = "Switch to light mode"
 

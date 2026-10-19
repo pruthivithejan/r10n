@@ -28,7 +28,6 @@ EOF
 
 VERSION="latest"
 INSTALL_DIR="${R10N_INSTALL_DIR:-$HOME/.local/bin}"
-CURL_FLAGS="-fsSL --retry 3 --retry-delay 2 --retry-connrefused"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -141,18 +140,92 @@ asset_url_from_release_json() {
   ' "$release_json_path"
 }
 
+asset_size_from_release_json() {
+  name="$1"
+  awk -v name="$name" '
+    /"name":[[:space:]]*"/ {
+      in_asset = ($0 ~ "\"name\":[[:space:]]*\"" name "\"")
+    }
+    in_asset && /"size":[[:space:]]*[0-9]+/ {
+      sub(/.*"size":[[:space:]]*/, "")
+      sub(/,.*/, "")
+      sub(/[[:space:]]*}.*/, "")
+      print
+      exit
+    }
+  ' "$release_json_path"
+}
+
+download_binary_asset() {
+  download_url="$1"
+  destination="$2"
+  if [ "${brand_displayed:-0}" -eq 0 ]; then
+    if [ -t 2 ] && [ -z "${NO_COLOR:-}" ] && [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
+      printf '\033[96m' >&2
+    fi
+    if [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
+      # BEGIN GENERATED R10N ASCII
+      printf '%s\n' \
+        '  ██████╗  ██╗ ██████╗ ███╗   ██╗' \
+        '  ██╔══██╗███║██╔═══██╗████╗  ██║' \
+        '  ██████╔╝╚██║██║   ██║██╔██╗ ██║' \
+        '  ██╔══██╗ ██║██║   ██║██║╚██╗██║' \
+        '  ██║  ██║ ██║╚██████╔╝██║ ╚████║' \
+        '  ╚═╝  ╚═╝ ╚═╝ ╚═════╝ ╚═╝  ╚═══╝' >&2
+      # END GENERATED R10N ASCII
+    else
+      printf 'r10n — routine automation\n' >&2
+    fi
+    if [ -t 2 ] && [ -z "${NO_COLOR:-}" ] && [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
+      printf '\033[0m' >&2
+    fi
+    if [ -n "${expected_asset_bytes:-}" ]; then
+      expected_size_mb=$(awk -v bytes="$expected_asset_bytes" 'BEGIN { printf "%.1f MB", bytes / 1000000 }')
+      printf 'Downloading %s (%s)...\n' "$asset" "$expected_size_mb" >&2
+    else
+      printf 'Downloading %s; total size unknown...\n' "$asset" >&2
+    fi
+    brand_displayed=1
+  fi
+
+  # Keep a live transfer meter when motion is allowed; accessible and reduced-motion
+  # modes show the announced expected MB value and the actual MB total afterward.
+  if [ -t 2 ] && [ "${R10N_ACCESSIBLE:-}" != "1" ] && [ "${R10N_NO_MOTION:-}" != "1" ]; then
+    if ! curl -fL --retry 3 --retry-delay 2 --retry-connrefused \
+      "$download_url" -o "$destination"; then
+      return 1
+    fi
+  else
+    if ! curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused \
+      "$download_url" -o "$destination"; then
+      return 1
+    fi
+  fi
+
+  downloaded_bytes=$(wc -c < "$destination" | tr -d '[:space:]')
+  downloaded_mb=$(awk -v bytes="$downloaded_bytes" 'BEGIN { printf "%.1f MB", bytes / 1000000 }')
+  if [ -n "${expected_asset_bytes:-}" ]; then
+    expected_size_mb=$(awk -v bytes="$expected_asset_bytes" 'BEGIN { printf "%.1f MB", bytes / 1000000 }')
+    printf 'Downloaded %s / %s.\n' "$downloaded_mb" "$expected_size_mb" >&2
+  else
+    printf 'Downloaded %s; release size unknown.\n' "$downloaded_mb" >&2
+  fi
+}
+
 downloaded=0
 echo "Downloading $APP_NAME $VERSION for $uname_s/$arch..."
 
 if [ -n "$RELEASE_API_URL" ] \
-  && curl $CURL_FLAGS -H "Accept: application/vnd.github+json" "$RELEASE_API_URL" -o "$release_json_path"; then
+  && curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused \
+    -H "Accept: application/vnd.github+json" "$RELEASE_API_URL" -o "$release_json_path"; then
   binary_url=$(asset_url_from_release_json "$asset")
   checksum_url=$(asset_url_from_release_json "SHA256SUMS")
+  expected_asset_bytes=$(asset_size_from_release_json "$asset")
 
   if [ -n "$binary_url" ] && [ -n "$checksum_url" ]; then
     rm -f "$artifact_path" "$checksum_path"
-    if curl $CURL_FLAGS "$binary_url" -o "$artifact_path" \
-      && curl $CURL_FLAGS "$checksum_url" -o "$checksum_path"; then
+    if download_binary_asset "$binary_url" "$artifact_path" \
+      && curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused "$checksum_url" -o "$checksum_path"; then
       downloaded=1
     fi
   fi
@@ -161,8 +234,10 @@ fi
 for base_url in $BASE_URLS; do
   if [ "$downloaded" -ne 1 ]; then
     rm -f "$artifact_path" "$checksum_path"
-    if curl $CURL_FLAGS "$base_url/$asset" -o "$artifact_path" \
-      && curl $CURL_FLAGS "$base_url/SHA256SUMS" -o "$checksum_path"; then
+    expected_asset_bytes=""
+    if download_binary_asset "$base_url/$asset" "$artifact_path" \
+      && curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused \
+        "$base_url/SHA256SUMS" -o "$checksum_path"; then
       downloaded=1
       break
     fi

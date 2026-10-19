@@ -72,7 +72,7 @@ func TestVersionAndHelpDoNotNeedBackend(t *testing.T) {
 	defer func() { stdout = original }()
 	var output bytes.Buffer
 	stdout = &output
-	cases := [][]string{{"--version"}, {"--help"}, {"run", "--help"}, {"list", "--help"}, {"tui", "--help"}, {"configure", "--help"}, {"init", "--help"}, {"status", "--help"}, {"upgrade", "--help"}}
+	cases := [][]string{{"--version"}, {"--help"}, {"run", "--help"}, {"list", "--help"}, {"tui", "--help"}, {"configure", "--help"}, {"status", "--help"}, {"upgrade", "--help"}}
 	for id := range aliases {
 		cases = append(cases, []string{id, "--help"})
 	}

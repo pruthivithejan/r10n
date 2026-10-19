@@ -74,7 +74,7 @@ def check_staged() -> None:
     for name in files:
         parts = Path(name).parts
         if any(part in {"local", "htmlcov", ".coverage"} for part in parts) or any(
-            part.startswith(".env") and part != ".env.example" for part in parts
+            part.startswith(".env") for part in parts
         ):
             raise SystemExit(f"Do not commit local/generated/secret files: {name}")
         blob = subprocess.check_output(["git", "show", f":{name}"], cwd=ROOT)

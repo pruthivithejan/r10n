@@ -1,6 +1,6 @@
 [project]
 name = "r10n"
-version = "0.12.2"
+version = "0.13.0"
 description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
@@ -34,12 +34,12 @@ dependencies = [
     "reportlab>=5.0.1",
     "pillow>=12.3.0",
     "pydantic>=2.14.1",
-    "python-dotenv>=1.2.4",
     "openpyxl>=3.1.5",
     "markdown>=3.10.3",
-    "flask>=3.1.3",
     "pypdfium2>=5.14.0",
     "certifi>=2026.7.22",
+    "platformdirs>=4.0.0",
+    "keyring>=25.0.0",
 ]
 
 [project.urls]
@@ -95,9 +95,6 @@ addopts = [
 [tool.black]
 line-length = 100
 target-version = ['py310', 'py311', 'py312']
-
-[tool.hatch.build]
-artifacts = ["src/r10n_backend/configure/templates/*.html"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/r10n_backend"]

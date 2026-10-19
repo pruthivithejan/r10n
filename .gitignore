@@ -35,19 +35,7 @@ ENV/
 
 # Enviroment Variables
 .env
-!.env.example
-
-# User Workspace (contains sensitive data)
-workspace/
-!workspace/.gitkeep
-local/
-
-# Legacy Data Directory
-data/
 .plans/
-
-# Legacy user templates, not package-owned configure/templates assets.
-/templates/
 
 # Operating System
 .DS_Store
@@ -72,3 +60,6 @@ htmlcov/
 # Native shell and generated frozen backend
 /r10n
 internal/backend/payload/backend.bin
+
+# Private implementation handoff
+/UI_REDESIGN_PLAN.md

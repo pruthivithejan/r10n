@@ -1,114 +1,135 @@
 # r10n contributor and agent guidelines
 
 r10n automates repetitive workflows through one native Go CLI and a Python
-automation backend. Every entry point (`go run`, installed binary, `uv run`,
-and `uvx`) presents the same native commands and Charm terminal interface.
+automation worker. The standalone binary, `uv run`, and `uvx` share the same
+commands, Charm terminal UI, registry contract, and worker protocol.
 
 ## Architecture and ownership
 
 ```text
-cmd/r10n/                         Small Go executable entry point
-internal/cli/                     Public routing, flags, init/status/upgrade/configure
+cmd/r10n/                         Native executable entry point
+internal/cli/                     Commands, flags, settings and upgrades
 internal/tui/                     Charm picker, forms, review and progress
 internal/backend/                 Python process client and bundle discovery
+internal/settings/                Per-user settings and profile schema
+internal/brand/                   Generated terminal identity
 src/r10n_backend/
-  __main__.py                     Backend modes: catalog, worker, configure
+  __main__.py                     Backend modes and package launcher
   registry.py                     Automation metadata, Pydantic inputs, adapters
   worker.py                       Versioned JSON Lines execution protocol
-  launcher.py                     Thin uv/uvx bridge to matching native executable
+  settings.py / secrets.py        Per-user preferences and OS credential store
   automations/                    Python workflow implementations
-  configure/templates/            Browser PDF configuration assets
-configs/                          Default templates embedded by Go init
-scripts/                          Shared developer checks, build and version preparation
-tests/                            Python tests; Go tests live beside Go implementation
+scripts/                          Developer checks, packaging and version tooling
+tests/                            Python tests; Go tests beside implementation
 docs/                             Zensical documentation
-local/                            Ignored user inputs, outputs, configs and secrets
 ```
 
-Go owns all public commands and UI. Python owns catalog validation, automation
-execution and the configure web service, not a second CLI/TUI framework.
-Do not duplicate automation schemas or execution rules in Go.
-The backend supports `catalog`, `worker AUTOMATION_ID` (one JSON object on stdin),
-and `configure --template PATH [--recipients PATH] [--output PATH]`.
-Worker stdout is JSON Lines only; diagnostics belong on stderr.
+Go owns public commands, terminal interactions, system settings UI, upgrades,
+and release progress. Python owns automation schemas, validation, execution,
+and per-user profile resolution. Do not add a second Python CLI/TUI or duplicate
+the registry's automation rules in Go.
+
+Python backend modes include `catalog`, `worker AUTOMATION_ID`, secret-store
+operations, and PDF inspection/preview. Worker stdout is JSON Lines only;
+diagnostics belong on stderr. Treat the catalog and worker protocol versions
+as a shared Go/Python contract and update tests in both languages when it changes.
+
+## Settings, paths, and secrets
+
+- Do not create, discover, or document project-local `local/`, `workspace/`,
+  `configs/`, or `.env` trees for normal product use.
+- Store preferences and non-secret named profiles in the OS per-user settings
+  directory. Keep the Go and Python paths and JSON schemas in sync.
+- Store SMTP passwords only in an OS credential service. Never place a secret
+  in settings JSON, command-line arguments, output, fixtures, or logs.
+- Inputs and explicit output paths retain their caller-selected meaning. Use
+  `r10n-output/` as the default output root; do not silently relocate bare paths.
+- `R10N_CONFIG_DIR` is a test/deployment override. It must not default to the
+  current working directory or trigger filesystem creation when read.
 
 ## Toolchains and developer commands
 
-Install Go (version from `go.mod`), Python 3.10–3.12 and uv.
-Use committed `go.sum` and `uv.lock`; never replace locked sync with unconstrained pip installs.
+Install Go (version from `go.mod`), Python 3.10–3.12 and uv for source
+development. Use committed `go.sum` and `uv.lock`; do not replace locked sync
+with unconstrained pip installs.
 
 ```bash
-./setup.sh setup                 # uv sync --locked, Go modules, Lefthook installation
-go run ./cmd/r10n                # Primary development entry point
-go run ./cmd/r10n init           # Initialize current local/ layout
-uv run --locked r10n            # Thin launcher, same native behavior
+./setup.sh setup                 # Contributor tools, Go modules and hooks
+go run ./cmd/r10n                # Native development entry point
 ./setup.sh lint                  # Read-only Go/Python checks
 ./setup.sh test                  # Both test suites
-./setup.sh format                # Explicit Python Black and Go gofmt rewrites
+./setup.sh format                # Explicit Black and gofmt rewrites
 ./setup.sh check                 # Full checks including docs
+./setup.sh build                 # Host-native bundle and outside-checkout smoke tests
 ./setup.sh docs                  # Zensical build
-./setup.sh build                 # Locked build-only environment, host-native frozen bundle
-./setup.sh dev                   # Restore contributor tools after build
 ```
 
-`scripts/check.py` is shared by hooks and CI. Pre-commit checks staged Go with
-**gofmt check**, never silent writes/restaging. Staged paths use NUL-separated
-Git output and argument arrays, so spaces are safe. Partially staged code is
-rejected rather than checking a different version. Pre-push checks full Go
-format/tidy/vet/test, Python lock/versions/Black/Ruff/ty/pytest and docs.
+`setup.sh` is developer tooling only. It must not initialize runtime folders or
+write project-local user configuration.
+
+Hooks and CI share `scripts/check.py`. Pre-commit checks staged Go with gofmt
+without silently writing or restaging files. Pre-push checks Go format/tidy/vet/test,
+Python lock/versions/Black/Ruff/ty/pytest, and documentation.
 
 ## Automation requirements
 
-- Support absolute input/output paths from outside the checkout; do not assume `local/` exists.
-- Support `uvx` and local installation through the same native launcher.
-- Register a Pydantic input model and adapter in the Python registry.
-- Add public aliases/routing in Go only when needed; reuse registry field definitions.
-- Show a header, guided inputs, resolved summary, confirmation and clear results interactively.
-- Headless execution must be fully specified and use `--yes`; never prompt on redirected stdin.
-- Require confirmation before destructive or externally visible work, including sending email.
-- Missing inputs must give actionable errors; native `init` creates examples safely without overwriting.
-- Preserve protocol errors, cancellation, artifact paths and process cleanup guarantees.
+- Support absolute paths outside the checkout and preserve the caller's working directory.
+- Register one Pydantic model and adapter in the Python registry; derive forms
+  and catalog metadata from that source of truth.
+- Keep errors actionable and tests isolated with temporary paths/mocks. Never
+  touch real user data or send email in tests.
+- Interactive work must show a header, labeled validated inputs, a resolved
+  summary, explicit confirmation, and clear status/results.
+- Headless runs require complete inputs and `--yes`; never prompt on redirected
+  stdin. `--yes` skips review, not validation.
+- Keep keyboard instructions discoverable, focus visible, status readable
+  without color, and cancellation behavior testable.
+- Honor accessible linear prompts and reduced-motion settings. Do not animate
+  status when motion is disabled.
+- Preserve worker error codes, cancellation, artifact paths, output redaction,
+  and process cleanup guarantees.
 
 ## Code quality
 
-Python: type hints on functions, Google-style public docstrings, specific helpful
-exceptions, standard-library/third-party/local import order, module-level constants.
-Use Black (100 columns), Ruff and ty with the project configuration.
-Go: gofmt, idiomatic errors and package boundaries; vet and test every package.
-Prefer a single source of truth and simple explicit rules over additional abstractions.
-Do not introduce a Python public CLI or terminal UI framework.
+Python functions require type hints and public functions require Google-style
+docstrings. Use specific helpful exceptions, standard-library/third-party/local
+import order, module-level constants, Black (100 columns), Ruff, and ty.
+
+Go code must be gofmt-formatted and use idiomatic errors and package boundaries.
+Do not add Charm dependencies unless they serve a real UI need; do not import
+Crush internal packages or copy code without license review.
 
 ## Testing and builds
 
-Python tests belong in `tests/test_<module>.py`; Go tests beside their package.
-Test missing files, empty/invalid inputs, validation, absolute paths and cancellation.
-Use temporary directories and mocks instead of touching real user data or sending email.
-Aim for >80% coverage of automation modules.
+Python tests belong in `tests/test_<module>.py`; Go tests belong beside their
+package. Cover invalid and empty inputs, missing files, absolute paths, settings
+round trips, secret handling, accessible/reduced-motion behavior, and cancellation.
 
-CI runs Python 3.10, 3.11 and 3.12, checks both languages, `uv lock --check` and
-`go mod tidy -diff`, then builds on native Linux x86_64, macOS arm64 and Windows x86_64.
-Go cross-compilation alone cannot package native Python dependencies.
-Build dependencies are a separate locked `build` group; developer tools must not leak into runtime.
-PyInstaller must collect r10n distribution metadata and configure `picker.html`.
-Keep Unix runtime symlinks intact and Go `-trimpath -ldflags="-s -w"`.
-Native smoke tests run outside checkout and validate contacts, optimized images and generated PDFs.
-Bundle size/duplicate reports are evidence, not arbitrary platform-specific limits.
+CI runs Python 3.10, 3.11 and 3.12, verifies `uv.lock` and `go.mod`, then builds
+on native Linux x86_64, macOS arm64 and Windows x86_64 runners. Go
+cross-compilation alone cannot package native Python dependencies. Build
+dependencies use a separate locked `build` group.
+
+Native bundles must include r10n distribution metadata for
+`importlib.metadata.version("r10n")`; they must not carry browser-picker assets
+or unused Python CLI/TUI frameworks. Preserve Unix runtime symlinks and Go
+`-trimpath -ldflags="-s -w"`. Smoke tests run outside the checkout and verify
+the catalog, worker, contacts, images, and PDF output.
 
 ## Documentation
 
-Every automation gets `docs/automations/<name>.md`, an index card and navigation
-in `zensical.toml`. Include overview/features, instant and local quick starts,
-interactive and fully specified `--yes` examples, parameter table, input/output
-formats, configuration, troubleshooting and related links.
-Preserve current CLI aliases in examples; JSON input uses registry model field names.
-Describe native Go behavior consistently for installed binaries and uv launchers.
+Each automation needs `docs/automations/<name>.md`, an index card, and navigation
+in `zensical.toml`. Document the installed terminal flow, `uvx` when relevant,
+accurate parameters/defaults, input/output formats, system profile requirements,
+troubleshooting, and related links. Do not describe project-local configuration
+folders or browser-based setup. Document `--yes` as skipping confirmation,
+not validation.
 
 ## Versioning and releases
 
-`pyproject.toml` `[project].version` is the **only human-edited version**.
-Regenerate `uv.lock` with `uv lock`; Go embeds pyproject metadata and the Python
-backend uses `importlib.metadata.version("r10n")`. Frozen metadata must be copied.
-Check metadata agreement with:
+`pyproject.toml` `[project].version` is the only human-edited version. Regenerate
+`uv.lock` with `uv lock`; Go embeds pyproject metadata and the Python backend
+uses installed distribution metadata. Verify before release:
 
 ```bash
 uv run --locked python scripts/release_version.py --check
@@ -116,20 +137,15 @@ go run ./cmd/r10n --version
 uv run --locked python -c 'from importlib.metadata import version; print(version("r10n"))'
 ```
 
-Before committing shipped behavior, choose the highest-impact semantic bump:
-fix → patch, feature → minor, breaking change → major. Minor versions do not
-require intervening patch releases. **The explicitly requested architecture batch
-is 0.12.2**, an exception to the usual minor rule; do not rewrite 0.12.1 or its tag.
-`scripts/release_version.py [patch|minor|major]` prepares metadata only, never commits,
-tags or pushes. `--dry-run` previews the next version.
+Choose a semantic version bump based on the highest-impact shipped change:
+fix → patch, feature → minor, breaking change → major. The release preparation
+script never commits, tags, or pushes.
 
-`.github/workflows/release.yml` publishes binaries and SHA256SUMS after a version
-bump on main (or a matching tag/manual workflow). Do not manually publish a release
-or add scripts bypassing that workflow.
+`.github/workflows/release.yml` publishes binaries and checksums after a version
+bump on main. Preserve release asset names and compatibility required by older
+installed updaters; a bridge release alone does not help users who skip releases.
+Do not publish manually or rewrite history.
 
-Use `<type>(<scope>): <description>` commit messages (`feat`, `fix`, `docs`,
-`refactor`, `test`, `chore`). Review remotes before publication. Ask before
-irreversible operations, history rewrites or publishing; never commit secrets,
-local data, coverage output or generated native assets. Do not delete data outside
-the checkout. Obsolete setup/migration scripts only explain native init and safe
-manual migration; they must not move user files.
+Use `<type>(<scope>): <description>` commit messages. Review configured remotes
+before publication. Ask before irreversible actions or publishing. Never commit
+secrets, user data, coverage output, or generated native assets.

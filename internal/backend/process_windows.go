@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func configureProcess(cmd *exec.Cmd, foreground bool) {
+func configureProcess(cmd *exec.Cmd) {
 	cmd.Cancel = func() error {
 		// Kill the frozen runtime's children as well as its onefile launcher.
 		err := exec.Command("taskkill", "/PID", strconv.Itoa(cmd.Process.Pid), "/T", "/F").Run()

@@ -29,9 +29,10 @@ Usage:
   r10n <automation> [flags]   Run using command flags
   r10n list [--json]          List the Python registry
   r10n run <automation> [--input-json <object> | --input-file <path>]
-  r10n configure --template PATH [--recipients PATH] [--output PATH]
-  r10n init                  Create local workspace without overwriting
-  r10n status [--json]        Report local workspace
+  r10n configure --template PATH [--recipients PATH] [--name PROFILE]
+  r10n setup                  Edit per-user terminal preferences
+  r10n config <action>        Inspect profiles and system settings
+  r10n status [--json]        Report system settings and runtime status
   r10n upgrade [--version VERSION] [--check] [--yes]
   r10n --version             Print version without Python
 Execution: --yes/-y skips confirmation; --json streams JSON Lines.
@@ -48,6 +49,19 @@ func usage(err error) error {
 
 func Run(ctx context.Context, args []string) error {
 	tui.SetIO(stdin, stdout, stderr)
+	for len(args) > 0 {
+		switch args[0] {
+		case "--accessible":
+			_ = os.Setenv("R10N_ACCESSIBLE", "1")
+			args = args[1:]
+		case "--no-motion":
+			_ = os.Setenv("R10N_NO_MOTION", "1")
+			args = args[1:]
+		default:
+			goto flagsParsed
+		}
+	}
+flagsParsed:
 	if len(args) == 1 && (args[0] == "--version" || args[0] == "-v") {
 		fmt.Fprintf(stdout, "r10n, version %s\n", r10n.Version)
 		return nil
@@ -69,7 +83,7 @@ func Run(ctx context.Context, args []string) error {
 			return nil
 		}
 		switch args[0] {
-		case "run", "list", "tui", "configure", "init", "status", "upgrade":
+		case "run", "list", "tui", "configure", "setup", "config", "status", "upgrade":
 			fmt.Fprint(stdout, help)
 			return nil
 		}
@@ -85,8 +99,12 @@ func Run(ctx context.Context, args []string) error {
 				return usage(err)
 			}
 			return runJSON(ctx, o)
+		case "setup":
+			return editSettings(ctx)
+		case "config":
+			return settingsCommand(ctx, args[1:])
 		case "init":
-			return initialize(ctx, args[1:])
+			return usage(fmt.Errorf("r10n init is no longer supported; use `r10n setup` to edit per-user preferences"))
 		case "status":
 			return status(args[1:])
 		case "configure":
@@ -135,11 +153,6 @@ func Run(ctx context.Context, args []string) error {
 				payload, err := raw.payload(task)
 				if err != nil {
 					return usage(err)
-				}
-				if args[0] == "fill-pdfs" {
-					if err := checkPDFConfig(task, payload, raw.template); err != nil {
-						return usage(err)
-					}
 				}
 				return tui.Execute(ctx, engine, task, payload, raw.yes, raw.json)
 			}
