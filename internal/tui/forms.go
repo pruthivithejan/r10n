@@ -187,16 +187,17 @@ func runForm(ctx context.Context, form *huh.Form) error {
 
 func theme() *huh.Theme {
 	colors := brand.Accent()
+	focus := brand.FocusAccent()
 	onAccent := brand.OnAccent()
 	t := huh.ThemeCharm()
-	t.Focused.Base = t.Focused.Base.BorderForeground(colors)
+	t.Focused.Base = t.Focused.Base.BorderForeground(focus)
 	t.Focused.Title = t.Focused.Title.Foreground(colors).Bold(true)
 	t.Focused.NoteTitle = t.Focused.NoteTitle.Foreground(colors).Bold(true)
-	t.Focused.SelectSelector = t.Focused.SelectSelector.Foreground(colors)
-	t.Focused.MultiSelectSelector = t.Focused.MultiSelectSelector.Foreground(colors)
+	t.Focused.SelectSelector = t.Focused.SelectSelector.Foreground(focus)
+	t.Focused.MultiSelectSelector = t.Focused.MultiSelectSelector.Foreground(focus)
 	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(colors)
-	t.Focused.SelectedPrefix = t.Focused.SelectedPrefix.Foreground(colors)
-	t.Focused.TextInput.Cursor = t.Focused.TextInput.Cursor.Foreground(colors)
+	t.Focused.SelectedPrefix = t.Focused.SelectedPrefix.Foreground(focus)
+	t.Focused.TextInput.Cursor = t.Focused.TextInput.Cursor.Foreground(focus)
 	t.Focused.TextInput.Prompt = t.Focused.TextInput.Prompt.Foreground(colors)
 	t.Focused.FocusedButton = t.Focused.FocusedButton.Foreground(onAccent).Background(colors)
 	t.Group.Title = t.Focused.Title

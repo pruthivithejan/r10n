@@ -54,16 +54,16 @@ repo = "fontawesome/brands/github"
 # Light Mode (Default)
 [[project.theme.palette]]
 scheme = "default"
-primary = "green"
-accent = "green"
+primary = "blue"
+accent = "cyan"
 toggle.icon = "material/brightness-7"
 toggle.name = "Switch to dark mode"
 
 # Dark Mode
 [[project.theme.palette]]
 scheme = "slate"
-primary = "green"
-accent = "green"
+primary = "cyan"
+accent = "cyan"
 toggle.icon = "material/brightness-4"
 toggle.name = "Switch to light mode"
 

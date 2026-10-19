@@ -161,7 +161,7 @@ download_binary_asset() {
   destination="$2"
   if [ "${brand_displayed:-0}" -eq 0 ]; then
     if [ -t 2 ] && [ -z "${NO_COLOR:-}" ] && [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
-      printf '\033[92m' >&2
+      printf '\033[38;2;18;247;214m' >&2
     fi
     if [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
       # BEGIN GENERATED R10N ASCII
