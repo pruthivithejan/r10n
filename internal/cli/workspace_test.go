@@ -8,59 +8,56 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/pruthivithejan/r10n"
+	"github.com/pruthivithejan/r10n/internal/settings"
 )
 
-func TestInitStatusPreserveExistingFiles(t *testing.T) {
+func TestRemovedInitCommandDoesNotCreateProjectFolders(t *testing.T) {
 	t.Chdir(t.TempDir())
+
+	err := Run(context.Background(), []string{"init"})
+	if err == nil {
+		t.Fatal("removed init command was accepted")
+	}
+	if _, err := os.Stat("local"); !os.IsNotExist(err) {
+		t.Fatalf("init created a project-local directory: %v", err)
+	}
+}
+
+func TestStatusReportsSystemSettingsWithoutSecrets(t *testing.T) {
+	configDirectory := t.TempDir()
+	t.Setenv("R10N_CONFIG_DIR", configDirectory)
+	document := settings.Document{
+		Theme:             "dark",
+		ActiveSMTPProfile: "work",
+		SMTPProfiles: map[string]settings.SMTPProfile{
+			"work": {Server: "smtp.example.com", Port: 587, Email: "person@example.com"},
+		},
+	}
+	if _, err := settings.Save(document); err != nil {
+		t.Fatal(err)
+	}
 	old := stdout
-	defer func() { stdout = old }()
+	t.Cleanup(func() { stdout = old })
 	var output strings.Builder
 	stdout = &output
-	if err := os.MkdirAll("local/configs", 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile("local/configs/email.json", []byte("private configuration"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	for i := 0; i < 2; i++ {
-		if err := initialize(context.Background(), nil); err != nil {
-			t.Fatal(err)
-		}
-	}
-	data, _ := os.ReadFile("local/configs/email.json")
-	if string(data) != "private configuration" {
-		t.Fatal("overwrote existing config")
-	}
-	entries, _ := r10n.WorkspaceTemplates.ReadDir("configs")
-	for _, entry := range entries {
-		if entry.Name() == "email.default.json" {
-			continue
-		}
-		data, err := os.ReadFile(filepath.Join("local/configs", strings.Replace(entry.Name(), ".default.json", ".json", 1)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		expected, _ := r10n.WorkspaceTemplates.ReadFile("configs/" + entry.Name())
-		if string(data) != string(expected) {
-			t.Fatalf("template drift: %s", entry.Name())
-		}
-	}
-	if err := os.WriteFile("local/.env", []byte("secret"), 0600); err != nil {
-		t.Fatal(err)
-	}
-	output.Reset()
+
 	if err := status([]string{"--json"}); err != nil {
 		t.Fatal(err)
 	}
-	var result map[string]bool
+	var result struct {
+		SettingsPath       string `json:"settings_path"`
+		SettingsSaved      bool   `json:"settings_saved"`
+		SMTPProfileCount   int    `json:"smtp_profile_count"`
+		SecureSecretValues bool   `json:"secure_secret_values"`
+	}
 	if err := json.Unmarshal([]byte(output.String()), &result); err != nil {
 		t.Fatal(err)
 	}
-	if !result["local/configs/email.json"] || !result["local/.env"] || !result["local/outputs"] {
-		t.Fatal(result)
+	if result.SettingsPath != filepath.Join(configDirectory, "config.json") ||
+		!result.SettingsSaved || result.SMTPProfileCount != 1 || result.SecureSecretValues {
+		t.Fatalf("unexpected status response: %+v", result)
 	}
-	if strings.Contains(output.String(), "private configuration") || strings.Contains(output.String(), "secret") {
-		t.Fatal("status leaked config contents")
+	if strings.Contains(output.String(), "person@example.com") {
+		t.Fatal("status leaked a profile's private details")
 	}
 }

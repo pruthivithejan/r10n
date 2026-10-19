@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/pruthivithejan/r10n/internal/settings"
 )
 
 // Backend describes a command without interpreting any values through a shell.
@@ -31,6 +33,11 @@ func Resolve() (Backend, error) {
 	}
 	env := setEnv(os.Environ(), "R10N_EXECUTABLE", executable)
 	env = setEnv(env, "R10N_SOURCE", "")
+	configDir, err := settings.Directory()
+	if err != nil {
+		return Backend{}, err
+	}
+	env = setEnv(env, "R10N_CONFIG_DIR", configDir)
 	commandPath := os.Args[0]
 	if found, err := exec.LookPath(commandPath); err == nil {
 		commandPath, _ = filepath.Abs(found)
@@ -134,6 +141,6 @@ func setEnv(env []string, key, value string) []string {
 func (b Backend) Command(ctx context.Context, args ...string) *exec.Cmd {
 	command := exec.CommandContext(ctx, b.Executable, append(append([]string{}, b.Prefix...), args...)...)
 	command.Env = b.Env
-	configureProcess(command, len(args) > 0 && args[0] == "configure")
+	configureProcess(command)
 	return command
 }

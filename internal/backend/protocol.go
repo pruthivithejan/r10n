@@ -13,7 +13,7 @@ import (
 	"github.com/pruthivithejan/r10n"
 )
 
-const ProtocolVersion = 1
+const ProtocolVersion = 2
 
 // Catalog is exported by Python; all forms and task metadata derive from it.
 type Catalog struct {
@@ -30,6 +30,7 @@ type Automation struct {
 	Category     string   `json:"category"`
 	Roles        []string `json:"roles"`
 	Confirmation string   `json:"confirmation"`
+	SetupHint    string   `json:"setup_hint"`
 	InputSchema  Schema   `json:"input_schema"`
 	FieldOrder   []string `json:"field_order"`
 }
@@ -124,7 +125,10 @@ type Event struct {
 	Protocol   int             `json:"protocol"`
 	Automation string          `json:"automation"`
 	Message    string          `json:"message"`
+	Stage      string          `json:"stage"`
+	Unit       string          `json:"unit"`
 	Error      string          `json:"error"`
+	Status     string          `json:"status"`
 	Path       string          `json:"path"`
 	Current    float64         `json:"current"`
 	Total      float64         `json:"total"`

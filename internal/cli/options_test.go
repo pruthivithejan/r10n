@@ -19,14 +19,14 @@ func TestFlagAliasMatrix(t *testing.T) {
 		expected map[string]string
 	}{
 		{"contacts", []string{"-i", "numbers.txt", "-o", "out.vcf", "-p", "Friend"}, map[string]string{"input_file": "numbers.txt", "output_file": "out.vcf", "prefix": "Friend"}},
-		{"fill-pdfs", []string{"-c", "config.json", "-r", "data.csv"}, map[string]string{"config_file": "config.json", "recipients_file": "data.csv"}},
+		{"fill-pdfs", []string{"-c", "conference", "-r", "data.csv"}, map[string]string{"config_profile": "conference", "recipients_file": "data.csv"}},
 		{"images", []string{"-i", "in", "-o", "out", "-q", "80", "-s", "1.5", "-p", "img", "--preserve-names=false"}, map[string]string{"input_directory": "in", "output_directory": "out", "quality": "80", "max_size_mb": "1.5", "prefix": "img", "preserve_filenames": "false"}},
 		{"website-images", []string{"-u", "https://example.test", "-o", "out", "-f", "jpeg", "-q", "80", "--timeout", "7", "--max-pages", "0"}, map[string]string{"url": "https://example.test", "output_directory": "out", "output_format": "jpeg", "quality": "80", "timeout": "7", "max_pages": "0"}},
 		{"logos", []string{"-n", "A,B", "-o", "out", "--timeout", "7", "--max-candidates", "10", "--overwrite", "--no-manifest"}, map[string]string{"names": "A,B", "output_directory": "out", "timeout": "7", "max_candidates": "10", "overwrite": "true", "write_manifest": "false"}},
-		{"email", []string{"-c", "config", "-r", "recipients", "-b", "body", "-d", "attachments"}, map[string]string{"config_file": "config", "recipients_file": "recipients", "body_file": "body", "attachments_directory": "attachments"}},
+		{"email", []string{"--smtp-profile", "work", "-r", "recipients", "-b", "body", "-d", "attachments"}, map[string]string{"smtp_profile": "work", "recipients_file": "recipients", "body_file": "body", "attachments_directory": "attachments"}},
 		{"colors", []string{"-p", "src", "-f", "a.css", "--no-backup", "-a", "--no-dry-run"}, map[string]string{"path": "src", "file": "a.css", "create_backups": "false", "dry_run": "false"}},
 		{"rename", []string{"-i", "in", "-p", "{name}", "--prefix", "p", "--suffix", "s", "--replace-from", "a", "--replace-to", "b", "--lowercase", "--uppercase=false", "--add-date", "--add-sequence", "-r", "-n", "--file-pattern", "*.txt"}, map[string]string{"input_directory": "in", "pattern": "{name}", "prefix": "p", "suffix": "s", "replace_from": "a", "replace_to": "b", "lowercase": "true", "uppercase": "false", "add_date": "true", "add_sequence": "true", "recursive": "true", "dry_run": "true", "file_pattern": "*.txt"}},
-		{"validate", []string{"-i", "a.csv", "-s", "schema", "-o", "report", "--strict", "--clean", "-f", "json"}, map[string]string{"input_file": "a.csv", "schema_file": "schema", "report_file": "report", "strict": "true", "clean_invalid": "true", "report_format": "json"}},
+		{"validate", []string{"-i", "a.csv", "-s", "schema", "-o", "report", "--strict", "--clean", "-f", "json", "--trim-whitespace=false"}, map[string]string{"input_file": "a.csv", "schema_file": "schema", "report_file": "report", "strict": "true", "clean_invalid": "true", "report_format": "json", "trim_whitespace": "false"}},
 		{"md2pdf", []string{"-i", "a.md", "-o", "a.pdf", "-c", "style.css", "--page-size", "Letter", "--toc", "--syntax-highlight=false", "-r"}, map[string]string{"input_path": "a.md", "output_path": "a.pdf", "css_file": "style.css", "page_size": "Letter", "include_toc": "true", "syntax_highlighting": "false", "recursive": "true"}},
 	}
 	for _, test := range tests {
@@ -119,18 +119,30 @@ func TestRunAcceptsRegistryDefinedTask(t *testing.T) {
 	}
 }
 
-func TestPDFTemplateIsNotIgnored(t *testing.T) {
-	o, err := parseFlags("fill-pdfs", []string{"-t", "template.pdf", "-c", "missing.json", "-y"})
-	if err != nil || o.template != "template.pdf" {
-		t.Fatalf("%+v %v", o, err)
-	}
-	err = checkPDFConfig(backend.Automation{}, map[string]any{"config_file": "missing.json"}, o.template)
-	if err == nil || !strings.Contains(err.Error(), "r10n configure") {
+func TestPDFProfileFlagUsesSystemProfileName(t *testing.T) {
+	options, err := parseFlags("fill-pdfs", []string{"--config", "conference", "-r", "people.csv", "-y"})
+	if err != nil {
 		t.Fatal(err)
 	}
-	err = checkPDFConfig(backend.Automation{}, map[string]any{"config_file": "missing.json"}, "")
-	if err == nil || !strings.Contains(err.Error(), "r10n configure") {
+	task := backend.Automation{
+		ID: "fill-pdfs",
+		InputSchema: backend.Schema{
+			Properties: map[string]backend.Field{
+				"config_profile":  {Type: "string"},
+				"recipients_file": {Type: "string"},
+			},
+			Required: []string{"recipients_file"},
+		},
+	}
+	payload, err := options.payload(task)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if payload["config_profile"] != "conference" || payload["recipients_file"] != "people.csv" {
+		t.Fatalf("unexpected PDF profile payload: %+v", payload)
+	}
+	if _, err := parseFlags("fill-pdfs", []string{"--template", "local-template.pdf"}); err == nil {
+		t.Fatal("removed project-local template flag was accepted")
 	}
 }
 
@@ -138,14 +150,14 @@ func TestMain(m *testing.M) {
 	if os.Getenv("R10N_CLI_HELPER") == "1" {
 		switch os.Args[1] {
 		case "catalog":
-			fmt.Println(`{"protocol":1,"automations":[{"id":"contacts","title":"Contacts","input_schema":{"properties":{"input_file":{"type":"string"},"output_file":{"type":"string"},"prefix":{"type":"string"}}},"field_order":["input_file","output_file","prefix"]}]}`)
+			fmt.Println(`{"protocol":2,"automations":[{"id":"contacts","title":"Contacts","input_schema":{"properties":{"input_file":{"type":"string"},"output_file":{"type":"string"},"prefix":{"type":"string"}}},"field_order":["input_file","output_file","prefix"]}]}`)
 		case "worker":
 			var payload map[string]any
 			if err := json.NewDecoder(os.Stdin).Decode(&payload); err != nil {
 				os.Exit(2)
 			}
-			fmt.Println(`{"type":"hello","protocol":1}`)
-			fmt.Println(`{"type":"started","protocol":1,"automation":"contacts"}`)
+			fmt.Println(`{"type":"hello","protocol":2}`)
+			fmt.Println(`{"type":"started","protocol":2,"automation":"contacts"}`)
 			_ = json.NewEncoder(os.Stdout).Encode(map[string]any{"type": "completed", "automation": "contacts", "success": true, "result": payload})
 		default:
 			os.Exit(2)

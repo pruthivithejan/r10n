@@ -40,6 +40,15 @@ def test_unsupported_platform() -> None:
         build_native.asset_name("Linux", "arm64")
 
 
+def test_release_workflow_keeps_latest_windows_upgrade_asset() -> None:
+    """Legacy Windows clients resolve the onefile asset directly from latest."""
+    root = Path(__file__).resolve().parents[1]
+    build_workflow = (root / ".github/workflows/build-binaries.yml").read_text(encoding="utf-8")
+    release_workflow = (root / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert "asset: r10n-windows-x86_64.exe" in build_workflow
+    assert "release-assets/r10n-*" in release_workflow
+
+
 def test_declared_versions(tmp_path: Path) -> None:
     """Read only the project version, not incidental tool metadata or old CLI code."""
     make_project(tmp_path)
@@ -61,15 +70,15 @@ def test_build_layout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, system: s
             assert command[command.index("--paths") + 1] == str(tmp_path / "src")
             assert command[command.index("--python-option") + 1] == "X utf8"
             assert command[command.index("--copy-metadata") + 1] == "r10n"
+            assert "keyring" in command[command.index("--collect-all") + 1 :]
+            assert "--add-data" not in command
             assert command[-1] == str(tmp_path / "src/r10n_backend/__main__.py")
             environment = kwargs["env"]
             assert isinstance(environment, dict)
             assert environment["PYTHONPATH"] == str(tmp_path / "src")
             work = Path(command[command.index("--workpath") + 1])
             work.mkdir()
-            (work / "Analysis-00.toc").write_text(
-                "r10n_backend/configure/templates/picker.html\nr10n-1.2.3.dist-info/METADATA"
-            )
+            (work / "Analysis-00.toc").write_text("r10n-1.2.3.dist-info/METADATA")
             output = Path(command[command.index("--distpath") + 1])
             output.mkdir()
             if system == "Windows":
@@ -166,7 +175,7 @@ def test_smoke_runs_worker_outside_checkout(
             pdf.drawString(72, 720, "Bundle smoke")
             pdf.save()
         events = [
-            {"type": "hello", "protocol": 1},
+            {"type": "hello", "protocol": 2},
             {"type": "started"},
             {"type": "progress"},
             {"type": "artifact", "path": str(output)},
@@ -192,39 +201,40 @@ def test_bundle_report_counts_symlinks_not_copies(tmp_path: Path) -> None:
     assert report["symlinks"] == (0 if os.name == "nt" else 1)
 
 
-def test_bundle_requires_configure_assets(tmp_path: Path) -> None:
-    """Fail closed when package data is not collected."""
+def test_bundle_requires_distribution_metadata(tmp_path: Path) -> None:
+    """Fail closed when importlib.metadata cannot resolve the installed version."""
     make_project(tmp_path)
-    with pytest.raises(RuntimeError, match=r"picker\.html"):
+    with pytest.raises(RuntimeError, match="distribution metadata"):
         build_native.validate_bundle(tmp_path, tmp_path)
 
 
-@pytest.mark.parametrize("package", ["typer", "textual", "rich", "pandas", "numpy"])
+@pytest.mark.parametrize("package", ["typer", "textual", "flask", "rich", "pandas", "numpy"])
 def test_bundle_rejects_obsolete_runtime(tmp_path: Path, package: str) -> None:
     """Inspect analysis archives as well as loose files for forbidden dependencies."""
     make_project(tmp_path)
     (tmp_path / "Analysis.toc").write_text(
-        f"picker.html\nr10n-1.2.3.dist-info/METADATA\n"
-        f"('{package}.obsolete', 'unused', 'PYMODULE')",
+        f"r10n-1.2.3.dist-info/METADATA\n" f"('{package}.obsolete', 'unused', 'PYMODULE')",
         encoding="utf-8",
     )
     with pytest.raises(RuntimeError, match="Unused runtime"):
         build_native.validate_bundle(tmp_path, tmp_path)
 
 
-def test_bundle_requires_distribution_metadata(tmp_path: Path) -> None:
-    """Frozen importlib.metadata must not silently fall back to a different version."""
+def test_bundle_does_not_require_browser_picker_assets(tmp_path: Path) -> None:
+    """The installed backend no longer includes the Flask PDF picker."""
     make_project(tmp_path)
-    (tmp_path / "picker.html").write_text("picker", encoding="utf-8")
-    with pytest.raises(RuntimeError, match="distribution metadata"):
-        build_native.validate_bundle(tmp_path, tmp_path)
+    (tmp_path / "Analysis.toc").write_text(
+        "r10n-1.2.3.dist-info/METADATA\n",
+        encoding="utf-8",
+    )
+    build_native.validate_bundle(tmp_path, tmp_path)
 
 
 def test_bundle_allows_vendor_numpy_shim(tmp_path: Path) -> None:
     """A source filename must not be mistaken for a collected top-level package."""
     make_project(tmp_path)
     (tmp_path / "Analysis.toc").write_text(
-        "picker.html\nr10n-1.2.3.dist-info/METADATA\n"
+        "r10n-1.2.3.dist-info/METADATA\n"
         "('setuptools._distutils.compat.numpy', "
         "'/site-packages/setuptools/_distutils/compat/numpy.py', 'PYMODULE')",
         encoding="utf-8",
@@ -236,9 +246,7 @@ def test_bundle_accepts_escaped_windows_metadata_path(tmp_path: Path) -> None:
     """Onefile metadata exists only in TOCs whose Windows paths are repr-escaped."""
     make_project(tmp_path)
     metadata = repr("r10n-1.2.3.dist-info\\METADATA")
-    (tmp_path / "Analysis.toc").write_text(
-        f"picker.html\n({metadata}, 'source', 'DATA')\n", encoding="utf-8"
-    )
+    (tmp_path / "Analysis.toc").write_text(f"({metadata}, 'source', 'DATA')\n", encoding="utf-8")
     build_native.validate_bundle(tmp_path, tmp_path)
 
 
@@ -248,7 +256,7 @@ def test_bundle_allows_declared_dependency(tmp_path: Path) -> None:
     with (tmp_path / "pyproject.toml").open("a", encoding="utf-8") as file:
         file.write('dependencies = ["rich>=1"]\n')
     (tmp_path / "Analysis.toc").write_text(
-        "picker.html\nr10n-1.2.3.dist-info/METADATA\n('rich.console', 'module', 'PYMODULE')",
+        "r10n-1.2.3.dist-info/METADATA\n('rich.console', 'module', 'PYMODULE')",
         encoding="utf-8",
     )
     build_native.validate_bundle(tmp_path, tmp_path)

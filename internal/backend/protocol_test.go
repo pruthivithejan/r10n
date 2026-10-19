@@ -17,43 +17,43 @@ func TestBackendHelperProcess(t *testing.T) {
 	}
 	switch os.Getenv("R10N_TEST_SCENARIO") {
 	case "catalog":
-		fmt.Print(`{"protocol":1,"automations":[{"id":"contacts","title":"Contacts","input_schema":{"properties":{"path":{"type":"string","default":"a","ui:widget":"file"}}},"field_order":["path"]}]}`)
+		fmt.Print(`{"protocol":2,"automations":[{"id":"contacts","title":"Contacts","input_schema":{"properties":{"path":{"type":"string","default":"a","ui:widget":"file"}}},"field_order":["path"]}]}`)
 	case "bad-catalog":
 		fmt.Print(`{"protocol":2,"automations":[]}`)
 	case "mismatched-catalog-version":
-		fmt.Print(`{"protocol":1,"version":"99.0.0","automations":[{"id":"contacts","input_schema":{"properties":{}},"field_order":[]}]}`)
+		fmt.Print(`{"protocol":2,"version":"99.0.0","automations":[{"id":"contacts","input_schema":{"properties":{}},"field_order":[]}]}`)
 	case "duplicate-field":
-		fmt.Print(`{"protocol":1,"automations":[{"id":"x","input_schema":{"properties":{"a":{},"b":{}}},"field_order":["a","a"]}]}`)
+		fmt.Print(`{"protocol":2,"automations":[{"id":"x","input_schema":{"properties":{"a":{},"b":{}}},"field_order":["a","a"]}]}`)
 	case "invalid":
 		fmt.Println("not json")
 	case "wrong-protocol":
-		fmt.Println(`{"type":"hello","protocol":2}`)
-	case "truncated":
 		fmt.Println(`{"type":"hello","protocol":1}`)
+	case "truncated":
+		fmt.Println(`{"type":"hello","protocol":2}`)
 	case "extra":
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"started\",\"protocol\":1,\"automation\":\"contacts\"}\n{\"type\":\"completed\",\"automation\":\"contacts\",\"success\":true,\"result\":{}}\n{\"type\":\"log\",\"message\":\"late\"}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"started\",\"protocol\":2,\"automation\":\"contacts\"}\n{\"type\":\"completed\",\"automation\":\"contacts\",\"success\":true,\"result\":{}}\n{\"type\":\"log\",\"message\":\"late\"}")
 	case "input-error":
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"error\",\"kind\":\"input\",\"error\":\"invalid inputs\"}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"error\",\"kind\":\"input\",\"error\":\"invalid inputs\"}")
 		os.Exit(2)
 	case "failed":
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"started\",\"protocol\":1,\"automation\":\"contacts\"}\n{\"type\":\"completed\",\"automation\":\"contacts\",\"success\":false,\"result\":{}}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"started\",\"protocol\":2,\"automation\":\"contacts\"}\n{\"type\":\"completed\",\"automation\":\"contacts\",\"success\":false,\"result\":{}}")
 	case "incomplete-completed":
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"started\",\"protocol\":1,\"automation\":\"contacts\"}\n{\"type\":\"completed\",\"automation\":\"contacts\"}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"started\",\"protocol\":2,\"automation\":\"contacts\"}\n{\"type\":\"completed\",\"automation\":\"contacts\"}")
 	case "mismatched-automation":
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"started\",\"protocol\":1,\"automation\":\"images\"}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"started\",\"protocol\":2,\"automation\":\"images\"}")
 	case "missing-started":
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"completed\",\"automation\":\"contacts\",\"success\":true,\"result\":{}}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"completed\",\"automation\":\"contacts\",\"success\":true,\"result\":{}}")
 	case "cancelled":
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"cancelled\"}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"cancelled\"}")
 	case "blocking":
-		fmt.Println(`{"type":"hello","protocol":1}`)
+		fmt.Println(`{"type":"hello","protocol":2}`)
 		time.Sleep(30 * time.Second)
 	case "success", "live":
 		var payload map[string]any
 		if err := json.NewDecoder(os.Stdin).Decode(&payload); err != nil {
 			os.Exit(2)
 		}
-		fmt.Println("{\"type\":\"hello\",\"protocol\":1}\n{\"type\":\"started\",\"protocol\":1,\"automation\":\"contacts\",\"inputs\":{}}\n{\"type\":\"progress\",\"current\":1,\"total\":2}")
+		fmt.Println("{\"type\":\"hello\",\"protocol\":2}\n{\"type\":\"started\",\"protocol\":2,\"automation\":\"contacts\"}\n{\"type\":\"progress\",\"current\":1,\"total\":2}")
 		if os.Getenv("R10N_TEST_SCENARIO") == "live" {
 			time.Sleep(300 * time.Millisecond)
 		}
@@ -92,9 +92,9 @@ func TestLoadCatalog(t *testing.T) {
 }
 
 func TestParseCatalogSharedContract(t *testing.T) {
-	raw := []byte(`{"protocol":1,"version":"0.12.2","automations":[{"id":"new-task","input_schema":{"properties":{"path":{"type":"string"}}},"field_order":["path"]}]}`)
+	raw := []byte(`{"protocol":2,"version":"0.13.0","automations":[{"id":"new-task","input_schema":{"properties":{"path":{"type":"string"}}},"field_order":["path"]}]}`)
 	catalog, err := ParseCatalog(raw)
-	if err != nil || catalog.Version != "0.12.2" || catalog.Automations[0].ID != "new-task" {
+	if err != nil || catalog.Version != "0.13.0" || catalog.Automations[0].ID != "new-task" {
 		t.Fatalf("valid registry metadata rejected: %+v, %v", catalog, err)
 	}
 	raw[0] = ' '
@@ -103,9 +103,9 @@ func TestParseCatalogSharedContract(t *testing.T) {
 	}
 	for _, invalid := range []string{
 		`not json`,
-		`{"protocol":2,"automations":[]}`,
 		`{"protocol":1,"automations":[]}`,
-		`{"protocol":1,"automations":[{"id":"x","input_schema":{"properties":{"a":{}}},"field_order":[]}]}`,
+		`{"protocol":2,"automations":[]}`,
+		`{"protocol":2,"automations":[{"id":"x","input_schema":{"properties":{"a":{}}},"field_order":[]}]}`,
 	} {
 		if _, err := ParseCatalog([]byte(invalid)); err == nil {
 			t.Errorf("invalid catalog accepted: %s", invalid)

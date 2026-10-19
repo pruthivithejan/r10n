@@ -429,7 +429,14 @@ def fill_certificate(template_path, config, recipient_data, output_path):
         raise Exception(f"Error filling certificate: {e!s}") from e
 
 
-def generate_certificates(recipients_file, config_file, base_dir="data/certificates"):
+def generate_certificates(
+    recipients_file,
+    config_file,
+    base_dir="",
+    *,
+    config_override=None,
+    progress_callback=None,
+):
     """
     Generate personalized certificates from template PDF
 
@@ -442,33 +449,25 @@ def generate_certificates(recipients_file, config_file, base_dir="data/certifica
         dict: Summary of generation results
     """
 
-    # Helper to resolve file/dir paths sensibly across workspace vs base_dir
     def _resolve_path(p: str, base: str, is_dir: bool = False) -> str:
-        """Resolve a path without incorrectly prefixing workspace-relative paths.
-
-        Rules:
-        - Absolute paths: return as-is
-        - Paths starting with known project anchors (e.g., "workspace/", "templates/", "configs/")
-          are treated as project-relative and returned as-is
-        - Existing paths (relative to CWD): returned as-is
-        - Otherwise: joined to base
-        """
+        """Resolve an explicit path against an optional caller-selected base."""
         if not p:
             return p
-        anchors = ("workspace/", "templates/", "configs/", "src/", "docs/", "scripts/")
-        if os.path.isabs(p) or p.startswith(anchors):
+        if os.path.isabs(p):
             return p
-        # For directories that may not exist yet, rely on anchor check above and fall through to base join
-        if not is_dir and os.path.exists(p):
-            return p
-        return os.path.join(base, p)
+        return os.path.join(base, p) if base else p
 
     # Resolve recipients and config paths
     recipients_file = _resolve_path(recipients_file, base_dir, is_dir=False)
-    config_file = _resolve_path(config_file, base_dir, is_dir=False)
 
     # Load configuration and data
-    config = load_config(config_file)
+    if config_override is not None:
+        config = config_override
+    elif config_file is not None:
+        config_file = _resolve_path(config_file, base_dir, is_dir=False)
+        config = load_config(config_file)
+    else:
+        raise ValueError("An explicit PDF configuration is required")
     recipients = load_recipients(recipients_file)
 
     if not recipients:
@@ -531,6 +530,9 @@ def generate_certificates(recipients_file, config_file, base_dir="data/certifica
             errors.append(error_msg)
             failed_count += 1
             continue
+        finally:
+            if progress_callback:
+                progress_callback(i, len(recipients))
 
     # Print summary
     print(f"\n{'=' * 50}")
@@ -546,13 +548,29 @@ def generate_certificates(recipients_file, config_file, base_dir="data/certifica
         for error in errors:
             print(f"  - {error}")
 
+    success = generated_count == len(recipients) and failed_count == 0
     return {
+        "success": success,
+        "status": "succeeded" if success else ("partial" if generated_count else "failed"),
         "total": len(recipients),
         "generated": generated_count,
         "failed": failed_count,
         "errors": errors,
         "output_directory": output_dir,
     }
+
+
+def fill_certificates_from_config(
+    recipients_file: str, config: dict, progress_callback=None
+) -> dict:
+    """Generate certificates from an in-memory, system-saved profile."""
+    return generate_certificates(
+        recipients_file,
+        None,
+        base_dir="",
+        config_override=config,
+        progress_callback=progress_callback,
+    )
 
 
 def font_mappings_keys():

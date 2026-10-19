@@ -9,6 +9,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from pathlib import Path
@@ -70,7 +71,7 @@ class WebsiteImageDownloadConfig:
     """Configuration for downloading and converting website images."""
 
     url: str
-    output_directory: str = "local/outputs/website-images"
+    output_directory: str = "r10n-output/website-images"
     output_format: str = "webp"
     quality: int = 85
     timeout: int = 20
@@ -762,6 +763,7 @@ def download_website_images(
     quality: int = 85,
     timeout: int = 20,
     max_pages: int | None = 50,
+    progress_callback: Callable[[str, int, int | None, str], None] | None = None,
 ) -> dict[str, Any]:
     """
     Download images from a website and convert them.
@@ -787,7 +789,7 @@ def download_website_images(
     if max_pages is not None and max_pages < 1:
         raise ValueError("Max pages must be at least 1, or None for no limit")
 
-    destination = Path(output_dir or "local/outputs/website-images")
+    destination = Path(output_dir or "r10n-output/website-images")
     destination.mkdir(parents=True, exist_ok=True)
 
     results: dict[str, Any] = {
@@ -827,6 +829,13 @@ def download_website_images(
                     "error": str(exc),
                 }
             )
+            if progress_callback:
+                progress_callback(
+                    "crawl",
+                    results["pages_scanned"],
+                    None,
+                    "Crawling website pages; total unknown",
+                )
             continue
 
         image_urls = extract_image_urls(html, page_url)
@@ -837,6 +846,13 @@ def download_website_images(
 
         results["pages_scanned"] += 1
         results["found"] += len(image_urls)
+        if progress_callback:
+            progress_callback(
+                "crawl",
+                results["pages_scanned"],
+                None,
+                f"Scanned {results['pages_scanned']} website pages; total unknown",
+            )
         page_result = {
             "success": True,
             "url": page_url,
@@ -863,6 +879,13 @@ def download_website_images(
             else:
                 results["failed"] += 1
             results["files"].append(file_result)
+            if progress_callback:
+                progress_callback(
+                    "download",
+                    index,
+                    len(image_urls),
+                    f"Downloaded image {index} of {len(image_urls)} on this page",
+                )
 
     return results
 

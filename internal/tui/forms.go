@@ -11,6 +11,7 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/pruthivithejan/r10n/internal/backend"
+	"github.com/pruthivithejan/r10n/internal/brand"
 )
 
 type fieldValue struct {
@@ -145,11 +146,22 @@ func inputForm(task backend.Automation) (*huh.Form, func() (map[string]any, erro
 	return huh.NewForm(groups...), collect, nil
 }
 
+// RunForm runs a reusable Huh form with r10n's keyboard, accessibility and brand settings.
+func RunForm(ctx context.Context, form *huh.Form) error {
+	if !Interactive() {
+		return fmt.Errorf("this action requires an interactive terminal")
+	}
+	if err := applySettings(); err != nil {
+		return err
+	}
+	return runForm(ctx, form)
+}
+
 func runForm(ctx context.Context, form *huh.Form) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	form.WithOutput(stderr).WithInput(stdin).WithAccessible(accessible())
+	form.WithTheme(theme()).WithOutput(stderr).WithInput(stdin).WithAccessible(accessible())
 	var err error
 	if accessible() {
 		// huh's plain-prompt runner does not observe context cancellation.
@@ -171,4 +183,23 @@ func runForm(ctx context.Context, form *huh.Form) error {
 		return context.Canceled
 	}
 	return err
+}
+
+func theme() *huh.Theme {
+	colors := brand.Accent()
+	onAccent := brand.OnAccent()
+	t := huh.ThemeCharm()
+	t.Focused.Base = t.Focused.Base.BorderForeground(colors)
+	t.Focused.Title = t.Focused.Title.Foreground(colors).Bold(true)
+	t.Focused.NoteTitle = t.Focused.NoteTitle.Foreground(colors).Bold(true)
+	t.Focused.SelectSelector = t.Focused.SelectSelector.Foreground(colors)
+	t.Focused.MultiSelectSelector = t.Focused.MultiSelectSelector.Foreground(colors)
+	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(colors)
+	t.Focused.SelectedPrefix = t.Focused.SelectedPrefix.Foreground(colors)
+	t.Focused.TextInput.Cursor = t.Focused.TextInput.Cursor.Foreground(colors)
+	t.Focused.TextInput.Prompt = t.Focused.TextInput.Prompt.Foreground(colors)
+	t.Focused.FocusedButton = t.Focused.FocusedButton.Foreground(onAccent).Background(colors)
+	t.Group.Title = t.Focused.Title
+	t.Group.Description = t.Focused.Description
+	return t
 }

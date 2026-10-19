@@ -128,8 +128,8 @@ def test_json_stdin_uses_same_worker(
         payload={"input_file": "numbers.txt", "output_file": "stdin.vcf"},
     )
     completed_result(process)
-    # Preserve the automation's existing bare-filename output convention.
-    assert (tmp_path / "local" / "outputs" / "contacts" / "stdin.vcf").is_file()
+    # Explicit bare filenames remain relative to the caller's current directory.
+    assert (tmp_path / "stdin.vcf").is_file()
 
 
 def test_source_backend_cannot_be_shadowed_by_caller_package(
@@ -168,9 +168,9 @@ def test_worker_protocol_and_files_use_utf8(
     )
     completed_result(process)
     events = [json.loads(line) for line in process.stdout.splitlines()]
-    assert (
-        next(event for event in events if event["type"] == "started")["inputs"]["prefix"] == prefix
-    )
+    started = next(event for event in events if event["type"] == "started")
+    assert "inputs" not in started
+    assert "prefix" in started["input_fields"]
     assert prefix in (tmp_path / "exports" / "unicode.vcf").read_text(encoding="utf-8")
 
 
@@ -232,7 +232,7 @@ def test_markdown_flags_produce_readable_pdf(
 def test_fill_pdf_flags_render_recipient(
     native_binary: Path, native_environment: dict[str, str], tmp_path: Path
 ) -> None:
-    """Existing PDF configuration files remain usable through Go flag aliases."""
+    """The Go frontend consumes named profiles from system configuration."""
     template = tmp_path / "template.pdf"
     writer = PdfWriter()
     writer.add_blank_page(width=400, height=300)
@@ -244,14 +244,26 @@ def test_fill_pdf_flags_render_recipient(
         "font_family": "Helvetica",
         "fields": {"name": {"x": 100, "y": 150, "font_size": 18}},
     }
-    (tmp_path / "config.json").write_text(json.dumps(config), encoding="utf-8")
+    config_directory = tmp_path / "system-config"
+    config_directory.mkdir()
+    (config_directory / "config.json").write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "active_pdf_profile": "conference",
+                "pdf_profiles": {"conference": config},
+            }
+        ),
+        encoding="utf-8",
+    )
+    environment = native_environment | {"R10N_CONFIG_DIR": str(config_directory)}
     process = invoke(
         native_binary,
         tmp_path,
-        native_environment,
+        environment,
         "fill-pdfs",
         "-c",
-        "config.json",
+        "conference",
         "-r",
         "recipients.csv",
         "--yes",
@@ -400,24 +412,11 @@ def test_website_images_flags_use_loopback_fixture(
     assert list((tmp_path / "downloaded").rglob("*.png"))
 
 
-def test_init_templates_are_valid_and_not_overwritten(
+def test_init_is_removed_without_creating_project_folders(
     native_binary: Path, native_environment: dict[str, str], tmp_path: Path
 ) -> None:
-    """The Go initializer embeds canonical, usable configuration examples."""
-    from r10n_backend.automations.fill_pdfs import load_config
-    from r10n_backend.automations.send_same_email import load_simple_config
-    from r10n_backend.registry import ImagesInput
-
+    """The removed project-local initializer does not scaffold anything."""
     initialized = invoke(native_binary, tmp_path, native_environment, "init")
-    assert initialized.returncode == 0, initialized.stdout + initialized.stderr
-    configs = tmp_path / "local" / "configs"
-    pdf = load_config(str(configs / "fill-pdfs.json"))
-    assert pdf["template_pdf"] == "inputs/fill-pdfs/template.pdf"
-    email = load_simple_config(str(configs / "email.json"))
-    assert email.smtp_port == 587
-    ImagesInput.model_validate_json((configs / "images.json").read_text(encoding="utf-8"))
-    custom = '{"subject":"Do not overwrite"}\n'
-    (configs / "email.json").write_text(custom, encoding="utf-8")
-    repeated = invoke(native_binary, tmp_path, native_environment, "init")
-    assert repeated.returncode == 0, repeated.stdout + repeated.stderr
-    assert (configs / "email.json").read_text(encoding="utf-8") == custom
+    assert initialized.returncode == 2
+    assert "r10n setup" in initialized.stderr
+    assert not (tmp_path / "local").exists()

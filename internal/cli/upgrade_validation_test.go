@@ -17,7 +17,7 @@ import (
 // The offline native double dispatches to its sidecar, writes real VCF output,
 // and emits JSONL. No network, system Python, or checkout files are needed.
 func releaseFixtureEntries() []archiveEntry {
-	catalog := `{"protocol":1,"version":"99.0.0","automations":[{"id":"contacts","title":"Contacts","input_schema":{"properties":{"input_file":{"type":"string"},"output_file":{"type":"string"},"prefix":{"type":"string"}},"required":["input_file","output_file"]},"field_order":["input_file","output_file","prefix"]}]}`
+	catalog := `{"protocol":2,"version":"99.0.0","automations":[{"id":"contacts","title":"Contacts","input_schema":{"properties":{"input_file":{"type":"string"},"output_file":{"type":"string"},"prefix":{"type":"string"}},"required":["input_file","output_file"]},"field_order":["input_file","output_file","prefix"]}]}`
 	native := `#!/bin/sh
 set -eu
 app=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -45,7 +45,7 @@ worker)
   case "$input:$output" in /*:/*) ;; *) exit 2 ;; esac
   grep -q '+94771234567' "$input"
   printf 'BEGIN:VCARD\nVERSION:3.0\nFN:Upgrade 1\nTEL;TYPE=CELL:+94771234567\nEND:VCARD\n' > "$output"
-  printf '{"type":"hello","protocol":1}\n{"type":"started","protocol":1,"automation":"contacts"}\n'
+  printf '{"type":"hello","protocol":2}\n{"type":"started","protocol":2,"automation":"contacts"}\n'
   printf '{"type":"progress","current":1,"total":1}\n{"type":"artifact","path":"%s"}\n' "$output"
   printf '{"type":"completed","automation":"contacts","success":true,"result":{"valid":1}}\n' ;;
 *) exit 2 ;;
@@ -97,7 +97,7 @@ func TestReleaseValidationFailuresDoNotMutateInstallation(t *testing.T) {
 			return e
 		}},
 		{"corrupt catalog", func(e []archiveEntry) []archiveEntry {
-			e[1].body = strings.Replace(e[1].body, `{"protocol":1`, `{broken "protocol":1`, 1)
+			e[1].body = strings.Replace(e[1].body, `{"protocol":2`, `{broken "protocol":2`, 1)
 			return e
 		}},
 		{"failed catalog", func(e []archiveEntry) []archiveEntry {
@@ -105,7 +105,7 @@ func TestReleaseValidationFailuresDoNotMutateInstallation(t *testing.T) {
 			return e
 		}},
 		{"wrong protocol", func(e []archiveEntry) []archiveEntry {
-			e[1].body = strings.ReplaceAll(e[1].body, `"protocol":1`, `"protocol":2`)
+			e[1].body = strings.ReplaceAll(e[1].body, `"protocol":2`, `"protocol":1`)
 			return e
 		}},
 		{"invalid fields", func(e []archiveEntry) []archiveEntry {

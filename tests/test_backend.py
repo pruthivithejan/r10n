@@ -16,6 +16,7 @@ import pytest
 from r10n_backend import __main__ as backend
 from r10n_backend.__main__ import build_catalog
 from r10n_backend.registry import list_automations
+from r10n_backend.settings import PDFField, PDFProfile, Settings, SMTPProfile, save_settings
 from r10n_backend.worker import PROTOCOL_VERSION
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -60,8 +61,11 @@ def run_backend(
     )
 
 
-def test_catalog_matches_every_registered_model() -> None:
+def test_catalog_matches_every_registered_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Catalog metadata and schemas are lossless exports of the full registry."""
+    monkeypatch.setenv("R10N_CONFIG_DIR", str(tmp_path / "settings"))
     result = run_backend("catalog")
 
     assert result.returncode == 0
@@ -69,10 +73,15 @@ def test_catalog_matches_every_registered_model() -> None:
     assert len(result.stdout.splitlines()) == 1
     catalog = json.loads(result.stdout)
     assert catalog == build_catalog()
-    assert catalog["protocol"] == PROTOCOL_VERSION == 1
+    assert catalog["protocol"] == PROTOCOL_VERSION == 2
     assert catalog["version"] == version("r10n")
     assert len(catalog["automations"]) == len(list_automations())
     for exported, spec in zip(catalog["automations"], list_automations(), strict=True):
+        setup_hint = ""
+        if spec.id == "fill-pdfs":
+            setup_hint = "Create a PDF template profile first with `r10n configure`."
+        elif spec.id == "email":
+            setup_hint = "Create an SMTP profile first with `r10n config add-smtp-profile <name>`."
         assert exported == {
             "id": spec.id,
             "title": spec.title,
@@ -80,8 +89,9 @@ def test_catalog_matches_every_registered_model() -> None:
             "category": spec.category,
             "roles": list(spec.roles),
             "confirmation": spec.confirmation,
-            "input_schema": spec.input_model.model_json_schema(),
+            "input_schema": spec.input_schema(),
             "field_order": list(spec.input_model.model_fields),
+            "setup_hint": setup_hint,
         }
 
 
@@ -116,6 +126,47 @@ def test_catalog_preserves_defaults_nullables_enums_and_required_fields() -> Non
     assert website["additionalProperties"] is False
     assert catalog["contacts"]["confirmation"] is None
     assert isinstance(catalog["email"]["confirmation"], str)
+
+
+def test_catalog_defaults_follow_system_profiles_and_output_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Forms expose saved profile names and re-root outputs from system settings."""
+    monkeypatch.setenv("R10N_CONFIG_DIR", str(tmp_path / "settings"))
+    output_root = tmp_path / "results"
+    save_settings(
+        Settings(
+            output_directory=str(output_root),
+            active_smtp_profile="work",
+            smtp_profiles={
+                "work": SMTPProfile(
+                    smtp_server="smtp.example.test",
+                    smtp_port=587,
+                    email="sender@example.test",
+                    subject="Hello",
+                )
+            },
+            active_pdf_profile="conference",
+            pdf_profiles={
+                "conference": PDFProfile(
+                    template_pdf=str(tmp_path / "template.pdf"),
+                    output_directory=str(output_root / "pdfs"),
+                    fields={"name": PDFField(x=100, y=200, font_size=18)},
+                )
+            },
+        )
+    )
+    automations = {item["id"]: item for item in build_catalog()["automations"]}
+    email_field = automations["email"]["input_schema"]["properties"]["smtp_profile"]
+    pdf_field = automations["fill-pdfs"]["input_schema"]["properties"]["config_profile"]
+    assert email_field["enum"] == ["work"] and email_field["default"] == "work"
+    assert pdf_field["enum"] == ["conference"] and pdf_field["default"] == "conference"
+    assert automations["contacts"]["input_schema"]["properties"]["output_file"]["default"] == str(
+        output_root / "contacts.vcf"
+    )
+    assert automations["images"]["input_schema"]["properties"]["output_directory"][
+        "default"
+    ] == str(output_root / "images")
 
 
 def test_catalog_keeps_automation_and_cli_imports_lazy() -> None:
@@ -161,10 +212,10 @@ def test_worker_contacts_uses_absolute_paths_outside_project(tmp_path: Path) -> 
         "artifact",
         "completed",
     ]
-    assert events[0] == {"type": "hello", "protocol": 1}
-    assert events[1]["protocol"] == 1
+    assert events[0] == {"type": "hello", "protocol": 2}
+    assert events[1]["protocol"] == 2
     assert events[1]["automation"] == "contacts"
-    assert events[1]["inputs"] == payload
+    assert events[1]["input_fields"] == sorted(payload)
     assert events[-2]["path"] == str(output_file.resolve())
     assert events[-1]["success"] is True
     assert events[-1]["result"]["valid"] == 2
@@ -192,7 +243,7 @@ def test_worker_input_errors_have_protocol_events_and_exit_two(
     assert result.returncode == 2
     assert result.stderr == ""
     events = [json.loads(line) for line in result.stdout.splitlines()]
-    assert events[0] == {"type": "hello", "protocol": 1}
+    assert events[0] == {"type": "hello", "protocol": 2}
     assert len(events) == 2
     assert events[1]["type"] == "error"
     assert events[1]["kind"] == "input"

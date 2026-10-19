@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import sys
 import traceback
 from collections.abc import Callable
@@ -13,11 +14,32 @@ from typing import Any, TextIO
 
 from pydantic import ValidationError
 
-from r10n_backend.environment import load_environment
 from r10n_backend.registry import get_automation, normalize_result
 
-PROTOCOL_VERSION = 1
+PROTOCOL_VERSION = 2
 ProtocolCallback = Callable[[dict[str, Any]], None]
+_EMAIL_PATTERN = re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+_SENSITIVE_KEYS = ("password", "secret", "token", "api_key", "authorization", "credential")
+_PRIVATE_LIST_KEYS = ("failed_emails", "recipient_emails", "email_addresses")
+
+
+def redact_sensitive(value: Any, key: str = "") -> Any:
+    """Redact credentials and personal email addresses before terminal output."""
+    key_lower = key.lower()
+    if any(marker in key_lower for marker in _SENSITIVE_KEYS):
+        return "[redacted]"
+    if key_lower in _PRIVATE_LIST_KEYS and isinstance(value, (list, tuple)):
+        return {"redacted_count": len(value)}
+    if isinstance(value, dict):
+        return {
+            str(child_key): redact_sensitive(child, str(child_key))
+            for child_key, child in value.items()
+        }
+    if isinstance(value, list):
+        return [redact_sensitive(item, key) for item in value]
+    if isinstance(value, str):
+        return _EMAIL_PATTERN.sub("[redacted email]", value)
+    return value
 
 
 class EventTextWriter:
@@ -41,13 +63,25 @@ class EventTextWriter:
         while "\n" in self._buffer:
             line, self._buffer = self._buffer.split("\n", 1)
             if line.strip():
-                self.emit({"type": "log", "level": self.level, "message": line})
+                self.emit(
+                    {
+                        "type": "log",
+                        "level": self.level,
+                        "message": redact_sensitive(line),
+                    }
+                )
         return len(text)
 
     def flush(self) -> None:
         """Emit an incomplete buffered line."""
         if self._buffer.strip():
-            self.emit({"type": "log", "level": self.level, "message": self._buffer})
+            self.emit(
+                {
+                    "type": "log",
+                    "level": self.level,
+                    "message": redact_sensitive(self._buffer),
+                }
+            )
         self._buffer = ""
 
 
@@ -116,12 +150,12 @@ def run_automation(
             "type": "started",
             "protocol": PROTOCOL_VERSION,
             "automation": automation_id,
-            "inputs": validated.model_dump(mode="json"),
+            "input_fields": sorted(validated.model_fields_set),
         }
     )
 
     def adapter_emit(event_type: str, data: dict[str, Any]) -> None:
-        emit({"type": event_type, **_json_safe(data)})
+        emit({"type": event_type, **redact_sensitive(_json_safe(data))})
 
     output_writer = EventTextWriter(emit)
     error_writer = EventTextWriter(emit, level="error")
@@ -137,8 +171,11 @@ def run_automation(
         {
             "type": "completed",
             "automation": automation_id,
-            "success": normalized.get("success", True),
-            "result": normalized,
+            "success": bool(normalized.get("success", True)),
+            "status": normalized.get(
+                "status", "succeeded" if normalized.get("success", True) else "failed"
+            ),
+            "result": redact_sensitive(normalized),
         }
     )
     return normalized
@@ -146,7 +183,7 @@ def run_automation(
 
 def write_json_event(stream: TextIO, event: dict[str, Any]) -> None:
     """Write and flush one JSON Lines protocol event."""
-    stream.write(json.dumps(_json_safe(event), ensure_ascii=False) + "\n")
+    stream.write(json.dumps(_json_safe(redact_sensitive(event)), ensure_ascii=False) + "\n")
     stream.flush()
 
 
@@ -160,7 +197,6 @@ def worker_main(automation_id: str, input_json: str | None = None) -> int:
     Returns:
         Process exit status.
     """
-    load_environment()
     protocol_stdout = sys.stdout
 
     def emit(event: dict[str, Any]) -> None:

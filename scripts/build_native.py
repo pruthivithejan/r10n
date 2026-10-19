@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
+# Older Windows updaters request this exact asset from the latest release.
 ASSETS = {
     ("Linux", "x86_64"): "r10n-linux-x86_64.tar.gz",
     ("Darwin", "arm64"): "r10n-macos-arm64.tar.gz",
@@ -83,7 +84,7 @@ def bundle_report(directory: Path) -> dict[str, Any]:
 
 
 def validate_bundle(directory: Path, root: Path) -> None:
-    """Reject missing configure assets and obsolete frozen UI runtimes.
+    """Reject missing package metadata and obsolete frozen CLI runtimes.
 
     Args:
         directory: PyInstaller output, including its analysis archive listing.
@@ -99,15 +100,13 @@ def validate_bundle(directory: Path, root: Path) -> None:
     for path in directory.rglob("*.toc"):
         analysis += "\n" + path.read_text(encoding="utf-8")
     contents += analysis
-    if "picker.html" not in contents:
-        raise RuntimeError("Frozen backend is missing configure/templates/picker.html")
     # Windows TOCs store repr strings, so a separator may appear as "\\\\".
     if not re.search(r"r10n-[^/\\'\"]+\.dist-info[/\\]+METADATA", contents):
         raise RuntimeError("Frozen backend is missing r10n distribution metadata")
     project = (root / "pyproject.toml").read_text(encoding="utf-8")
     dependencies = re.search(r"(?s)dependencies\s*=\s*\[(.*?)\]", project)
     declared = dependencies[1].lower() if dependencies else ""
-    for package in ("typer", "textual", "rich", "pandas", "numpy"):
+    for package in ("typer", "textual", "flask", "rich", "pandas", "numpy"):
         if re.search(rf'["\']{package}(?:[<>=!~;\["\'])', declared):
             continue
         # TOC entries begin with the collected module/destination, followed by its
@@ -325,8 +324,8 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
                 str(root / "src"),
                 "--copy-metadata",
                 "r10n",
-                "--add-data",
-                f"{root / 'src/r10n_backend/configure/templates'}{os.pathsep}r10n_backend/configure/templates",
+                "--collect-all",
+                "keyring",
                 "--collect-all",
                 "pypdfium2",
                 "--collect-all",
