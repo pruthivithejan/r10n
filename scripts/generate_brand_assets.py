@@ -16,13 +16,13 @@ INSTALLER_START = "      # BEGIN GENERATED R10N ASCII"
 INSTALLER_END = "      # END GENERATED R10N ASCII"
 
 
-def read_logo() -> tuple[list[str], str, str]:
-    """Read the canonical striped logo and its turquoise-to-blue palette."""
+def read_logo() -> tuple[list[str], str]:
+    """Read the canonical striped logo and its single primary foreground."""
     lines = ASCII_PATH.read_text(encoding="utf-8").splitlines()
     if not lines or any(set(line) - {" ", "▀"} for line in lines):
         raise ValueError("The logo must contain only spaces and upper-half stripe blocks (▀).")
     tokens = json.loads(TOKENS_PATH.read_text(encoding="utf-8"))
-    return lines, tokens["brand_neon"], tokens["electric_blue"]
+    return lines, tokens["brand_neon"]
 
 
 def render_glyphs(lines: list[str], *, x_offset: float = 0, y_offset: float = 0) -> str:
@@ -47,7 +47,7 @@ def render_glyphs(lines: list[str], *, x_offset: float = 0, y_offset: float = 0)
     return "".join(rectangles)
 
 
-def render_wordmark(lines: list[str], color: str, end_color: str) -> str:
+def render_wordmark(lines: list[str], color: str) -> str:
     """Render the transparent striped wordmark without fonts, outlines, or shadows."""
     width = max(len(line) for line in lines)
     height = len(lines) * 2 - 1
@@ -55,26 +55,12 @@ def render_wordmark(lines: list[str], color: str, end_color: str) -> str:
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '
         f'{width} {height}" role="img" aria-labelledby="title desc">'
         '<title id="title">r10n routine automation</title>'
-        '<desc id="desc">Horizontal turquoise-to-blue stripes spell r10n.</desc>'
-        f"{render_gradient(color, end_color, height=height)}"
-        f'<g fill="url(#brand)">{render_glyphs(lines)}</g></svg>\n'
+        '<desc id="desc">Horizontal primary-turquoise stripes spell r10n.</desc>'
+        f'<g fill="{color}">{render_glyphs(lines)}</g></svg>\n'
     )
 
 
-def render_gradient(color: str, end_color: str, *, height: int, top: float = 0) -> str:
-    """Use the shared electric palette with no decorative offset geometry."""
-    tokens = json.loads(TOKENS_PATH.read_text(encoding="utf-8"))
-    return (
-        '<defs><linearGradient id="brand" gradientUnits="userSpaceOnUse" '
-        f'x1="0" y1="{top:g}" x2="0" y2="{top + height:g}">'
-        f'<stop stop-color="{color}"/>'
-        f'<stop offset=".5" stop-color="{tokens["brand_secondary"]}"/>'
-        f'<stop offset="1" stop-color="{end_color}"/>'
-        "</linearGradient></defs>"
-    )
-
-
-def render_favicon(lines: list[str], color: str, end_color: str) -> str:
+def render_favicon(lines: list[str], color: str) -> str:
     """Center only the seven-column R crop on a transparent square."""
     letter_rows = [line[:7] for line in lines]
     side = len(lines) * 2 + 2
@@ -83,8 +69,7 @@ def render_favicon(lines: list[str], color: str, end_color: str) -> str:
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {side} {side}" '
         'role="img" aria-labelledby="title">'
         '<title id="title">r10n R</title>'
-        f"{render_gradient(color, end_color, height=len(lines) * 2 - 1, top=1.5)}"
-        f'<g fill="url(#brand)">{render_glyphs(letter_rows, x_offset=left, y_offset=1.5)}'
+        f'<g fill="{color}">{render_glyphs(letter_rows, x_offset=left, y_offset=1.5)}'
         "</g></svg>\n"
     )
 
@@ -116,16 +101,14 @@ def update_installer_banner(lines: list[str]) -> None:
 
 def main() -> None:
     """Regenerate the native CLI logo and docs wordmark/favicon."""
-    lines, color, end_color = read_logo()
+    lines, color = read_logo()
     DOC_ASSETS.mkdir(parents=True, exist_ok=True)
     RUNTIME_BRAND.mkdir(parents=True, exist_ok=True)
     (RUNTIME_BRAND / "logo.txt").write_text(
         ASCII_PATH.read_text(encoding="utf-8"), encoding="utf-8"
     )
-    (DOC_ASSETS / "r10n.svg").write_text(render_wordmark(lines, color, end_color), encoding="utf-8")
-    (DOC_ASSETS / "favicon.svg").write_text(
-        render_favicon(lines, color, end_color), encoding="utf-8"
-    )
+    (DOC_ASSETS / "r10n.svg").write_text(render_wordmark(lines, color), encoding="utf-8")
+    (DOC_ASSETS / "favicon.svg").write_text(render_favicon(lines, color), encoding="utf-8")
     update_installer_banner(lines)
 
 

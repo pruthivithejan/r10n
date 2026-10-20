@@ -34,8 +34,7 @@
 .md-header__button.md-logo {
   display: block;
   padding: 0.35rem;
-  border-radius: 0.35rem;
-  background: var(--r10n-dark-background);
+  background: transparent;
 }
 
 .md-header__button.md-logo img {

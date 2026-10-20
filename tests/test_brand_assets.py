@@ -9,15 +9,25 @@ from scripts import generate_brand_assets
 
 
 def test_docs_logos_match_generated_wordmark_and_r_favicon() -> None:
-    """The wordmark is shadow-free SVG and the favicon is its R-only crop."""
-    lines, color, end_color = generate_brand_assets.read_logo()
+    """Logos use only the primary foreground, with no background or shadow."""
+    lines, color = generate_brand_assets.read_logo()
     wordmark = (generate_brand_assets.DOC_ASSETS / "r10n.svg").read_text(encoding="utf-8")
     favicon = (generate_brand_assets.DOC_ASSETS / "favicon.svg").read_text(encoding="utf-8")
 
-    assert wordmark == generate_brand_assets.render_wordmark(lines, color, end_color)
-    assert favicon == generate_brand_assets.render_favicon(lines, color, end_color)
+    assert wordmark == generate_brand_assets.render_wordmark(lines, color)
+    assert favicon == generate_brand_assets.render_favicon(lines, color)
     assert 'viewBox="0 0 16 16"' in favicon
-    for forbidden in ("<filter", "<feDropShadow", "filter=", "box-shadow", "stroke=", "<text"):
+    for forbidden in (
+        "<filter",
+        "<feDropShadow",
+        "filter=",
+        "box-shadow",
+        "stroke=",
+        "<text",
+        "<linearGradient",
+        "<radialGradient",
+        "<stop",
+    ):
         assert forbidden not in wordmark
         assert forbidden not in favicon
     for logo in (wordmark, favicon):
@@ -25,17 +35,16 @@ def test_docs_logos_match_generated_wordmark_and_r_favicon() -> None:
         rects = tree.findall(".//{http://www.w3.org/2000/svg}rect")
         assert rects
         assert all(rect.attrib["height"] == "1" for rect in rects)
-        assert all(color in logo for color in ("#12F7D6", "#00D1FF", "#007BFF"))
+        fills = {element.attrib["fill"] for element in tree.iter() if "fill" in element.attrib}
+        assert fills == {color}
 
 
 def test_stripes_match_ascii_cells_and_favicon_contains_only_r() -> None:
     """SVG rows preserve every source cell and the first glyph's centered crop."""
-    lines, color, end_color = generate_brand_assets.read_logo()
+    lines, color = generate_brand_assets.read_logo()
     assert set("".join(lines)) == {" ", "▀"}
-    wordmark = ElementTree.fromstring(
-        generate_brand_assets.render_wordmark(lines, color, end_color)
-    )
-    favicon = ElementTree.fromstring(generate_brand_assets.render_favicon(lines, color, end_color))
+    wordmark = ElementTree.fromstring(generate_brand_assets.render_wordmark(lines, color))
+    favicon = ElementTree.fromstring(generate_brand_assets.render_favicon(lines, color))
     ns = "{http://www.w3.org/2000/svg}"
     for tree, source, x_offset, y_offset in (
         (wordmark, lines, 0, 0),
@@ -64,7 +73,7 @@ def test_shadow_or_non_stripe_glyphs_are_rejected(invalid: str) -> None:
 
 def test_embedded_terminal_and_installer_logos_match_canonical_source() -> None:
     """The native CLI and shell installer cannot drift from the ASCII asset."""
-    lines, _, _ = generate_brand_assets.read_logo()
+    lines, _ = generate_brand_assets.read_logo()
     canonical = generate_brand_assets.ASCII_PATH.read_text(encoding="utf-8")
     assert (generate_brand_assets.RUNTIME_BRAND / "logo.txt").read_text(
         encoding="utf-8"
@@ -89,7 +98,7 @@ def test_installer_generation_preserves_surrounding_download_code(
         encoding="utf-8",
     )
     monkeypatch.setattr(generate_brand_assets, "INSTALLER_PATH", installer)
-    lines, _, _ = generate_brand_assets.read_logo()
+    lines, _ = generate_brand_assets.read_logo()
     for _ in range(2):
         generate_brand_assets.update_installer_banner(lines)
         assert installer.read_text(encoding="utf-8") == (
@@ -114,6 +123,8 @@ def test_header_hides_only_duplicate_site_topic_visually() -> None:
     css = (generate_brand_assets.ROOT / "docs/stylesheets/extra.css").read_text(encoding="utf-8")
     logo_rule = css.split(".md-header__button.md-logo {", 1)[1].split("}", 1)[0]
     assert "display: block" in logo_rule
+    assert "background: transparent" in logo_rule
+    assert "border-radius" not in logo_rule
     rule = css.split(".md-header__topic:first-child {", 1)[1].split("}", 1)[0]
     assert "clip-path: inset(50%)" in rule
     assert "display: none" not in rule
