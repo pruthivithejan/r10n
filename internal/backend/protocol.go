@@ -91,13 +91,20 @@ func (b Backend) LoadCatalog(ctx context.Context) (Catalog, error) {
 
 // ParseCatalog validates the same registry contract for direct and native probes.
 func ParseCatalog(raw []byte) (Catalog, error) {
+	return ParseCatalogForProtocol(raw, ProtocolVersion)
+}
+
+// ParseCatalogForProtocol validates a catalog against an explicitly selected
+// wire contract. Release probes select the target's supported native contract;
+// live backend communication must continue to use ParseCatalog.
+func ParseCatalogForProtocol(raw []byte, protocol int) (Catalog, error) {
 	var catalog Catalog
 	if err := json.Unmarshal(raw, &catalog); err != nil {
 		return catalog, fmt.Errorf("invalid backend catalog: %w", err)
 	}
 	catalog.Raw = append(json.RawMessage{}, raw...)
-	if catalog.Protocol != ProtocolVersion {
-		return catalog, fmt.Errorf("unsupported catalog protocol %d (expected %d)", catalog.Protocol, ProtocolVersion)
+	if catalog.Protocol != protocol {
+		return catalog, fmt.Errorf("unsupported catalog protocol %d (expected %d)", catalog.Protocol, protocol)
 	}
 	if len(catalog.Automations) == 0 {
 		return catalog, errors.New("backend catalog contains no automations")

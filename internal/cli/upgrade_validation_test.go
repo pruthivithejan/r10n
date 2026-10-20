@@ -105,7 +105,15 @@ func TestReleaseValidationFailuresDoNotMutateInstallation(t *testing.T) {
 			return e
 		}},
 		{"wrong protocol", func(e []archiveEntry) []archiveEntry {
-			e[1].body = strings.ReplaceAll(e[1].body, `"protocol":2`, `"protocol":1`)
+			e[1].body = strings.ReplaceAll(e[1].body, `"protocol":2`, `"protocol":99`)
+			return e
+		}},
+		{"catalog and worker disagree", func(e []archiveEntry) []archiveEntry {
+			e[1].body = strings.Replace(e[1].body, `"protocol":2`, `"protocol":1`, 1)
+			return e
+		}},
+		{"hello and started disagree", func(e []archiveEntry) []archiveEntry {
+			e[1].body = strings.Replace(e[1].body, `"type":"started","protocol":2`, `"type":"started","protocol":1`, 1)
 			return e
 		}},
 		{"invalid fields", func(e []archiveEntry) []archiveEntry {
@@ -240,7 +248,35 @@ func TestFrozenReleaseProbe(t *testing.T) {
 	}
 	t.Setenv("R10N_PROJECT", "/not-a-source-checkout")
 	t.Setenv("R10N_BACKEND", "/not-a-backend")
-	if err := validateReleaseBundle(t.Context(), absolute, r10n.Version); err != nil {
+	version := os.Getenv("R10N_TEST_BUNDLE_VERSION")
+	if version == "" {
+		version = r10n.Version
+	}
+	if err := validateReleaseBundle(t.Context(), absolute, version); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestUpgradeSupportedNativeProtocols(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix release helpers")
+	}
+	for _, protocol := range []string{"1", "2"} {
+		t.Run(protocol, func(t *testing.T) {
+			_, native := installedFixture(t)
+			entries := releaseFixtureEntries()
+			entries[1].body = strings.ReplaceAll(entries[1].body, `"protocol":2`, `"protocol":`+protocol)
+			app, err := extractFixture(t, entries)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := replaceBundle(t.Context(), native, app, "99.0.0"); err != nil {
+				t.Fatal(err)
+			}
+			// A second replacement exercises an already upgraded installation.
+			if err := replaceBundle(t.Context(), native, app, "99.0.0"); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

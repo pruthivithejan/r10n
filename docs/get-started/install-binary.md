@@ -82,14 +82,16 @@ Check only (no install):
 r10n upgrade --check
 ```
 
-Install a specific version (for example, the 0.13.0 release):
+Install a specific version (for example, the 0.13.1 release):
 
 ```bash
-r10n upgrade --version v0.13.0
+r10n upgrade --version v0.13.1
 ```
 
 The updater shows the r10n logo and byte-based progress with received and total
-megabytes. It asks before replacing the complete application bundle. For
+megabytes, using the same terminal palette as the forms. Narrow terminals keep
+the numeric status without wrapping the live meter. Accessible and reduced-motion
+modes print static progress lines instead. It asks before replacing the complete application bundle. For
 scripts, review the target with `upgrade --check`, then explicitly authorize:
 
 ```bash
@@ -108,7 +110,7 @@ package through its package manager instead.
 Install a specific version:
 
 ```bash
-sh install.sh --version v0.13.0
+sh install.sh --version v0.13.1
 ```
 
 Install to a custom directory:
@@ -120,6 +122,26 @@ sh install.sh --install-dir "$HOME/bin"
 ---
 
 ## Troubleshooting
+
+### Unsupported catalog protocol during an older upgrade
+
+The `0.12.x` updater requires protocol 1, while `0.13.x` uses protocol 2.
+An older updater can reject the new bundle with
+`unsupported catalog protocol 2 (expected 1)` before replacing the installation.
+The existing application remains intact.
+
+Use the checksum-verified installer once to move from `0.12.x` to `0.13.1`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh -s -- --version v0.13.1
+r10n --version
+r10n upgrade --check
+```
+
+Starting with `0.13.1`, the updater validates the target release's supported
+protocol and requires its catalog and execution events to agree, instead of
+assuming the target must use the updater's own protocol. The normal Go/Python
+worker connection still requires the matching protocol; validation is not skipped.
 
 ### Permission denied during upgrade
 

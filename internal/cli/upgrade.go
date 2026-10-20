@@ -21,10 +21,13 @@ import (
 	"time"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/pruthivithejan/r10n"
 	"github.com/pruthivithejan/r10n/internal/backend"
 	"github.com/pruthivithejan/r10n/internal/brand"
 	"github.com/pruthivithejan/r10n/internal/tui"
+	"golang.org/x/term"
 )
 
 var releasesAPI = "https://api.github.com/repos/pruthivithejan/r10n/releases"
@@ -198,7 +201,14 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 	var lastReportedBytes int64
 	lastReport := time.Time{}
 	interactive := tui.Interactive()
-	reducedMotion := os.Getenv("R10N_NO_MOTION") == "1"
+	linearProgress := os.Getenv("R10N_NO_MOTION") == "1" ||
+		os.Getenv("R10N_ACCESSIBLE") == "1" || os.Getenv("TERM") == "dumb"
+	liveProgress := false
+	defer func() {
+		if liveProgress {
+			fmt.Fprintln(stderr)
+		}
+	}()
 	for {
 		read, readErr := res.Body.Read(buffer)
 		if read > 0 {
@@ -218,14 +228,11 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 				_ = out.Close()
 				return io.ErrShortWrite
 			}
-			if interactive && reducedMotion &&
-				(n-lastReportedBytes >= 4*1024*1024 || (total > 0 && n == total)) {
-				fmt.Fprintln(stderr, formatDownloadProgress(label, n, total))
-				lastReportedBytes = n
-			} else if interactive && (time.Since(lastReport) >= 100*time.Millisecond || (total > 0 && n == total)) {
-				fmt.Fprintf(stderr, "\r%s", formatDownloadProgress(label, n, total))
+			if interactive && !linearProgress && time.Since(lastReport) >= 100*time.Millisecond {
+				fmt.Fprintf(stderr, "\r\033[2K%s", formatDownloadProgress(label, n, total))
 				lastReport = time.Now()
-			} else if !interactive && n-lastReportedBytes >= 4*1024*1024 {
+				liveProgress = true
+			} else if (!interactive || linearProgress) && n-lastReportedBytes >= 4*1024*1024 {
 				fmt.Fprintf(stderr, "%s\n", formatDownloadProgress(label, n, total))
 				lastReportedBytes = n
 			}
@@ -260,34 +267,68 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 		_ = os.Remove(destination)
 		return fmt.Errorf("download ended at %d of %d bytes", n, total)
 	}
-	if interactive && !reducedMotion {
-		fmt.Fprintf(stderr, "\r%s\n", formatDownloadProgress(label, n, total))
+	if interactive && !linearProgress {
+		fmt.Fprintf(stderr, "\r\033[2K%s\n", formatDownloadProgress(label, n, total))
 	} else {
 		fmt.Fprintln(stderr, formatDownloadProgress(label, n, total))
 	}
+	liveProgress = false
 	return nil
 }
 
 func formatDownloadProgress(label string, received, total int64) string {
-	const width = 24
+	columns := 0
+	if tui.Interactive() {
+		columns, _, _ = term.GetSize(int(os.Stderr.Fd()))
+	}
+	return downloadProgressView(label, received, total, columns)
+}
+
+func downloadProgressView(label string, received, total int64, columns int) string {
+	label = strings.NewReplacer("\n", " ", "\t", " ").Replace(tui.SafeText(label))
+	if os.Getenv("R10N_ACCESSIBLE") != "1" {
+		label = lipgloss.NewStyle().Foreground(brand.Accent()).Render(label)
+	}
 	receivedMB := float64(received) / 1_000_000
+	var details, compact, minimal string
+	ratio := 0.0
 	if total <= 0 {
-		return fmt.Sprintf("%s %.1f MB downloaded · total unknown", tui.SafeText(label), receivedMB)
+		details = fmt.Sprintf("%.1f MB downloaded · total unknown", receivedMB)
+		compact = fmt.Sprintf("%.1f MB · total unknown", receivedMB)
+		minimal = fmt.Sprintf("%.1f MB · ?", receivedMB)
+	} else {
+		ratio = max(0, min(1, float64(received)/float64(total)))
+		details = fmt.Sprintf("%.1f MB / %.1f MB · %d%%", receivedMB, float64(total)/1_000_000, int(ratio*100))
+		compact = fmt.Sprintf("%.1f MB · %d%%", receivedMB, int(ratio*100))
+		minimal = fmt.Sprintf("%d%%", int(ratio*100))
 	}
-	ratio := float64(received) / float64(total)
-	if ratio > 1 {
-		ratio = 1
+	result := fmt.Sprintf("%s %s", label, details)
+	if total > 0 {
+		// Do not wrap live \r updates onto another terminal row. Small terminals
+		// keep the numeric status and drop the decorative bar first.
+		width := 24
+		if columns > 0 {
+			width = min(width, columns-lipgloss.Width(result)-5)
+		}
+		if width >= 8 && os.Getenv("R10N_ACCESSIBLE") != "1" {
+			bar := tui.NewProgress(width)
+			bar.ShowPercentage = false
+			bar.Full, bar.Empty = '#', '-'
+			result = fmt.Sprintf("%s [%s] %s", label, bar.ViewAs(ratio), details)
+		}
 	}
-	filled := int(ratio * width)
-	return fmt.Sprintf(
-		"%s [%s%s] %.1f MB / %.1f MB · %d%%",
-		tui.SafeText(label),
-		strings.Repeat("#", filled),
-		strings.Repeat("-", width-filled),
-		receivedMB,
-		float64(total)/1_000_000,
-		int(ratio*100),
-	)
+	if columns > 0 && lipgloss.Width(result) >= columns {
+		// A label is less important than received/total bytes on narrow screens.
+		result = details
+		if lipgloss.Width(result) >= columns {
+			result = compact
+		}
+		if lipgloss.Width(result) >= columns {
+			result = minimal
+		}
+		result = ansi.Truncate(result, columns-1, "")
+	}
+	return result
 }
 
 func verifyChecksum(archive, sums, name string) error {
@@ -548,7 +589,7 @@ func validateReleaseBundle(ctx context.Context, app, version string) error {
 	if err != nil {
 		return err
 	}
-	catalog, err := backend.ParseCatalog(raw)
+	catalog, err := parseReleaseCatalog(raw)
 	if err != nil {
 		return err
 	}
@@ -575,7 +616,7 @@ func validateReleaseBundle(ctx context.Context, app, version string) error {
 	if err != nil {
 		return fmt.Errorf("native contacts execution: %w", err)
 	}
-	if err := validateProbeEvents(events, output); err != nil {
+	if err := validateProbeEvents(events, output, catalog.Protocol); err != nil {
 		return err
 	}
 	if err := verifyProbeContacts(output); err != nil {
@@ -584,9 +625,28 @@ func validateReleaseBundle(ctx context.Context, app, version string) error {
 	return ctx.Err()
 }
 
+// The target native command owns its backend protocol. A release's public JSON
+// contract need not match the upgrader's internal Go/Python worker contract.
+// Both shipped native contracts have the catalog and contacts-event fields
+// checked below. Unknown contracts still require an explicit compatibility review.
+func parseReleaseCatalog(raw []byte) (backend.Catalog, error) {
+	var header struct {
+		Protocol int `json:"protocol"`
+	}
+	if err := json.Unmarshal(raw, &header); err != nil {
+		return backend.Catalog{}, fmt.Errorf("invalid release catalog: %w", err)
+	}
+	switch header.Protocol {
+	case 1, 2:
+		return backend.ParseCatalogForProtocol(raw, header.Protocol)
+	default:
+		return backend.Catalog{}, fmt.Errorf("unsupported release catalog protocol %d (supported: 1, 2)", header.Protocol)
+	}
+}
+
 // The native command enforces the worker protocol; also require a successful
 // exchange and the expected artifact before replacing a working installation.
-func validateProbeEvents(raw []byte, output string) error {
+func validateProbeEvents(raw []byte, output string, protocol int) error {
 	hello, started, completed, artifact := false, false, false, false
 	for _, line := range bytes.Split(bytes.TrimSpace(raw), []byte("\n")) {
 		var event backend.Event
@@ -598,12 +658,12 @@ func validateProbeEvents(raw []byte, output string) error {
 		}
 		switch event.Type {
 		case "hello":
-			if hello || event.Protocol != backend.ProtocolVersion {
+			if hello || event.Protocol != protocol {
 				return fmt.Errorf("invalid contacts probe handshake")
 			}
 			hello = true
 		case "started":
-			if started || event.Protocol != backend.ProtocolVersion || event.Automation != "contacts" {
+			if started || event.Protocol != protocol || event.Automation != "contacts" {
 				return fmt.Errorf("invalid contacts probe started event")
 			}
 			started = true

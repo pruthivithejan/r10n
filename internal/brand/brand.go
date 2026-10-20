@@ -23,41 +23,37 @@ const (
 	LightAccent = "#0058B8"
 )
 
-// Accent returns the configured terminal-safe accent or adapts to the terminal.
-func Accent() lipgloss.TerminalColor {
+func themeColor(light, dark string) lipgloss.Color {
 	switch os.Getenv("R10N_THEME") {
 	case "dark":
-		return lipgloss.Color(Neon)
+		return lipgloss.Color(dark)
 	case "light":
-		return lipgloss.Color(LightAccent)
+		return lipgloss.Color(light)
 	default:
-		return lipgloss.AdaptiveColor{Light: LightAccent, Dark: Neon}
+		if lipgloss.HasDarkBackground() {
+			return lipgloss.Color(dark)
+		}
+		return lipgloss.Color(light)
 	}
 }
+
+// Accent resolves the configured theme at render time, including progress bars.
+func Accent() lipgloss.Color { return themeColor(LightAccent, Neon) }
 
 // FocusAccent returns a high-visibility control indicator for the current theme.
-func FocusAccent() lipgloss.TerminalColor {
-	switch os.Getenv("R10N_THEME") {
-	case "dark":
-		return lipgloss.Color(Neon)
-	case "light":
-		return lipgloss.Color(ElectricBlue)
-	default:
-		return lipgloss.AdaptiveColor{Light: ElectricBlue, Dark: Neon}
-	}
-}
+func FocusAccent() lipgloss.Color { return lipgloss.Color(ElectricBlue) }
+
+// Foreground returns readable body text without painting the terminal background.
+func Foreground() lipgloss.Color { return themeColor(DarkBackground, LightForeground) }
+
+// Muted returns the supporting palette color for descriptions and inactive controls.
+func Muted() lipgloss.Color { return themeColor(LightAccent, Secondary) }
+
+// Surface returns the background for inactive buttons.
+func Surface() lipgloss.Color { return themeColor(LightForeground, DarkBackground) }
 
 // OnAccent returns readable text for a brand-colored button.
-func OnAccent() lipgloss.TerminalColor {
-	switch os.Getenv("R10N_THEME") {
-	case "dark":
-		return lipgloss.Color(DarkBackground)
-	case "light":
-		return lipgloss.Color(LightForeground)
-	default:
-		return lipgloss.AdaptiveColor{Light: LightForeground, Dark: DarkBackground}
-	}
-}
+func OnAccent() lipgloss.Color { return themeColor(LightForeground, DarkBackground) }
 
 // ASCII contains the canonical foreground-only terminal logo.
 //

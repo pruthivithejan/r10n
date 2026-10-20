@@ -21,9 +21,23 @@ import (
 	"golang.org/x/term"
 )
 
-var heading = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.AdaptiveColor{Light: brand.LightAccent, Dark: brand.Neon})
+func heading() lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Foreground(brand.Accent())
+}
+
+// NewProgress uses the same resolved palette as forms and release downloads.
+func NewProgress(width int) progress.Model {
+	bar := progress.New(progress.WithSolidFill(string(brand.Accent())), progress.WithWidth(width),
+		progress.WithColorProfile(lipgloss.ColorProfile()))
+	bar.EmptyColor = string(brand.Muted())
+	bar.PercentageStyle = lipgloss.NewStyle().Foreground(brand.Foreground())
+	return bar
+}
+
+func newSpinner() spinner.Model {
+	return spinner.New(spinner.WithSpinner(spinner.Dot),
+		spinner.WithStyle(lipgloss.NewStyle().Foreground(brand.Accent())))
+}
 
 // SafeText removes terminal control sequences from untrusted automation output.
 func SafeText(text string) string {
@@ -59,7 +73,7 @@ func writeTable(writer io.Writer, title string, values map[string]any) error {
 		}
 		return style
 	})
-	if _, err := fmt.Fprintln(writer, heading.Render(title)); err != nil {
+	if _, err := fmt.Fprintln(writer, heading().Render(title)); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(writer, rendered.String())
@@ -189,7 +203,7 @@ func (m executionModel) View() string {
 	if !m.done && m.animate {
 		status = m.spinner.View() + " " + status
 	}
-	lines := []string{heading.Render(m.title), status}
+	lines := []string{heading().Render(m.title), status}
 	if m.hasTotal {
 		lines = append(lines, m.progress.ViewAs(m.percent))
 	}
@@ -227,10 +241,10 @@ func executeInteractive(ctx context.Context, engine backend.Backend, task backen
 		close(events)
 		close(finished)
 	}()
-	s := spinner.New(spinner.WithSpinner(spinner.Dot))
+	s := newSpinner()
 	model := executionModel{
 		title: task.Title, status: "Starting Python worker…", spinner: s,
-		progress: progress.New(), events: events, resultErr: resultErr, cancel: cancel,
+		progress: NewProgress(60), events: events, resultErr: resultErr, cancel: cancel,
 		animate: os.Getenv("R10N_NO_MOTION") != "1", width: 76,
 	}
 	final, err := tea.NewProgram(model, tea.WithContext(parentCtx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()

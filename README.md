@@ -1,8 +1,6 @@
-# r10n
+<img src="docs/assets/brand/r10n.svg" width="220" alt="r10n — striped routine automation wordmark">
 
 **Routine automation in an accessible, keyboard-first terminal.**
-
-![r10n ASCII wordmark](docs/assets/brand/r10n.svg)
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Go](https://img.shields.io/badge/Go-native-00ADD8.svg)](https://go.dev/)
@@ -94,6 +92,11 @@ Go owns command routing, Charm forms, progress, and release downloads. Python
 owns the registry and automation worker. Both communicate through a versioned
 JSON Lines contract. The native build packages the matching worker and smoke
 tests the bundle outside the checkout.
+
+Go unit and private-hook component tests stay beside their packages. Standalone
+compiled-command integration/end-to-end tests live in [`tests/go/`](tests/go/README.md):
+run them with `go test ./tests/go/...`. The standard `go test ./...` check includes
+both groups without special configuration.
 
 ## Documentation
 

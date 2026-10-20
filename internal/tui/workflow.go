@@ -123,7 +123,7 @@ func RunTask(ctx context.Context, engine backend.Backend, task backend.Automatio
 		return &backend.RunError{Code: 2, Message: task.SetupHint}
 	}
 	fmt.Fprintln(stderr, brand.Banner(accessible()))
-	fmt.Fprintln(stderr, heading.Render(SafeText(task.Title)), SafeText(task.Description))
+	fmt.Fprintln(stderr, heading().Render(SafeText(task.Title)), SafeText(task.Description))
 	form, collect, err := inputForm(task)
 	if err != nil {
 		return err

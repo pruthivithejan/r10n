@@ -1,27 +1,13 @@
 package cli
 
 import (
-	"context"
 	"encoding/json"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/pruthivithejan/r10n/internal/settings"
 )
-
-func TestRemovedInitCommandDoesNotCreateProjectFolders(t *testing.T) {
-	t.Chdir(t.TempDir())
-
-	err := Run(context.Background(), []string{"init"})
-	if err == nil {
-		t.Fatal("removed init command was accepted")
-	}
-	if _, err := os.Stat("local"); !os.IsNotExist(err) {
-		t.Fatalf("init created a project-local directory: %v", err)
-	}
-}
 
 func TestStatusReportsSystemSettingsWithoutSecrets(t *testing.T) {
 	configDirectory := t.TempDir()

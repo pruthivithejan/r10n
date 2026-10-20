@@ -113,6 +113,27 @@ func TestParseCatalogSharedContract(t *testing.T) {
 	}
 }
 
+func TestExplicitCatalogProtocolDoesNotRelaxBackendContract(t *testing.T) {
+	raw := []byte(`{"protocol":1,"version":"0.12.2","automations":[{"id":"contacts","input_schema":{"properties":{}},"field_order":[]}]}`)
+	if _, err := ParseCatalog(raw); err == nil {
+		t.Fatal("live backend accepted a legacy worker contract")
+	}
+	if _, err := ParseCatalogForProtocol(raw, 2); err == nil {
+		t.Fatal("catalog did not enforce selected contract")
+	}
+	if _, err := ParseCatalogForProtocol(raw, 1); err != nil {
+		t.Fatal(err)
+	}
+	for _, invalid := range []string{
+		`{"protocol":1,"automations":[]}`,
+		`{"protocol":1,"automations":[{"id":"x","input_schema":{"properties":{"a":{}}},"field_order":[]}]}`,
+	} {
+		if _, err := ParseCatalogForProtocol([]byte(invalid), 1); err == nil {
+			t.Fatal("legacy release bypassed schema validation")
+		}
+	}
+}
+
 func TestStreamSuccessAndLiveDelivery(t *testing.T) {
 	for _, scenario := range []string{"success", "live"} {
 		t.Run(scenario, func(t *testing.T) {

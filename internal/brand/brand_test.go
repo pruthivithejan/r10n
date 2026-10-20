@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestEmbeddedLogoMatchesCanonicalSource(t *testing.T) {
@@ -39,5 +41,35 @@ func TestAccentColorsMatchCanonicalTokens(t *testing.T) {
 		tokens["light_foreground"] != LightForeground ||
 		tokens["brand_text_on_light"] != LightAccent {
 		t.Fatalf("terminal accents differ from canonical tokens: %#v", tokens)
+	}
+}
+
+func TestPaletteHonorsExplicitThemeAndSystemBackground(t *testing.T) {
+	background := lipgloss.HasDarkBackground()
+	t.Cleanup(func() { lipgloss.SetHasDarkBackground(background) })
+	for _, test := range []struct {
+		theme string
+		dark  bool
+		want  string
+		text  string
+	}{
+		{"dark", false, Neon, LightForeground},
+		{"light", true, LightAccent, DarkBackground},
+		{"system", true, Neon, LightForeground},
+		{"system", false, LightAccent, DarkBackground},
+	} {
+		t.Run(test.theme+"/"+test.want, func(t *testing.T) {
+			t.Setenv("R10N_THEME", test.theme)
+			lipgloss.SetHasDarkBackground(test.dark)
+			if got := string(Accent()); got != test.want {
+				t.Fatalf("accent = %s, want %s", got, test.want)
+			}
+			if got := string(Foreground()); got != test.text {
+				t.Fatalf("foreground = %s, want %s", got, test.text)
+			}
+			if FocusAccent() != lipgloss.Color(ElectricBlue) {
+				t.Fatal("focus indicator does not use electric blue")
+			}
+		})
 	}
 }

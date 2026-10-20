@@ -20,7 +20,8 @@ src/r10n_backend/
   settings.py / secrets.py        Per-user preferences and OS credential store
   automations/                    Python workflow implementations
 scripts/                          Developer checks, packaging and version tooling
-tests/                            Python tests; Go tests beside implementation
+tests/                            Python tests
+tests/go/                         Standalone Go integration/end-to-end tests
 docs/                             Zensical documentation
 ```
 
@@ -101,8 +102,13 @@ Crush internal packages or copy code without license review.
 
 ## Testing and builds
 
-Python tests belong in `tests/test_<module>.py`; Go tests belong beside their
-package. Cover invalid and empty inputs, missing files, absolute paths, settings
+Python tests belong in `tests/test_<module>.py`. Go unit tests and component tests
+requiring private package hooks belong beside their package; standalone Go
+integration/end-to-end tests belong in `tests/go/` and use public APIs or compiled
+commands. Do not export production internals or add custom runners to relocate
+tests. `go test ./...` includes both; `go test ./tests/go/...` runs the standalone
+suite. See `tests/go/README.md` for opt-in frozen-bundle workflows.
+Cover invalid and empty inputs, missing files, absolute paths, settings
 round trips, secret handling, accessible/reduced-motion behavior, and cancellation.
 
 CI runs Python 3.10, 3.11 and 3.12, verifies `uv.lock` and `go.mod`, then builds

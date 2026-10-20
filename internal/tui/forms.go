@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/pruthivithejan/r10n/internal/backend"
 	"github.com/pruthivithejan/r10n/internal/brand"
 )
@@ -189,18 +190,49 @@ func theme() *huh.Theme {
 	colors := brand.Accent()
 	focus := brand.FocusAccent()
 	onAccent := brand.OnAccent()
-	t := huh.ThemeCharm()
+	text, muted := brand.Foreground(), brand.Muted()
+	// Start from the uncolored layout, not Charm's pink/purple theme. Define
+	// every field state before copying blurred styles so accents cannot leak.
+	t := huh.ThemeBase()
 	t.Focused.Base = t.Focused.Base.BorderForeground(focus)
+	t.Focused.Card = t.Focused.Base
 	t.Focused.Title = t.Focused.Title.Foreground(colors).Bold(true)
-	t.Focused.NoteTitle = t.Focused.NoteTitle.Foreground(colors).Bold(true)
+	t.Focused.NoteTitle = t.Focused.Title.MarginBottom(1)
+	t.Focused.Description = t.Focused.Description.Foreground(muted)
+	t.Focused.ErrorIndicator = t.Focused.ErrorIndicator.Foreground(lipgloss.Color("1"))
+	t.Focused.ErrorMessage = t.Focused.ErrorMessage.Foreground(lipgloss.Color("1"))
+	t.Focused.Directory = t.Focused.Directory.Foreground(colors)
+	t.Focused.File = t.Focused.File.Foreground(text)
 	t.Focused.SelectSelector = t.Focused.SelectSelector.Foreground(focus)
+	t.Focused.NextIndicator = t.Focused.NextIndicator.Foreground(focus)
+	t.Focused.PrevIndicator = t.Focused.PrevIndicator.Foreground(focus)
+	t.Focused.Option = t.Focused.Option.Foreground(text)
 	t.Focused.MultiSelectSelector = t.Focused.MultiSelectSelector.Foreground(focus)
 	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(colors)
 	t.Focused.SelectedPrefix = t.Focused.SelectedPrefix.Foreground(focus)
+	t.Focused.UnselectedOption = t.Focused.UnselectedOption.Foreground(text)
+	t.Focused.UnselectedPrefix = t.Focused.UnselectedPrefix.Foreground(muted)
 	t.Focused.TextInput.Cursor = t.Focused.TextInput.Cursor.Foreground(focus)
 	t.Focused.TextInput.Prompt = t.Focused.TextInput.Prompt.Foreground(colors)
+	t.Focused.TextInput.Text = t.Focused.TextInput.Text.Foreground(text)
+	t.Focused.TextInput.Placeholder = t.Focused.TextInput.Placeholder.Foreground(muted)
 	t.Focused.FocusedButton = t.Focused.FocusedButton.Foreground(onAccent).Background(colors)
+	t.Focused.BlurredButton = t.Focused.BlurredButton.Foreground(text).Background(brand.Surface())
+	t.Focused.Next = t.Focused.FocusedButton
+	t.Blurred = t.Focused
+	t.Blurred.Base = t.Focused.Base.BorderStyle(lipgloss.HiddenBorder())
+	t.Blurred.Card = t.Blurred.Base
+	t.Blurred.FocusedButton = t.Focused.BlurredButton
+	t.Blurred.Next = t.Focused.BlurredButton
+	t.Blurred.NextIndicator = lipgloss.NewStyle()
+	t.Blurred.PrevIndicator = lipgloss.NewStyle()
 	t.Group.Title = t.Focused.Title
 	t.Group.Description = t.Focused.Description
+	t.Help.ShortKey = t.Help.ShortKey.Foreground(colors)
+	t.Help.FullKey = t.Help.FullKey.Foreground(colors)
+	t.Help.ShortDesc = t.Help.ShortDesc.Foreground(muted)
+	t.Help.FullDesc = t.Help.FullDesc.Foreground(muted)
+	t.Help.ShortSeparator = t.Help.ShortSeparator.Foreground(muted)
+	t.Help.FullSeparator = t.Help.FullSeparator.Foreground(muted)
 	return t
 }

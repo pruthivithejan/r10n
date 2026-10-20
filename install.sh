@@ -159,24 +159,32 @@ asset_size_from_release_json() {
 download_binary_asset() {
   download_url="$1"
   destination="$2"
+  use_color=0
+  if [ -t 2 ] && [ "${TERM:-}" != "dumb" ] && [ -z "${NO_COLOR:-}" ] && [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
+    use_color=1
+  fi
   if [ "${brand_displayed:-0}" -eq 0 ]; then
-    if [ -t 2 ] && [ -z "${NO_COLOR:-}" ] && [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
-      printf '\033[38;2;18;247;214m' >&2
+    if [ "$use_color" -eq 1 ]; then
+      case "${R10N_THEME:-dark}" in
+        light) printf '\033[38;2;0;88;184m' >&2 ;;
+        *) printf '\033[38;2;18;247;214m' >&2 ;;
+      esac
     fi
     if [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
       # BEGIN GENERATED R10N ASCII
       printf '%s\n' \
-        '  ██████╗  ██╗ ██████╗ ███╗   ██╗' \
-        '  ██╔══██╗███║██╔═══██╗████╗  ██║' \
-        '  ██████╔╝╚██║██║   ██║██╔██╗ ██║' \
-        '  ██╔══██╗ ██║██║   ██║██║╚██╗██║' \
-        '  ██║  ██║ ██║╚██████╔╝██║ ╚████║' \
-        '  ╚═╝  ╚═╝ ╚═╝ ╚═════╝ ╚═╝  ╚═══╝' >&2
+        '▀▀▀▀▀▀     ▀▀    ▀▀▀▀▀   ▀▀   ▀▀' \
+        '▀▀   ▀▀   ▀▀▀   ▀▀   ▀▀  ▀▀▀  ▀▀' \
+        '▀▀   ▀▀    ▀▀   ▀▀   ▀▀  ▀▀▀▀ ▀▀' \
+        '▀▀▀▀▀▀     ▀▀   ▀▀   ▀▀  ▀▀ ▀▀▀▀' \
+        '▀▀ ▀▀      ▀▀   ▀▀   ▀▀  ▀▀  ▀▀▀' \
+        '▀▀  ▀▀     ▀▀   ▀▀   ▀▀  ▀▀   ▀▀' \
+        '▀▀   ▀▀  ▀▀▀▀▀▀  ▀▀▀▀▀   ▀▀   ▀▀' >&2
       # END GENERATED R10N ASCII
     else
       printf 'r10n — routine automation\n' >&2
     fi
-    if [ -t 2 ] && [ -z "${NO_COLOR:-}" ] && [ "${R10N_ACCESSIBLE:-}" != "1" ]; then
+    if [ "$use_color" -eq 1 ]; then
       printf '\033[0m' >&2
     fi
     if [ -n "${expected_asset_bytes:-}" ]; then
@@ -191,10 +199,18 @@ download_binary_asset() {
   # Keep a live transfer meter when motion is allowed; accessible and reduced-motion
   # modes show the announced expected MB value and the actual MB total afterward.
   if [ -t 2 ] && [ "${R10N_ACCESSIBLE:-}" != "1" ] && [ "${R10N_NO_MOTION:-}" != "1" ]; then
-    if ! curl -fL --retry 3 --retry-delay 2 --retry-connrefused \
+    if [ "$use_color" -eq 1 ]; then
+      case "${R10N_THEME:-dark}" in
+        light) printf '\033[38;2;0;88;184m' >&2 ;;
+        *) printf '\033[38;2;0;209;255m' >&2 ;;
+      esac
+    fi
+    if ! curl -fL --progress-bar --retry 3 --retry-delay 2 --retry-connrefused \
       "$download_url" -o "$destination"; then
+      if [ "$use_color" -eq 1 ]; then printf '\033[0m' >&2; fi
       return 1
     fi
+    if [ "$use_color" -eq 1 ]; then printf '\033[0m' >&2; fi
   else
     if ! curl -fsSL --retry 3 --retry-delay 2 --retry-connrefused \
       "$download_url" -o "$destination"; then

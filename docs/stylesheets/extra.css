@@ -32,6 +32,7 @@
 }
 
 .md-header__button.md-logo {
+  display: block;
   padding: 0.35rem;
   border-radius: 0.35rem;
   background: var(--r10n-dark-background);
@@ -40,6 +41,35 @@
 .md-header__button.md-logo img {
   width: 5rem;
   height: auto;
+}
+
+@media (max-width: 30rem) {
+  .md-header__button.md-logo img {
+    width: 3rem;
+  }
+}
+
+/* Keep the site name accessible without repeating the wordmark visually. */
+.md-header__topic:first-child {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The theme normally reveals the page topic only after scrolling. With the
+   duplicate name hidden, retain the page title before and after scrolling. */
+.md-header__title .md-header__topic + .md-header__topic {
+  z-index: 0;
+  pointer-events: auto;
+  opacity: 1;
+  transform: none;
+  transition: none;
 }
 
 :focus-visible {
