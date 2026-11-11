@@ -55,6 +55,7 @@ class TestWorkerProtocol:
                 if request.full_url.endswith("/")
                 else image_bytes.getvalue()
             )
+
             class Response(BytesIO):
                 headers = Message()
 
@@ -212,6 +213,12 @@ class TestWorkerProtocol:
         )
 
         assert artifacts == [str(report.resolve())]
+
+    def test_artifact_discovery_retains_single_argument_compatibility(self, tmp_path):
+        output = tmp_path / "result.pdf"
+        output.write_bytes(b"pdf")
+
+        assert find_artifacts({"output_files": [str(output)]}) == [str(output.resolve())]
 
     def test_nested_artifacts_follow_declared_result_fields(self, tmp_path, monkeypatch):
         """Logo outputs are reported once, in result order, without unrelated paths."""

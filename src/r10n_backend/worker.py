@@ -96,12 +96,15 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def find_artifacts(result: dict[str, Any], fields: tuple[tuple[str, ...], ...]) -> list[str]:
+def find_artifacts(
+    result: dict[str, Any], fields: tuple[tuple[str, ...], ...] | None = None
+) -> list[str]:
     """Discover existing paths at the automation's declared result fields.
 
     Args:
         result: Normalized automation result.
-        fields: Paths into the result; ``*`` selects each item in a list.
+        fields: Paths into the result; ``*`` selects each item in a list. When
+            omitted, retain the original name-based discovery for callers.
 
     Returns:
         Unique artifact paths in encounter order.
@@ -115,7 +118,14 @@ def find_artifacts(result: dict[str, Any], fields: tuple[tuple[str, ...], ...]) 
         elif isinstance(value, list):
             for item in value:
                 visit(item, (*path, "*"))
-        elif isinstance(value, str) and path in fields:
+        elif isinstance(value, str) and (
+            path in fields
+            if fields is not None
+            else any(
+                token in next((part.lower() for part in reversed(path) if part != "*"), "")
+                for token in ("output", "artifact", "manifest", "report", "cleaned")
+            )
+        ):
             artifact = Path(value).expanduser()
             if artifact.exists():
                 normalized = str(artifact.resolve())
