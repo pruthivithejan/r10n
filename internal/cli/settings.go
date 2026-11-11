@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/charmbracelet/huh"
 	"github.com/pruthivithejan/r10n/internal/backend"
@@ -156,13 +158,12 @@ func promptSMTPProfile(ctx context.Context, name string, edit bool) error {
 			return fmt.Errorf("password cannot be empty")
 		}
 		current.ActiveSMTPProfile = name
-		if err := setSecret(ctx, name, password); err != nil {
-			return err
-		}
 	}
-	path, err := settings.Save(current)
-	if err != nil && !edit {
-		_ = deleteSecret(ctx, name)
+	var path string
+	if edit {
+		path, err = settings.Save(current)
+	} else {
+		path, err = saveSettingsWithSecret(ctx, current, name, password, systemCredentialStore{})
 	}
 	if err != nil {
 		return err
@@ -234,6 +235,37 @@ func setSecret(ctx context.Context, profile, secret string) error {
 
 func deleteSecret(ctx context.Context, profile string) error {
 	return callCredentialBackend(ctx, "secret-delete", profile, "")
+}
+
+type credentialStore interface {
+	set(context.Context, string, string) error
+	delete(context.Context, string) error
+}
+
+type systemCredentialStore struct{}
+
+func (systemCredentialStore) set(ctx context.Context, profile, secret string) error {
+	return setSecret(ctx, profile, secret)
+}
+
+func (systemCredentialStore) delete(ctx context.Context, profile string) error {
+	return deleteSecret(ctx, profile)
+}
+
+func saveSettingsWithSecret(ctx context.Context, document settings.Document, profile, secret string, store credentialStore) (string, error) {
+	if err := store.set(ctx, profile, secret); err != nil {
+		return "", err
+	}
+	path, err := settings.Save(document)
+	if err == nil {
+		return path, nil
+	}
+	cleanup, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if cleanupErr := store.delete(cleanup, profile); cleanupErr != nil {
+		return "", errors.Join(err, fmt.Errorf("could not remove the saved credential after settings failed: %w", cleanupErr))
+	}
+	return "", err
 }
 
 func callCredentialBackend(ctx context.Context, operation, profile, secret string) error {
@@ -336,20 +368,17 @@ func importSettings(ctx context.Context, args []string) error {
 	if !confirmed {
 		return nil
 	}
+	var path string
 	if hasSMTP && hasSecret {
 		var password string
 		if err := json.Unmarshal(secret, &password); err != nil {
 			return fmt.Errorf("legacy SMTP password must be a string")
 		}
-		if err := setSecret(ctx, *profileName, password); err != nil {
-			return err
-		}
+		path, err = saveSettingsWithSecret(ctx, current, *profileName, password, systemCredentialStore{})
+	} else {
+		path, err = settings.Save(current)
 	}
-	path, err := settings.Save(current)
 	if err != nil {
-		if hasSMTP && hasSecret {
-			_ = deleteSecret(ctx, *profileName)
-		}
 		return err
 	}
 	fmt.Fprintf(stdout, "Imported reviewed settings to %s\n", tui.SafeText(path))
