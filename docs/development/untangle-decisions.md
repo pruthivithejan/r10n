@@ -39,16 +39,15 @@ policy, and rate limiting of both workflows.
 - Protocol version declarations cross the Go/Python process boundary and are
   covered by integration tests.
 
-## Rendering options need a separate design
+## Render Markdown options through a shared pipeline — implemented
 
 - Markdown-to-PDF accepts a table-of-contents option, but the renderer does not
   produce one. Syntax highlighting and custom CSS styles are stripped before PDF
   rendering, and directory conversion drops the corresponding options.
-- A complete fix needs a rendering contract for headings, page references,
-  code-token styles, and supported CSS, plus consistent single-file and batch
-  behavior. This changes output and potentially dependencies; it is not solved
-  by forwarding flags. Existing tests that only asserted conversion success did
-  not demonstrate these features and have been replaced with output checks.
+- The renderer now builds linked, paginated contents and colored fenced code,
+  applies a documented subset of CSS, and passes the same options to batch
+  conversions. Tests inspect generated PDF text, links, and drawing commands;
+  the native bundle smoke test verifies its dynamically loaded syntax lexers.
 
 ## Unify contact generation paths — implemented
 

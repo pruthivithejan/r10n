@@ -173,6 +173,8 @@ def test_smoke_runs_worker_outside_checkout(
             output = Path(payload["output_path"])
             pdf = canvas.Canvas(str(output))
             pdf.drawString(72, 720, "Bundle smoke")
+            pdf.setFillColorRGB(0, 128 / 255, 0)
+            pdf.drawString(72, 700, "def hello():")
             pdf.save()
         events = [
             {"type": "hello", "protocol": 2},

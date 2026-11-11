@@ -215,12 +215,12 @@ class MarkdownToPdfInput(AutomationInput):
     )
     css_file: str | None = Field(
         None,
-        description="CSS file (currently does not affect PDF styling)",
+        description="CSS file with supported typography and color styles",
         json_schema_extra={"ui:widget": "file"},
     )
     page_size: Literal["A4", "Letter", "Legal"] = Field("A4", description="PDF page size")
-    include_toc: bool = Field(False, description="Table of contents (not yet rendered)")
-    syntax_highlighting: bool = Field(True, description="Code highlighting (not yet rendered)")
+    include_toc: bool = Field(False, description="Include a linked table of contents")
+    syntax_highlighting: bool = Field(True, description="Highlight fenced code blocks")
     recursive: bool = Field(False, description="Process nested directories")
 
 
@@ -591,6 +591,8 @@ def _run_markdown_to_pdf(inputs: BaseModel, emit: EventCallback) -> dict[str, An
             recursive=values.recursive,
             css_file=values.css_file,
             page_size=values.page_size,
+            include_toc=values.include_toc,
+            syntax_highlighting=values.syntax_highlighting,
         )
         result["success"] = result.get("failed", 0) == 0
         if not result["success"]:

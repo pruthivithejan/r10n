@@ -233,7 +233,10 @@ def smoke_test(executable: Path, version: str) -> None:
         optimized = directory / "optimized"
         Image.new("RGB", (32, 24), color=(42, 80, 140)).save(images / "sample.png")
         markdown = directory / "document.md"
-        markdown.write_text("# Bundle smoke\n\nGenerated outside the checkout.\n", encoding="utf-8")
+        markdown.write_text(
+            "# Bundle smoke\n\nGenerated outside the checkout.\n\n```python\ndef hello():\n    return 1\n```\n",
+            encoding="utf-8",
+        )
         pdf = directory / "document.pdf"
         jobs = [
             (
@@ -275,7 +278,15 @@ def smoke_test(executable: Path, version: str) -> None:
             if image.format != "WEBP" or image.size != (32, 24):
                 raise RuntimeError("Image worker produced an invalid WebP")
         reader = PdfReader(pdf)
-        if len(reader.pages) != 1 or "Bundle smoke" not in (reader.pages[0].extract_text() or ""):
+        content = reader.pages[0].extract_text() or ""
+        stream = reader.pages[0].get_contents()
+        drawing = stream.get_data() if stream is not None else b""
+        if (
+            len(reader.pages) != 1
+            or "Bundle smoke" not in content
+            or "def hello():" not in content
+            or b"0 .501961 0 rg" not in drawing
+        ):
             raise RuntimeError("PDF worker did not produce expected content")
 
 
@@ -330,6 +341,8 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
                 "pypdfium2",
                 "--collect-all",
                 "PIL",
+                "--collect-submodules",
+                "pygments.lexers",
                 "--collect-data",
                 "certifi",
                 str(root / "src" / "r10n_backend" / "__main__.py"),

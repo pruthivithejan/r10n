@@ -5,15 +5,22 @@ Converts markdown files to styled PDF documents with support for
 custom CSS styling, syntax highlighting, and batch processing.
 """
 
+import html as html_lib
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import markdown
+from pygments import highlight
+from pygments.formatters.html import HtmlFormatter
+from pygments.lexers import get_lexer_by_name
+from pygments.lexers.special import TextLexer
+from pygments.util import ClassNotFound
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4, LETTER
+from reportlab.lib.pagesizes import A4, LEGAL, LETTER
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
 from reportlab.platypus import (
@@ -23,13 +30,40 @@ from reportlab.platypus import (
     Spacer,
     Table,
     TableStyle,
+    XPreformatted,
 )
+from reportlab.platypus.tableofcontents import TableOfContents
 
 PAGE_SIZES = {
     "A4": A4,
     "Letter": LETTER,
     "LETTER": LETTER,
+    "Legal": LEGAL,
 }
+
+
+class _Heading(Paragraph):
+    """A heading with a destination for the contents list."""
+
+    def __init__(self, content: str, style: ParagraphStyle, level: int, key: str) -> None:
+        super().__init__(content, style)
+        self.toc_level = level
+        self.toc_key = key
+
+    def drawOn(self, canvas, x, y, _sW=0):  # noqa: N802, N803 - ReportLab callback signature
+        """Place the link destination at the actual top of this heading."""
+        canvas.bookmarkHorizontalAbsolute(self.toc_key, y + self.height, left=x)
+        return super().drawOn(canvas, x, y, _sW)
+
+
+class _DocumentWithContents(SimpleDocTemplate):
+    """Collect heading locations during ReportLab's multi-pass build."""
+
+    def afterFlowable(self, flowable):  # noqa: N802 - ReportLab callback name
+        """Register a heading's page and link destination."""
+        if isinstance(flowable, _Heading):
+            key = flowable.toc_key
+            self.notify("TOCEntry", (flowable.toc_level, flowable.getPlainText(), self.page, key))
 
 
 @dataclass
@@ -176,6 +210,10 @@ class MarkdownConverter:
                 textColor=colors.HexColor("#555555"),
             )
         )
+        for level in range(4, 7):
+            self.styles.add(
+                ParagraphStyle(name=f"Heading{level}Custom", parent=self.styles["Heading3Custom"])
+            )
         self.styles.add(
             ParagraphStyle(
                 name="CodeBlock",
@@ -200,6 +238,71 @@ class MarkdownConverter:
             )
         )
 
+    def _apply_custom_styles(self) -> None:
+        """Apply the supported basic element and typography CSS declarations."""
+        if not self.config.css_file:
+            return
+        css = Path(self.config.css_file).read_text(encoding="utf-8")
+        css = re.sub(r"/\*.*?\*/", "", css, flags=re.DOTALL)
+        selectors = {
+            "h1": ("Heading1Custom",),
+            "h2": ("Heading2Custom",),
+            "h3": ("Heading3Custom",),
+            "h4": ("Heading4Custom",),
+            "h5": ("Heading5Custom",),
+            "h6": ("Heading6Custom",),
+            "p": ("Normal",),
+            "pre": ("CodeBlock",),
+            "code": ("CodeBlock",),
+            "blockquote": ("BlockQuote",),
+        }
+        for selector_text, declarations in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+            for selector in selector_text.split(","):
+                for style_name in selectors.get(selector.strip().lower(), ()):
+                    style = self.styles[style_name]
+                    for declaration in declarations.split(";"):
+                        name, separator, value = declaration.partition(":")
+                        if not separator:
+                            continue
+                        name, value = name.strip().lower(), value.strip()
+                        if name in {"color", "background-color"}:
+                            try:
+                                if re.fullmatch(r"#[0-9a-fA-F]{3}", value):
+                                    value = "#" + "".join(character * 2 for character in value[1:])
+                                parse_color = cast(Callable[[str], Any], colors.toColor)
+                                color = parse_color(value)
+                            except (ValueError, TypeError):
+                                continue
+                            setattr(style, "textColor" if name == "color" else "backColor", color)
+                        elif name == "font-size" and re.fullmatch(r"\d+(?:\.\d+)?pt", value):
+                            style.fontSize = float(value[:-2])
+                            style.leading = style.fontSize * 1.2
+
+    def _code_flowable(self, content: str, language: str) -> Preformatted | XPreformatted:
+        """Render fenced code with optional Pygments token colors."""
+        code = html_lib.unescape(re.sub(r"<[^>]*>", "", content))
+        if not self.config.syntax_highlighting:
+            return Preformatted(code, self.styles["CodeBlock"])
+        try:
+            lexer = get_lexer_by_name(language) if language else TextLexer()
+        except ClassNotFound:
+            lexer = TextLexer()
+        highlighted = highlight(code, lexer, HtmlFormatter(nowrap=True, noclasses=True))
+
+        def render_token(match: re.Match[str]) -> str:
+            color = re.search(r"color:\s*(#[0-9A-Fa-f]{3,6})", match.group(1))
+            if not color:
+                return match.group(2)
+            value = color.group(1)
+            if len(value) == 4:
+                value = "#" + "".join(character * 2 for character in value[1:])
+            return f'<font color="{value}">{match.group(2)}</font>'
+
+        highlighted = re.sub(
+            r'<span\s+style="([^"]*)">(.*?)</span>', render_token, highlighted, flags=re.DOTALL
+        )
+        return XPreformatted(highlighted.rstrip("\n"), self.styles["CodeBlock"])
+
     def _parse_html_to_elements(self, html: str) -> list:
         """
         Parse HTML to reportlab flowable elements.
@@ -212,6 +315,10 @@ class MarkdownConverter:
         """
         elements = []
 
+        def heading(content: str, style: str, level: int) -> _Heading:
+            key = f"heading-{sum(isinstance(item, _Heading) for item in elements)}"
+            return _Heading(content, self.styles[style], level, key)
+
         html = re.sub(
             r"<html[^>]*>|</html>|<head[^>]*>.*?</head>|<body[^>]*>|</body>",
             "",
@@ -219,6 +326,11 @@ class MarkdownConverter:
             flags=re.DOTALL | re.IGNORECASE,
         )
         html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
+
+        escaped_marker = "\x00r10n-content-marker\x00"
+        while escaped_marker in html:
+            escaped_marker += "\x00"
+        html = html.replace("|||", escaped_marker)
 
         html = re.sub(
             r"<h1[^>]*>(.*?)</h1>", r"|||H1|||\1|||/H1|||", html, flags=re.DOTALL | re.IGNORECASE
@@ -243,9 +355,13 @@ class MarkdownConverter:
             r"<p[^>]*>(.*?)</p>", r"|||P|||\1|||/P|||", html, flags=re.DOTALL | re.IGNORECASE
         )
 
+        def code_marker(match: re.Match[str]) -> str:
+            language = re.search(r"language-([^\s\"'<>]+)", match.group(1))
+            return f"|||CODE:{language.group(1) if language else ''}|||{match.group(2)}|||/CODE|||"
+
         html = re.sub(
-            r"<pre[^>]*><code[^>]*>(.*?)</code></pre>",
-            r"|||CODE|||\1|||/CODE|||",
+            r"<pre[^>]*><code([^>]*)>(.*?)</code></pre>",
+            code_marker,
             html,
             flags=re.DOTALL | re.IGNORECASE,
         )
@@ -294,7 +410,7 @@ class MarkdownConverter:
             flags=re.DOTALL | re.IGNORECASE,
         )
 
-        parts = re.split(r"\|\|\|", html)
+        parts = [part.replace(escaped_marker, "|||") for part in html.split("|||")]
 
         i = 0
         while i < len(parts):
@@ -304,7 +420,7 @@ class MarkdownConverter:
                 content = parts[i + 1] if i + 1 < len(parts) else ""
                 content = self._clean_html(content)
                 if content:
-                    elements.append(Paragraph(content, self.styles["Heading1Custom"]))
+                    elements.append(heading(content, "Heading1Custom", 0))
                     elements.append(Spacer(1, 6 * mm))
                 i += 3
 
@@ -312,7 +428,7 @@ class MarkdownConverter:
                 content = parts[i + 1] if i + 1 < len(parts) else ""
                 content = self._clean_html(content)
                 if content:
-                    elements.append(Paragraph(content, self.styles["Heading2Custom"]))
+                    elements.append(heading(content, "Heading2Custom", 1))
                     elements.append(Spacer(1, 4 * mm))
                 i += 3
 
@@ -320,7 +436,7 @@ class MarkdownConverter:
                 content = parts[i + 1] if i + 1 < len(parts) else ""
                 content = self._clean_html(content)
                 if content:
-                    elements.append(Paragraph(content, self.styles["Heading3Custom"]))
+                    elements.append(heading(content, "Heading3Custom", 2))
                     elements.append(Spacer(1, 3 * mm))
                 i += 3
 
@@ -328,7 +444,7 @@ class MarkdownConverter:
                 content = parts[i + 1] if i + 1 < len(parts) else ""
                 content = self._clean_html(content)
                 if content:
-                    elements.append(Paragraph(content, self.styles["Heading3Custom"]))
+                    elements.append(heading(content, f"Heading{part[1]}Custom", int(part[1]) - 1))
                     elements.append(Spacer(1, 3 * mm))
                 i += 3
 
@@ -340,11 +456,12 @@ class MarkdownConverter:
                     elements.append(Spacer(1, 3 * mm))
                 i += 3
 
-            elif part == "CODE":
+            elif part == "CODE" or part.startswith("CODE:"):
                 content = parts[i + 1] if i + 1 < len(parts) else ""
-                content = self._unescape_html(content)
                 if content:
-                    elements.append(Preformatted(content, self.styles["Code"]))
+                    elements.append(
+                        self._code_flowable(content, part[5:] if part.startswith("CODE:") else "")
+                    )
                     elements.append(Spacer(1, 4 * mm))
                 i += 3
 
@@ -461,7 +578,9 @@ class MarkdownConverter:
 
         content = input_path.read_text(encoding="utf-8")
 
-        html = parse_markdown(content)
+        html = markdown.Markdown(extensions=["tables", "fenced_code", "toc", "nl2br"]).convert(
+            content
+        )
 
         styled_html = apply_css_styling(
             html,
@@ -469,11 +588,36 @@ class MarkdownConverter:
             syntax_highlighting=self.config.syntax_highlighting,
         )
 
+        self._apply_custom_styles()
         elements = self._parse_html_to_elements(styled_html)
+        if not elements:
+            elements.append(Spacer(1, 0))
+
+        include_toc = self.config.include_toc and any(
+            isinstance(item, _Heading) for item in elements
+        )
+        if include_toc:
+            contents = TableOfContents()
+            contents.levelStyles = [
+                ParagraphStyle(
+                    f"ContentsLevel{level}",
+                    parent=self.styles["Normal"],
+                    leftIndent=level * 12,
+                    firstLineIndent=-6,
+                    leading=14,
+                )
+                for level in range(6)
+            ]
+            elements = [
+                Paragraph("Table of Contents", self.styles["Heading1Custom"]),
+                contents,
+                Spacer(1, 8 * mm),
+                *elements,
+            ]
 
         page_size = PAGE_SIZES.get(self.config.page_size, A4)
 
-        doc = SimpleDocTemplate(
+        doc = _DocumentWithContents(
             str(output_path),
             pagesize=page_size,
             topMargin=self.config.margin_top * mm,
@@ -482,13 +626,16 @@ class MarkdownConverter:
             rightMargin=self.config.margin_right * mm,
         )
 
-        doc.build(elements)
+        if include_toc:
+            doc.multiBuild(elements)
+        else:
+            doc.build(elements)
 
         return {
             "success": True,
             "input_path": str(input_path),
             "output_path": str(output_path),
-            "pages": 1,  # reportlab doesn't easily expose page count
+            "pages": doc.page,
         }
 
 
@@ -550,6 +697,8 @@ def convert_directory(
     preserve_structure: bool = True,
     css_file: str | None = None,
     page_size: str = "A4",
+    include_toc: bool = False,
+    syntax_highlighting: bool = True,
 ) -> dict[str, Any]:
     """
     Convert all markdown files in a directory to PDF.
@@ -561,6 +710,8 @@ def convert_directory(
         preserve_structure: Maintain directory structure in output
         css_file: Path to custom CSS file for all conversions
         page_size: Page size for all PDFs
+        include_toc: Include a table of contents in each PDF
+        syntax_highlighting: Highlight fenced code in each PDF
 
     Returns:
         Dictionary with conversion summary
@@ -602,6 +753,8 @@ def convert_directory(
                 output_path=str(pdf_output),
                 css_file=css_file,
                 page_size=page_size,
+                include_toc=include_toc,
+                syntax_highlighting=syntax_highlighting,
             )
 
             results["converted"] += 1

@@ -12,7 +12,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from pypdf import PdfReader
+from pypdf import PageObject, PdfReader
+from pypdf.generic import ArrayObject, DictionaryObject
 
 from r10n_backend.automations.markdown_to_pdf import (
     MarkdownConverter,
@@ -23,6 +24,151 @@ from r10n_backend.automations.markdown_to_pdf import (
     load_config,
     parse_markdown,
 )
+from r10n_backend.worker import run_automation
+
+
+def _page_content(page: PageObject) -> bytes:
+    """Return the drawing stream of a page expected to contain content."""
+    contents = page.get_contents()
+    assert contents is not None
+    return contents.get_data()
+
+
+def test_pdf_table_of_contents_has_heading_links_and_pages(tmp_path):
+    """A TOC contains entries linked to real headings and reports actual page count."""
+    source = tmp_path / "guide.md"
+    source.write_text(
+        "# Chapter One\n\n" + "Paragraph text.\n\n" * 150 + "## Chapter Two\n", encoding="utf-8"
+    )
+    output = tmp_path / "guide.pdf"
+    result = convert_markdown_to_pdf(str(source), str(output), include_toc=True)
+    pdf = PdfReader(output)
+    text = "\n".join(page.extract_text() for page in pdf.pages)
+    assert "Table of Contents" in text
+    assert text.count("Chapter One") == 2
+    assert text.count("Chapter Two") == 2
+    assert result["pages"] == len(pdf.pages) > 1
+    assert any(page.get("/Annots") for page in pdf.pages)
+
+
+def test_toc_links_target_distinct_headings_on_same_page(tmp_path):
+    source = tmp_path / "guide.md"
+    output = tmp_path / "guide.pdf"
+    source.write_text("# First\n\n## Second\n", encoding="utf-8")
+    convert_markdown_to_pdf(str(source), str(output), include_toc=True)
+    page = PdfReader(output).pages[0]
+    annotations = page["/Annots"]
+    assert isinstance(annotations, ArrayObject)
+    destinations = []
+    for annotation in annotations:
+        link = annotation.get_object()
+        assert isinstance(link, DictionaryObject)
+        destination = link["/Dest"]
+        assert isinstance(destination, ArrayObject)
+        destinations.append(destination)
+    assert all(destination[1] == "/XYZ" for destination in destinations)
+    assert len({float(destination[3]) for destination in destinations}) == 2
+
+
+def test_pdf_highlighting_and_css_affect_rendered_colors(tmp_path):
+    """Syntax highlighting and stylesheet settings change actual PDF drawing colors."""
+    source = tmp_path / "code.md"
+    source.write_text(
+        '# Heading\n\n```python\ndef hello():\n    return "world"\n```\n', encoding="utf-8"
+    )
+    css = tmp_path / "style.css"
+    css.write_text("h1 { color: #f00; font-size: 18pt; }", encoding="utf-8")
+    plain = tmp_path / "plain.pdf"
+    highlighted = tmp_path / "highlighted.pdf"
+    convert_markdown_to_pdf(str(source), str(plain), syntax_highlighting=False)
+    convert_markdown_to_pdf(
+        str(source), str(highlighted), css_file=str(css), syntax_highlighting=True
+    )
+    plain_stream = _page_content(PdfReader(plain).pages[0])
+    styled_stream = _page_content(PdfReader(highlighted).pages[0])
+    assert b"1 0 0 rg" in styled_stream
+    assert b"1 0 0 rg" not in plain_stream
+    assert b"0 .501961 0 rg" in styled_stream
+    assert b"0 .501961 0 rg" not in plain_stream
+    assert 'return "world"' in PdfReader(highlighted).pages[0].extract_text()
+
+
+def test_directory_options_reach_each_pdf_through_worker(tmp_path):
+    """Batch conversions honor the same TOC and highlighting choices as single files."""
+    source = tmp_path / "docs"
+    source.mkdir()
+    (source / "one.md").write_text(
+        "# One\n\n```python\ndef first():\n    return 1\n```", encoding="utf-8"
+    )
+    output = tmp_path / "pdfs"
+    events = []
+    run_automation(
+        "md2pdf",
+        {
+            "input_path": str(source),
+            "output_path": str(output),
+            "include_toc": True,
+            "syntax_highlighting": False,
+        },
+        events.append,
+    )
+    assert events[-1]["success"] is True
+    page = PdfReader(output / "one.pdf").pages[0]
+    assert "Table of Contents" in page.extract_text()
+    assert b"0 .501961 0 rg" not in _page_content(page)
+
+
+def test_no_headings_does_not_show_reportlab_placeholder(tmp_path):
+    source = tmp_path / "plain.md"
+    output = tmp_path / "plain.pdf"
+    source.write_text("A document without headings.", encoding="utf-8")
+    convert_markdown_to_pdf(str(source), str(output), include_toc=True)
+    assert "Placeholder for table of contents" not in PdfReader(output).pages[0].extract_text()
+
+
+@pytest.mark.parametrize("include_toc", [False, True])
+def test_empty_markdown_produces_a_readable_blank_page(tmp_path, include_toc):
+    source = tmp_path / "empty.md"
+    output = tmp_path / "empty.pdf"
+    source.write_text("", encoding="utf-8")
+    result = convert_markdown_to_pdf(str(source), str(output), include_toc=include_toc)
+    pdf = PdfReader(output)
+    assert len(pdf.pages) == result["pages"] == 1
+    assert pdf.pages[0].extract_text() == ""
+
+
+def test_marker_text_is_preserved_in_prose_and_fenced_code(tmp_path):
+    source = tmp_path / "markers.md"
+    output = tmp_path / "markers.pdf"
+    source.write_text('Left ||| right\n\n```python\nprint("left ||| right")\n```', encoding="utf-8")
+    convert_markdown_to_pdf(str(source), str(output))
+    text = PdfReader(output).pages[0].extract_text()
+    assert "Left ||| right" in text
+    assert 'print("left ||| right")' in text
+
+
+@pytest.mark.parametrize("language, code", [("c#", "using System;"), ("f#", "let x = 1")])
+def test_language_aliases_with_hash_are_highlighted(tmp_path, language, code):
+    source = tmp_path / "code.md"
+    output = tmp_path / "code.pdf"
+    source.write_text(f"```{language}\n{code}\n```", encoding="utf-8")
+    convert_markdown_to_pdf(str(source), str(output))
+    page = PdfReader(output).pages[0]
+    assert code in page.extract_text()
+    assert b"0 .501961 0 rg" in _page_content(page)
+
+
+@pytest.mark.parametrize("language", ["python", "unknown-language"])
+def test_code_special_characters_survive_pdf_rendering(tmp_path, language):
+    source = tmp_path / "code.md"
+    output = tmp_path / "code.pdf"
+    source.write_text(
+        f'```{language}\nif a < b:\n    print("a & b <tag>")\n```\n', encoding="utf-8"
+    )
+    convert_markdown_to_pdf(str(source), str(output), syntax_highlighting=True)
+    text = PdfReader(output).pages[0].extract_text()
+    assert "if a < b:" in text
+    assert 'print("a & b <tag>")' in text
 
 
 class TestMarkdownToPdfConfig:
