@@ -63,3 +63,14 @@ func TestStdinInputCanBeCancelled(t *testing.T) {
 		t.Fatalf("blocked stdin ignored cancellation: %v", err)
 	}
 }
+
+func TestDisplayFlagsDoNotChangeProcessEnvironment(t *testing.T) {
+	t.Setenv("R10N_ACCESSIBLE", "0")
+	t.Setenv("R10N_NO_MOTION", "0")
+	if err := Run(context.Background(), []string{"--accessible", "--no-motion", "--version"}); err != nil {
+		t.Fatal(err)
+	}
+	if os.Getenv("R10N_ACCESSIBLE") != "0" || os.Getenv("R10N_NO_MOTION") != "0" {
+		t.Fatal("one invocation changed process-wide display overrides")
+	}
+}

@@ -15,7 +15,6 @@ import (
 
 	"github.com/charmbracelet/huh"
 	"github.com/pruthivithejan/r10n/internal/backend"
-	"github.com/pruthivithejan/r10n/internal/brand"
 	"github.com/pruthivithejan/r10n/internal/settings"
 	"github.com/pruthivithejan/r10n/internal/tui"
 )
@@ -51,7 +50,8 @@ func configurePDF(ctx context.Context, args []string) error {
 	if !tui.Interactive() {
 		return usage(fmt.Errorf("PDF configuration requires a terminal"))
 	}
-	if err := tui.ApplySettings(); err != nil {
+	ctx, err := tui.ResolveSettings(ctx)
+	if err != nil {
 		return err
 	}
 	if template == "" {
@@ -65,7 +65,7 @@ func configurePDF(ctx context.Context, args []string) error {
 			return err
 		}
 	}
-	template, err := filepath.Abs(template)
+	template, err = filepath.Abs(template)
 	if err != nil {
 		return err
 	}
@@ -132,7 +132,7 @@ func configurePDF(ctx context.Context, args []string) error {
 	}
 
 	fmt.Fprintf(stderr, "%s\nPDF page: %.1f x %.1f points\n",
-		brand.Banner(os.Getenv("R10N_ACCESSIBLE") == "1"),
+		tui.DisplayPreferences(ctx).Palette.Banner(tui.DisplayPreferences(ctx).Accessible),
 		inspection.PageWidth,
 		inspection.PageHeight,
 	)
@@ -281,7 +281,7 @@ func validatePositivePDFNumber(text string) error {
 }
 
 func showPDFPreview(ctx context.Context, inspection pdfInspection, profile settings.PDFProfile) error {
-	if os.Getenv("R10N_ACCESSIBLE") == "1" {
+	if tui.DisplayPreferences(ctx).Accessible {
 		fmt.Fprintf(stderr, "Screen-reader preview: %d fields on a %.1f x %.1f point page\n",
 			len(profile.Fields), inspection.PageWidth, inspection.PageHeight)
 		for name, field := range profile.Fields {

@@ -25,7 +25,6 @@ import (
 	"github.com/charmbracelet/x/ansi"
 	"github.com/pruthivithejan/r10n"
 	"github.com/pruthivithejan/r10n/internal/backend"
-	"github.com/pruthivithejan/r10n/internal/brand"
 	"github.com/pruthivithejan/r10n/internal/tui"
 	"golang.org/x/term"
 )
@@ -201,8 +200,8 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 	var lastReportedBytes int64
 	lastReport := time.Time{}
 	interactive := tui.Interactive()
-	linearProgress := os.Getenv("R10N_NO_MOTION") == "1" ||
-		os.Getenv("R10N_ACCESSIBLE") == "1" || os.Getenv("TERM") == "dumb"
+	prefs := tui.DisplayPreferences(ctx)
+	linearProgress := prefs.ReducedMotion || prefs.Accessible || os.Getenv("TERM") == "dumb"
 	liveProgress := false
 	defer func() {
 		if liveProgress {
@@ -229,11 +228,11 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 				return io.ErrShortWrite
 			}
 			if interactive && !linearProgress && time.Since(lastReport) >= 100*time.Millisecond {
-				fmt.Fprintf(stderr, "\r\033[2K%s", formatDownloadProgress(label, n, total))
+				fmt.Fprintf(stderr, "\r\033[2K%s", formatDownloadProgressWithPreferences(label, n, total, prefs))
 				lastReport = time.Now()
 				liveProgress = true
 			} else if (!interactive || linearProgress) && n-lastReportedBytes >= 4*1024*1024 {
-				fmt.Fprintf(stderr, "%s\n", formatDownloadProgress(label, n, total))
+				fmt.Fprintf(stderr, "%s\n", formatDownloadProgressWithPreferences(label, n, total, prefs))
 				lastReportedBytes = n
 			}
 		}
@@ -268,26 +267,34 @@ func download(ctx context.Context, address, destination string, limit, expectedS
 		return fmt.Errorf("download ended at %d of %d bytes", n, total)
 	}
 	if interactive && !linearProgress {
-		fmt.Fprintf(stderr, "\r\033[2K%s\n", formatDownloadProgress(label, n, total))
+		fmt.Fprintf(stderr, "\r\033[2K%s\n", formatDownloadProgressWithPreferences(label, n, total, prefs))
 	} else {
-		fmt.Fprintln(stderr, formatDownloadProgress(label, n, total))
+		fmt.Fprintln(stderr, formatDownloadProgressWithPreferences(label, n, total, prefs))
 	}
 	liveProgress = false
 	return nil
 }
 
 func formatDownloadProgress(label string, received, total int64) string {
+	return formatDownloadProgressWithPreferences(label, received, total, tui.DisplayPreferences(context.Background()))
+}
+
+func formatDownloadProgressWithPreferences(label string, received, total int64, prefs tui.Preferences) string {
 	columns := 0
 	if tui.Interactive() {
 		columns, _, _ = term.GetSize(int(os.Stderr.Fd()))
 	}
-	return downloadProgressView(label, received, total, columns)
+	return downloadProgressViewWithPreferences(label, received, total, columns, prefs)
 }
 
 func downloadProgressView(label string, received, total int64, columns int) string {
+	return downloadProgressViewWithPreferences(label, received, total, columns, tui.DisplayPreferences(context.Background()))
+}
+
+func downloadProgressViewWithPreferences(label string, received, total int64, columns int, prefs tui.Preferences) string {
 	label = strings.NewReplacer("\n", " ", "\t", " ").Replace(tui.SafeText(label))
-	if os.Getenv("R10N_ACCESSIBLE") != "1" {
-		label = lipgloss.NewStyle().Foreground(brand.Accent()).Render(label)
+	if !prefs.Accessible {
+		label = lipgloss.NewStyle().Foreground(prefs.Palette.Accent()).Render(label)
 	}
 	receivedMB := float64(received) / 1_000_000
 	var details, compact, minimal string
@@ -310,8 +317,8 @@ func downloadProgressView(label string, received, total int64, columns int) stri
 		if columns > 0 {
 			width = min(width, columns-lipgloss.Width(result)-5)
 		}
-		if width >= 8 && os.Getenv("R10N_ACCESSIBLE") != "1" {
-			bar := tui.NewProgress(width)
+		if width >= 8 && !prefs.Accessible {
+			bar := tui.NewProgress(width, prefs.Palette)
 			bar.ShowPercentage = false
 			bar.Full, bar.Empty = '#', '-'
 			result = fmt.Sprintf("%s [%s] %s", label, bar.ViewAs(ratio), details)
@@ -444,7 +451,8 @@ func upgrade(ctx context.Context, args []string) error {
 	if err := confirmUpgrade(ctx, yes); err != nil {
 		return err
 	}
-	if err := tui.ApplySettings(); err != nil {
+	ctx, err = tui.ResolveSettings(ctx)
+	if err != nil {
 		return err
 	}
 	assetURL, assetSize, err := r.asset(asset)
@@ -461,7 +469,8 @@ func upgrade(ctx context.Context, args []string) error {
 	}
 	defer os.RemoveAll(tmp)
 	archive, sums := filepath.Join(tmp, asset), filepath.Join(tmp, "SHA256SUMS")
-	fmt.Fprintln(stderr, brand.Banner(os.Getenv("R10N_ACCESSIBLE") == "1"))
+	prefs := tui.DisplayPreferences(ctx)
+	fmt.Fprintln(stderr, prefs.Palette.Banner(prefs.Accessible))
 	if err := download(ctx, assetURL, archive, 1024*1024*1024, assetSize, asset); err != nil {
 		return err
 	}

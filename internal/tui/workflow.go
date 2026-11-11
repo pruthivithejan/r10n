@@ -21,26 +21,55 @@ var stderr io.Writer = os.Stderr
 
 // SetIO connects the terminal UI to the command's streams.
 func SetIO(in *os.File, out, diagnostics io.Writer) { stdin, stdout, stderr = in, out, diagnostics }
-func accessible() bool                              { return os.Getenv("R10N_ACCESSIBLE") == "1" }
 
-// ApplySettings loads persisted preferences before a terminal workflow starts.
-func ApplySettings() error { return applySettings() }
+// Preferences hold display choices for one command invocation.
+type Preferences struct {
+	Accessible    bool
+	ReducedMotion bool
+	Palette       brand.Palette
+}
 
-func applySettings() error {
+type preferenceKey struct{}
+type overrideKey struct{}
+
+// WithOverrides applies command-line flags to this invocation only.
+func WithOverrides(ctx context.Context, accessible, reducedMotion bool) context.Context {
+	return context.WithValue(ctx, overrideKey{}, Preferences{Accessible: accessible, ReducedMotion: reducedMotion})
+}
+
+// ResolveSettings loads persisted preferences and applies environment and CLI overrides.
+func ResolveSettings(ctx context.Context) (context.Context, error) {
+	if _, ok := ctx.Value(preferenceKey{}).(Preferences); ok {
+		return ctx, nil
+	}
 	document, err := settings.Load()
 	if err != nil {
-		return fmt.Errorf("load r10n settings: %w", err)
+		return ctx, fmt.Errorf("load r10n settings: %w", err)
 	}
-	if os.Getenv("R10N_ACCESSIBLE") == "" && document.Accessible {
-		_ = os.Setenv("R10N_ACCESSIBLE", "1")
+	prefs := Preferences{Accessible: document.Accessible, ReducedMotion: document.ReducedMotion, Palette: brand.Palette(document.Theme)}
+	if value := os.Getenv("R10N_ACCESSIBLE"); value != "" {
+		prefs.Accessible = value == "1"
 	}
-	if os.Getenv("R10N_NO_MOTION") == "" && document.ReducedMotion {
-		_ = os.Setenv("R10N_NO_MOTION", "1")
+	if value := os.Getenv("R10N_NO_MOTION"); value != "" {
+		prefs.ReducedMotion = value == "1"
 	}
-	if os.Getenv("R10N_THEME") == "" && document.Theme != "" {
-		_ = os.Setenv("R10N_THEME", document.Theme)
+	if value := os.Getenv("R10N_THEME"); value != "" {
+		prefs.Palette = brand.Palette(value)
 	}
-	return nil
+	if flags, ok := ctx.Value(overrideKey{}).(Preferences); ok {
+		prefs.Accessible = prefs.Accessible || flags.Accessible
+		prefs.ReducedMotion = prefs.ReducedMotion || flags.ReducedMotion
+	}
+	return context.WithValue(ctx, preferenceKey{}, prefs), nil
+}
+
+// DisplayPreferences returns the preferences resolved for this invocation.
+func DisplayPreferences(ctx context.Context) Preferences {
+	if prefs, ok := ctx.Value(preferenceKey{}).(Preferences); ok {
+		return prefs
+	}
+	flags, _ := ctx.Value(overrideKey{}).(Preferences)
+	return Preferences{Accessible: flags.Accessible || os.Getenv("R10N_ACCESSIBLE") == "1", ReducedMotion: flags.ReducedMotion || os.Getenv("R10N_NO_MOTION") == "1", Palette: brand.Palette(os.Getenv("R10N_THEME"))}
 }
 func Interactive() bool {
 	return term.IsTerminal(int(stdin.Fd())) && term.IsTerminal(int(os.Stderr.Fd()))
@@ -80,7 +109,7 @@ func confirm(ctx context.Context, task backend.Automation, payload map[string]an
 	for name, value := range payload {
 		resolved[name] = value
 	}
-	if err := writeTable(stderr, "Review "+task.Title, resolved); err != nil {
+	if err := writeTable(stderr, "Review "+task.Title, resolved, DisplayPreferences(ctx).Palette); err != nil {
 		return err
 	}
 	if task.Confirmation != "" {
@@ -99,7 +128,8 @@ func confirm(ctx context.Context, task backend.Automation, payload map[string]an
 
 func Execute(ctx context.Context, engine backend.Backend, task backend.Automation, payload map[string]any, yes, jsonOutput bool) error {
 	if Interactive() {
-		if err := applySettings(); err != nil {
+		var err error
+		if ctx, err = ResolveSettings(ctx); err != nil {
 			return err
 		}
 	}
@@ -109,21 +139,23 @@ func Execute(ctx context.Context, engine backend.Backend, task backend.Automatio
 	if Interactive() && !jsonOutput {
 		return executeInteractive(ctx, engine, task, payload)
 	}
-	return engine.Stream(ctx, task.ID, payload, func(e backend.Event) error { return printEvent(stdout, e, jsonOutput) })
+	return engine.Stream(ctx, task.ID, payload, func(e backend.Event) error { return printEvent(stdout, e, jsonOutput, DisplayPreferences(ctx).Palette) })
 }
 
 func RunTask(ctx context.Context, engine backend.Backend, task backend.Automation) error {
 	if !Interactive() {
 		return &backend.RunError{Code: 2, Message: "native forms require a terminal; supply command flags and --yes or use run --input-json"}
 	}
-	if err := applySettings(); err != nil {
+	var err error
+	if ctx, err = ResolveSettings(ctx); err != nil {
 		return err
 	}
 	if task.SetupHint != "" {
 		return &backend.RunError{Code: 2, Message: task.SetupHint}
 	}
-	fmt.Fprintln(stderr, brand.Banner(accessible()))
-	fmt.Fprintln(stderr, heading().Render(SafeText(task.Title)), SafeText(task.Description))
+	prefs := DisplayPreferences(ctx)
+	fmt.Fprintln(stderr, prefs.Palette.Banner(prefs.Accessible))
+	fmt.Fprintln(stderr, heading(prefs.Palette).Render(SafeText(task.Title)), SafeText(task.Description))
 	form, collect, err := inputForm(task)
 	if err != nil {
 		return err
@@ -142,7 +174,8 @@ func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog
 	if !Interactive() {
 		return &backend.RunError{Code: 2, Message: "native forms require a terminal"}
 	}
-	if err := applySettings(); err != nil {
+	var err error
+	if ctx, err = ResolveSettings(ctx); err != nil {
 		return err
 	}
 	for {
@@ -155,7 +188,8 @@ func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog
 			options = append(options, huh.NewOption(SafeText(label), task.ID))
 		}
 		var selected string
-		title := brand.Banner(accessible()) + "\nr10n · Routine automation"
+		prefs := DisplayPreferences(ctx)
+		title := prefs.Palette.Banner(prefs.Accessible) + "\nr10n · Routine automation"
 		if err := runForm(ctx, huh.NewForm(huh.NewGroup(huh.NewSelect[string]().Title(title).
 			Description("Choose a task. Press / to filter.").Options(options...).Value(&selected)))); err != nil {
 			return err

@@ -49,19 +49,21 @@ func usage(err error) error {
 
 func Run(ctx context.Context, args []string) error {
 	tui.SetIO(stdin, stdout, stderr)
+	accessible, reducedMotion := false, false
 	for len(args) > 0 {
 		switch args[0] {
 		case "--accessible":
-			_ = os.Setenv("R10N_ACCESSIBLE", "1")
+			accessible = true
 			args = args[1:]
 		case "--no-motion":
-			_ = os.Setenv("R10N_NO_MOTION", "1")
+			reducedMotion = true
 			args = args[1:]
 		default:
 			goto flagsParsed
 		}
 	}
 flagsParsed:
+	ctx = tui.WithOverrides(ctx, accessible, reducedMotion)
 	if len(args) == 1 && (args[0] == "--version" || args[0] == "-v") {
 		fmt.Fprintf(stdout, "r10n, version %s\n", r10n.Version)
 		return nil

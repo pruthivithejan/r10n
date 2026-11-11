@@ -23,8 +23,11 @@ const (
 	LightAccent = "#0058B8"
 )
 
-func themeColor(light, dark string) lipgloss.Color {
-	switch os.Getenv("R10N_THEME") {
+// Palette resolves colors for one invocation without changing process state.
+type Palette string
+
+func (p Palette) themeColor(light, dark string) lipgloss.Color {
+	switch p {
 	case "dark":
 		return lipgloss.Color(dark)
 	case "light":
@@ -37,23 +40,40 @@ func themeColor(light, dark string) lipgloss.Color {
 	}
 }
 
+// Accent returns the primary foreground for the palette.
+func (p Palette) Accent() lipgloss.Color { return p.themeColor(LightAccent, Neon) }
+
+// Foreground returns the body text color for the palette.
+func (p Palette) Foreground() lipgloss.Color { return p.themeColor(DarkBackground, LightForeground) }
+
+// Muted returns the supporting text color for the palette.
+func (p Palette) Muted() lipgloss.Color { return p.themeColor(LightAccent, Secondary) }
+
+// Surface returns the inactive control background for the palette.
+func (p Palette) Surface() lipgloss.Color { return p.themeColor(LightForeground, DarkBackground) }
+
+// OnAccent returns the text color for a primary-colored control.
+func (p Palette) OnAccent() lipgloss.Color { return p.themeColor(LightForeground, DarkBackground) }
+
+func environmentPalette() Palette { return Palette(os.Getenv("R10N_THEME")) }
+
 // Accent resolves the configured theme at render time, including progress bars.
-func Accent() lipgloss.Color { return themeColor(LightAccent, Neon) }
+func Accent() lipgloss.Color { return environmentPalette().Accent() }
 
 // FocusAccent returns a high-visibility control indicator for the current theme.
 func FocusAccent() lipgloss.Color { return lipgloss.Color(ElectricBlue) }
 
 // Foreground returns readable body text without painting the terminal background.
-func Foreground() lipgloss.Color { return themeColor(DarkBackground, LightForeground) }
+func Foreground() lipgloss.Color { return environmentPalette().Foreground() }
 
 // Muted returns the supporting palette color for descriptions and inactive controls.
-func Muted() lipgloss.Color { return themeColor(LightAccent, Secondary) }
+func Muted() lipgloss.Color { return environmentPalette().Muted() }
 
 // Surface returns the background for inactive buttons.
-func Surface() lipgloss.Color { return themeColor(LightForeground, DarkBackground) }
+func Surface() lipgloss.Color { return environmentPalette().Surface() }
 
 // OnAccent returns readable text for a brand-colored button.
-func OnAccent() lipgloss.Color { return themeColor(LightForeground, DarkBackground) }
+func OnAccent() lipgloss.Color { return environmentPalette().OnAccent() }
 
 // ASCII contains the canonical foreground-only terminal logo.
 //
@@ -62,10 +82,15 @@ var ASCII string
 
 // Banner returns a decorative neon wordmark or a concise screen-reader title.
 func Banner(accessible bool) string {
+	return environmentPalette().Banner(accessible)
+}
+
+// Banner returns the wordmark or a concise screen-reader title for this palette.
+func (p Palette) Banner(accessible bool) string {
 	if accessible {
 		return "r10n · routine automation"
 	}
 	return lipgloss.NewStyle().
-		Foreground(Accent()).
+		Foreground(p.Accent()).
 		Render(strings.TrimSpace(ASCII))
 }

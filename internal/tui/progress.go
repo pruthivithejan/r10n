@@ -21,22 +21,30 @@ import (
 	"golang.org/x/term"
 )
 
-func heading() lipgloss.Style {
-	return lipgloss.NewStyle().Bold(true).Foreground(brand.Accent())
+func resolvedPalette(palettes []brand.Palette) brand.Palette {
+	if len(palettes) > 0 {
+		return palettes[0]
+	}
+	return brand.Palette(os.Getenv("R10N_THEME"))
+}
+
+func heading(palettes ...brand.Palette) lipgloss.Style {
+	return lipgloss.NewStyle().Bold(true).Foreground(resolvedPalette(palettes).Accent())
 }
 
 // NewProgress uses the same resolved palette as forms and release downloads.
-func NewProgress(width int) progress.Model {
-	bar := progress.New(progress.WithSolidFill(string(brand.Accent())), progress.WithWidth(width),
+func NewProgress(width int, palettes ...brand.Palette) progress.Model {
+	palette := resolvedPalette(palettes)
+	bar := progress.New(progress.WithSolidFill(string(palette.Accent())), progress.WithWidth(width),
 		progress.WithColorProfile(lipgloss.ColorProfile()))
-	bar.EmptyColor = string(brand.Muted())
-	bar.PercentageStyle = lipgloss.NewStyle().Foreground(brand.Foreground())
+	bar.EmptyColor = string(palette.Muted())
+	bar.PercentageStyle = lipgloss.NewStyle().Foreground(palette.Foreground())
 	return bar
 }
 
-func newSpinner() spinner.Model {
+func newSpinner(palettes ...brand.Palette) spinner.Model {
 	return spinner.New(spinner.WithSpinner(spinner.Dot),
-		spinner.WithStyle(lipgloss.NewStyle().Foreground(brand.Accent())))
+		spinner.WithStyle(lipgloss.NewStyle().Foreground(resolvedPalette(palettes).Accent())))
 }
 
 // SafeText removes terminal control sequences from untrusted automation output.
@@ -49,7 +57,7 @@ func SafeText(text string) string {
 	}, ansi.Strip(text))
 }
 
-func writeTable(writer io.Writer, title string, values map[string]any) error {
+func writeTable(writer io.Writer, title string, values map[string]any, palettes ...brand.Palette) error {
 	keys := make([]string, 0, len(values))
 	for key := range values {
 		keys = append(keys, key)
@@ -73,14 +81,14 @@ func writeTable(writer io.Writer, title string, values map[string]any) error {
 		}
 		return style
 	})
-	if _, err := fmt.Fprintln(writer, heading().Render(title)); err != nil {
+	if _, err := fmt.Fprintln(writer, heading(palettes...).Render(title)); err != nil {
 		return err
 	}
 	_, err := fmt.Fprintln(writer, rendered.String())
 	return err
 }
 
-func printEvent(writer io.Writer, event backend.Event, jsonOutput bool) error {
+func printEvent(writer io.Writer, event backend.Event, jsonOutput bool, palettes ...brand.Palette) error {
 	if jsonOutput {
 		_, err := fmt.Fprintf(writer, "%s\n", event.Raw)
 		return err
@@ -98,7 +106,7 @@ func printEvent(writer io.Writer, event backend.Event, jsonOutput bool) error {
 		_, err := fmt.Fprintln(writer, "Artifact:", SafeText(event.Path))
 		return err
 	case "completed":
-		return writeTable(writer, "Results", event.Result)
+		return writeTable(writer, "Results", event.Result, palettes...)
 	}
 	return nil
 }
@@ -123,6 +131,7 @@ type executionModel struct {
 	cancelling bool
 	animate    bool
 	width      int
+	palette    brand.Palette
 }
 
 func (m executionModel) nextEvent() tea.Cmd {
@@ -203,7 +212,7 @@ func (m executionModel) View() string {
 	if !m.done && m.animate {
 		status = m.spinner.View() + " " + status
 	}
-	lines := []string{heading().Render(m.title), status}
+	lines := []string{heading(m.palette).Render(m.title), status}
 	if m.hasTotal {
 		lines = append(lines, m.progress.ViewAs(m.percent))
 	}
@@ -217,9 +226,10 @@ func (m executionModel) View() string {
 }
 
 func executeInteractive(ctx context.Context, engine backend.Backend, task backend.Automation, payload map[string]any) error {
-	if accessible() {
+	prefs := DisplayPreferences(ctx)
+	if prefs.Accessible {
 		return engine.Stream(ctx, task.ID, payload, func(event backend.Event) error {
-			return printEvent(stdout, event, false)
+			return printEvent(stdout, event, false, prefs.Palette)
 		})
 	}
 	parentCtx := ctx
@@ -241,11 +251,11 @@ func executeInteractive(ctx context.Context, engine backend.Backend, task backen
 		close(events)
 		close(finished)
 	}()
-	s := newSpinner()
+	s := newSpinner(prefs.Palette)
 	model := executionModel{
 		title: task.Title, status: "Starting Python worker…", spinner: s,
-		progress: NewProgress(60), events: events, resultErr: resultErr, cancel: cancel,
-		animate: os.Getenv("R10N_NO_MOTION") != "1", width: 76,
+		progress: NewProgress(60, prefs.Palette), events: events, resultErr: resultErr, cancel: cancel,
+		animate: !prefs.ReducedMotion, width: 76, palette: prefs.Palette,
 	}
 	final, err := tea.NewProgram(model, tea.WithContext(parentCtx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
 	cancel()
@@ -258,7 +268,7 @@ func executeInteractive(ctx context.Context, engine backend.Backend, task backen
 	}
 	completed := final.(executionModel)
 	if completed.result != nil {
-		if err := writeTable(stdout, "Results", completed.result); err != nil {
+		if err := writeTable(stdout, "Results", completed.result, prefs.Palette); err != nil {
 			return err
 		}
 	}

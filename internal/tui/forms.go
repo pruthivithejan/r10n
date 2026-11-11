@@ -152,7 +152,8 @@ func RunForm(ctx context.Context, form *huh.Form) error {
 	if !Interactive() {
 		return fmt.Errorf("this action requires an interactive terminal")
 	}
-	if err := applySettings(); err != nil {
+	var err error
+	if ctx, err = ResolveSettings(ctx); err != nil {
 		return err
 	}
 	return runForm(ctx, form)
@@ -162,9 +163,10 @@ func runForm(ctx context.Context, form *huh.Form) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	form.WithTheme(theme()).WithOutput(stderr).WithInput(stdin).WithAccessible(accessible())
+	prefs := DisplayPreferences(ctx)
+	form.WithTheme(theme(prefs.Palette)).WithOutput(stderr).WithInput(stdin).WithAccessible(prefs.Accessible)
 	var err error
-	if accessible() {
+	if prefs.Accessible {
 		// huh's plain-prompt runner does not observe context cancellation.
 		// Allow the CLI to exit on a signal even while a prompt waits for input.
 		finished := make(chan error, 1)
@@ -186,11 +188,12 @@ func runForm(ctx context.Context, form *huh.Form) error {
 	return err
 }
 
-func theme() *huh.Theme {
-	colors := brand.Accent()
+func theme(palettes ...brand.Palette) *huh.Theme {
+	palette := resolvedPalette(palettes)
+	colors := palette.Accent()
 	focus := brand.FocusAccent()
-	onAccent := brand.OnAccent()
-	text, muted := brand.Foreground(), brand.Muted()
+	onAccent := palette.OnAccent()
+	text, muted := palette.Foreground(), palette.Muted()
 	// Start from the uncolored layout, not Charm's pink/purple theme. Define
 	// every field state before copying blurred styles so accents cannot leak.
 	t := huh.ThemeBase()
@@ -217,7 +220,7 @@ func theme() *huh.Theme {
 	t.Focused.TextInput.Text = t.Focused.TextInput.Text.Foreground(text)
 	t.Focused.TextInput.Placeholder = t.Focused.TextInput.Placeholder.Foreground(muted)
 	t.Focused.FocusedButton = t.Focused.FocusedButton.Foreground(onAccent).Background(colors)
-	t.Focused.BlurredButton = t.Focused.BlurredButton.Foreground(text).Background(brand.Surface())
+	t.Focused.BlurredButton = t.Focused.BlurredButton.Foreground(text).Background(palette.Surface())
 	t.Focused.Next = t.Focused.FocusedButton
 	t.Blurred = t.Focused
 	t.Blurred.Base = t.Focused.Base.BorderStyle(lipgloss.HiddenBorder())
