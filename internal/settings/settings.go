@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -122,7 +123,7 @@ func Load() (Document, error) {
 	return document, nil
 }
 
-// Decode validates a portable or imported settings JSON object without touching disk.
+// Decode reads a portable or imported settings JSON object without touching disk.
 func Decode(data []byte) (Document, error) {
 	var document Document
 	decoder := json.NewDecoder(bytes.NewReader(data))
@@ -130,9 +131,14 @@ func Decode(data []byte) (Document, error) {
 	if err := decoder.Decode(&document); err != nil {
 		return Document{}, err
 	}
+	return normalize(document)
+}
+
+// normalize applies version checks and defaults without rejecting legacy data.
+func normalize(document Document) (Document, error) {
 	if document.Version > Version {
 		return Document{}, fmt.Errorf(
-			"settings version %d is newer than supported version %d; update r10n first",
+			"settings version %d is newer than supported version %d",
 			document.Version, Version,
 		)
 	}
@@ -151,80 +157,91 @@ func Decode(data []byte) (Document, error) {
 	return document, nil
 }
 
-// Save validates and atomically writes settings with private file permissions.
-func Save(document Document) (string, error) {
-	if document.Version > Version {
-		return "", fmt.Errorf(
-			"settings version %d is newer than supported version %d",
-			document.Version, Version,
-		)
+// validate checks settings before writing them.
+func validate(document Document) (Document, error) {
+	document, err := normalize(document)
+	if err != nil {
+		return Document{}, err
 	}
-	if document.Theme != "" && document.Theme != "dark" &&
-		document.Theme != "light" && document.Theme != "system" {
-		return "", fmt.Errorf("unsupported theme %q", document.Theme)
+	if document.Theme != "dark" && document.Theme != "light" && document.Theme != "system" {
+		return Document{}, fmt.Errorf("unsupported theme %q", document.Theme)
 	}
 	document.Version = Version
-	if document.Theme == "" {
-		document.Theme = "dark"
-	}
-	if document.SMTPProfiles == nil {
-		document.SMTPProfiles = map[string]SMTPProfile{}
-	}
-	if document.PDFProfiles == nil {
-		document.PDFProfiles = map[string]PDFProfile{}
-	}
 	if document.ActiveSMTPProfile != "" {
 		if _, ok := document.SMTPProfiles[document.ActiveSMTPProfile]; !ok {
-			return "", fmt.Errorf("active SMTP profile %q does not exist", document.ActiveSMTPProfile)
+			return Document{}, fmt.Errorf("active SMTP profile %q does not exist", document.ActiveSMTPProfile)
 		}
 	}
 	if document.ActivePDFProfile != "" {
 		if _, ok := document.PDFProfiles[document.ActivePDFProfile]; !ok {
-			return "", fmt.Errorf("active PDF profile %q does not exist", document.ActivePDFProfile)
+			return Document{}, fmt.Errorf("active PDF profile %q does not exist", document.ActivePDFProfile)
 		}
 	}
 	for name, profile := range document.SMTPProfiles {
 		if name == "" || profile.Server == "" || profile.Port < 1 || profile.Port > 65535 || profile.Email == "" {
-			return "", fmt.Errorf("SMTP profile %q needs a server, valid port, and sender address", name)
+			return Document{}, fmt.Errorf("SMTP profile %q needs a server, valid port, and sender address", name)
 		}
 	}
 	for name, profile := range document.PDFProfiles {
 		if name == "" || profile.TemplatePDF == "" || profile.OutputDirectory == "" || len(profile.Fields) == 0 {
-			return "", fmt.Errorf("PDF profile %q needs a template, output directory, and at least one field", name)
+			return Document{}, fmt.Errorf("PDF profile %q needs a template, output directory, and at least one field", name)
 		}
 		for fieldName, field := range profile.Fields {
 			if fieldName == "" || field.X < 0 || field.Y < 0 || field.FontSize <= 0 {
-				return "", fmt.Errorf("PDF profile %q contains invalid settings for field %q", name, fieldName)
+				return Document{}, fmt.Errorf("PDF profile %q contains invalid settings for field %q", name, fieldName)
 			}
 			if field.Alignment == "" {
 				field.Alignment = "left"
 				profile.Fields[fieldName] = field
 			}
 			if field.Alignment != "left" && field.Alignment != "center" && field.Alignment != "right" {
-				return "", fmt.Errorf("PDF profile %q has unsupported alignment for field %q", name, fieldName)
+				return Document{}, fmt.Errorf("PDF profile %q has unsupported alignment for field %q", name, fieldName)
 			}
 			if len(field.Color) != 0 && len(field.Color) != 3 {
-				return "", fmt.Errorf("PDF profile %q needs three color components for field %q", name, fieldName)
+				return Document{}, fmt.Errorf("PDF profile %q needs three color components for field %q", name, fieldName)
 			}
 			if field.MaxWidth < 0 {
-				return "", fmt.Errorf("PDF profile %q has invalid maximum width for field %q", name, fieldName)
+				return Document{}, fmt.Errorf("PDF profile %q has invalid maximum width for field %q", name, fieldName)
 			}
 			switch weight := field.FontWeight.(type) {
 			case nil, int:
+			case bool:
+				field.FontWeight = 0
+				if weight {
+					field.FontWeight = 1
+				}
+				profile.Fields[fieldName] = field
 			case float64:
 				if weight != float64(int64(weight)) {
-					return "", fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
+					return Document{}, fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
 				}
 			case string:
 				if weight != "bold" && weight != "normal" {
-					return "", fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
+					integer := strings.TrimSpace(weight)
+					if whole, fraction, found := strings.Cut(integer, "."); found && fraction != "" && strings.Trim(fraction, "0") == "" {
+						integer = whole
+					}
+					numeric, err := strconv.Atoi(integer)
+					if err != nil {
+						return Document{}, fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
+					}
+					field.FontWeight = numeric
+					profile.Fields[fieldName] = field
 				}
 			default:
-				return "", fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
+				return Document{}, fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
 			}
 		}
 	}
+	return document, nil
+}
 
+// Save validates and atomically writes settings with private file permissions.
+func Save(document Document) (string, error) {
+	document, err := validate(document)
+	if err != nil {
+		return "", err
+	}
 	path, err := Path()
 	if err != nil {
 		return "", err

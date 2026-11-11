@@ -98,6 +98,14 @@ assert load_settings().pdf_profiles["certificate"].fields["name"].color == (0.5,
 	if output, err := exec.Command(python, "-c", read).CombinedOutput(); err != nil {
 		t.Fatalf("Python settings read failed: %v\n%s", err, output)
 	}
+	writeEmpty := `from r10n_backend.settings import Settings, SMTPProfile, save_settings
+save_settings(Settings(smtp_profiles={"": SMTPProfile(smtp_server="", smtp_port=587, email="", subject="")}))`
+	if output, err := exec.Command(python, "-c", writeEmpty).CombinedOutput(); err != nil {
+		t.Fatalf("Python settings write failed: %v\n%s", err, output)
+	}
+	if _, err := Load(); err != nil {
+		t.Fatalf("loading Python-written settings: %v", err)
+	}
 }
 
 func TestSaveRejectsPDFSettingsRejectedByBackend(t *testing.T) {
@@ -116,6 +124,62 @@ func TestSaveRejectsPDFSettingsRejectedByBackend(t *testing.T) {
 		if _, err := Save(document); err == nil {
 			t.Fatalf("accepted incompatible PDF field: %#v", field)
 		}
+	}
+}
+
+func TestSaveNormalizesCompatiblePDFSettings(t *testing.T) {
+	t.Setenv("R10N_CONFIG_DIR", t.TempDir())
+	valid := `{"pdf_profiles":{"certificate":{"template_pdf":"in.pdf","output_directory":"out","fields":{"name":{"x":1,"y":2,"font_size":12,"font_weight":"400"}}}}}`
+	document, err := Decode([]byte(valid))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Save(document); err != nil {
+		t.Fatalf("saving valid imported settings: %v", err)
+	}
+	document, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	field := document.PDFProfiles["certificate"].Fields["name"]
+	if field.Alignment != "left" || field.FontWeight != float64(400) {
+		t.Fatalf("defaults or numeric weight not normalized: %#v", field)
+	}
+	for source, expected := range map[string]int{`"400.00"`: 400, `true`: 1} {
+		input := strings.Replace(valid, `"400"`, source, 1)
+		decoded, err := Decode([]byte(input))
+		if err != nil {
+			t.Fatalf("decoding font weight %s: %v", source, err)
+		}
+		if _, err := Save(decoded); err != nil {
+			t.Fatalf("saving font weight %s: %v", source, err)
+		}
+		saved, err := Load()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if weight := saved.PDFProfiles["certificate"].Fields["name"].FontWeight; weight != float64(expected) {
+			t.Fatalf("font weight %s normalized to %v, want %d", source, weight, expected)
+		}
+	}
+}
+
+func TestLoadPreservesLegacySettings(t *testing.T) {
+	t.Setenv("R10N_CONFIG_DIR", t.TempDir())
+	legacy := `{"active_smtp_profile":"missing","smtp_profiles":{"":{"smtp_server":"","smtp_port":587,"email":"","subject":""}},"pdf_profiles":{"p":{"template_pdf":"in.pdf","output_directory":"out","fields":{"":{"x":1,"y":2,"font_size":12}}}}}`
+	path, err := Path()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(legacy), 0600); err != nil {
+		t.Fatal(err)
+	}
+	document, err := Load()
+	if err != nil {
+		t.Fatalf("loading existing settings: %v", err)
+	}
+	if document.ActiveSMTPProfile != "missing" || document.SMTPProfiles[""].Port != 587 {
+		t.Fatalf("legacy settings changed: %#v", document)
 	}
 }
 
