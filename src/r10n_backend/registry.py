@@ -374,7 +374,7 @@ def _run_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
     def progress(current: int, total: int) -> None:
         emit("progress", {"current": current, "total": total, "message": "Optimizing images"})
 
-    return optimize_images(
+    result = optimize_images(
         input_dir=values.input_directory,
         output_dir=values.output_directory,
         quality=values.quality,
@@ -383,6 +383,10 @@ def _run_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
         preserve_filename=values.preserve_filenames,
         progress_callback=progress,
     )
+    result["success"] = not result.get("error") and result.get("failed", 0) == 0
+    if not result["success"]:
+        result["status"] = "partial" if result.get("processed", 0) else "failed"
+    return result
 
 
 def _run_website_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
@@ -561,13 +565,17 @@ def _run_markdown_to_pdf(inputs: BaseModel, emit: EventCallback) -> dict[str, An
     source = Path(values.input_path)
     emit("log", {"message": "Converting Markdown to PDF"})
     if source.is_dir():
-        return convert_directory(
+        result = convert_directory(
             input_dir=values.input_path,
             output_dir=values.output_path,
             recursive=values.recursive,
             css_file=values.css_file,
             page_size=values.page_size,
         )
+        result["success"] = result.get("failed", 0) == 0
+        if not result["success"]:
+            result["status"] = "partial" if result.get("converted", 0) else "failed"
+        return result
     return convert_markdown_to_pdf(
         input_path=values.input_path,
         output_path=values.output_path,

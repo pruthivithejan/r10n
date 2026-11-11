@@ -3,6 +3,8 @@
 import json
 from dataclasses import replace
 
+from PIL import Image
+
 from r10n_backend.__main__ import main
 from r10n_backend.registry import get_automation
 from r10n_backend.worker import PROTOCOL_VERSION, find_artifacts, run_automation
@@ -10,6 +12,52 @@ from r10n_backend.worker import PROTOCOL_VERSION, find_artifacts, run_automation
 
 class TestWorkerProtocol:
     """Verify structured worker execution and artifact reporting."""
+
+    def test_missing_image_directory_reports_failure(self, tmp_path):
+        events = []
+        run_automation(
+            "images",
+            {
+                "input_directory": str(tmp_path / "missing"),
+                "output_directory": str(tmp_path / "out"),
+            },
+            events.append,
+        )
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == "failed"
+        assert "error" in events[-1]["result"]
+
+    def test_image_batch_reports_partial_failure(self, tmp_path):
+        source = tmp_path / "images"
+        source.mkdir()
+        Image.new("RGB", (4, 4), "red").save(source / "valid.png")
+        (source / "broken.png").write_bytes(b"not an image")
+        events = []
+        run_automation(
+            "images",
+            {"input_directory": str(source), "output_directory": str(tmp_path / "out")},
+            events.append,
+        )
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == "partial"
+        assert events[-1]["result"]["processed"] == 1
+        assert events[-1]["result"]["failed"] == 1
+
+    def test_markdown_batch_reports_partial_failure(self, tmp_path):
+        source = tmp_path / "docs"
+        source.mkdir()
+        (source / "valid.md").write_text("# Valid", encoding="utf-8")
+        (source / "broken.md").write_bytes(b"\xff")
+        events = []
+        run_automation(
+            "md2pdf",
+            {"input_path": str(source), "output_path": str(tmp_path / "out")},
+            events.append,
+        )
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == "partial"
+        assert events[-1]["result"]["converted"] == 1
+        assert events[-1]["result"]["failed"] == 1
 
     def test_runs_contacts_and_emits_lifecycle_events(self, tmp_path):
         """A worker validates input, runs the automation, and reports output."""
