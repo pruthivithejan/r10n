@@ -68,3 +68,28 @@ policy, and rate limiting of both workflows.
 - Go load and save paths duplicated version checks and defaults. They share
   normalization while retaining the stricter write-time checks, so older files
   remain readable. Numeric font-weight strings accepted by Python can be saved.
+
+## Derive offline CLI flag types from the registry — implemented
+
+- Go maintained a separate hand-written list of boolean inputs, which could drift
+  from Python's authoritative schemas. Offline help and argument validation
+  must continue to work without starting the backend.
+- A generated Go snapshot provides offline types; a freshness check compares it
+  with the Python registry in the test suite.
+
+## Share credential-save cleanup — implemented, with a remaining limitation
+
+- Profile creation and import duplicated credential writes and silently ignored
+  cleanup failures. Cleanup also reused a potentially cancelled context.
+- The operation now shares bounded cleanup and reports cleanup errors. Settings
+  writes have an unambiguous atomic commit point. The existing credential API
+  cannot restore a previously orphaned secret; preserving it requires a durable
+  credential-store transaction and recovery design across all writers.
+
+## Scope terminal preferences to an invocation — implemented
+
+- Persisted preferences were written to process-wide environment variables,
+  which could leak between invocations and obscure explicit caller overrides.
+  UI consumers now receive a resolved preference value.
+- Terminal streams are still process-wide; concurrent in-process CLI invocations
+  would require a separate stream-injection redesign.
