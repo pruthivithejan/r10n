@@ -223,6 +223,31 @@ func TestSaveSettingsIsPrivateAndRoundTrips(t *testing.T) {
 	}
 }
 
+func TestSaveReplacesExistingSettingsWithPrivateFile(t *testing.T) {
+	if os.PathSeparator == '\\' {
+		t.Skip("POSIX permission bits are not applicable")
+	}
+	directory := t.TempDir()
+	t.Setenv("R10N_CONFIG_DIR", directory)
+	path := filepath.Join(directory, "config.json")
+	if err := os.WriteFile(path, []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(path, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Save(defaults()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0600 {
+		t.Fatalf("replacement settings permissions = %o, want 600", info.Mode().Perm())
+	}
+}
+
 func TestSaveRejectsDanglingProfileAndInvalidTheme(t *testing.T) {
 	if _, err := Save(Document{
 		Theme: "solarized", ActiveSMTPProfile: "missing",

@@ -289,10 +289,5 @@ func Save(document Document) (string, error) {
 	if err := os.Rename(temporaryPath, path); err != nil {
 		return "", fmt.Errorf("replace r10n settings: %w", err)
 	}
-	if os.PathSeparator != '\\' {
-		if err := os.Chmod(path, 0600); err != nil {
-			return "", err
-		}
-	}
 	return path, nil
 }
