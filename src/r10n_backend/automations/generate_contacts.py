@@ -28,13 +28,11 @@ def clean_number(number: str) -> str | None:
                     return result
         return None
 
-    # Remove all non-digit characters
     number = re.sub(r"\D", "", number)
 
     # Strip leading zeros (e.g., 007123456789 -> 7123456789)
     number = number.lstrip("0")
 
-    # Add Sri Lankan country code
     if number.startswith("94") and len(number) == 11:
         number = "+" + number
     elif number.startswith("0"):
@@ -60,7 +58,6 @@ def generate_vcf_from_file(
     Returns:
         dict: Results dictionary with statistics and output file path
     """
-    # Read numbers from file
     input_path = Path(input_file)
     if not input_path.exists():
         raise FileNotFoundError(f"Input file not found: {input_file}")
@@ -68,7 +65,6 @@ def generate_vcf_from_file(
     with open(input_path) as f:
         raw_numbers = f.read()
 
-    # Filter out comments and empty lines
     lines = []
     for line in raw_numbers.strip().splitlines():
         line = line.strip()
@@ -92,13 +88,10 @@ def generate_vcf_from_file(
 
     cleaned_numbers = sorted(cleaned_numbers)
 
-    # Handle output path
     output_path = Path(output_name)
 
-    # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Generate VCF file
     with open(output_path, "w") as f:
         for idx, number in enumerate(cleaned_numbers, start=1):
             f.write("BEGIN:VCARD\n")
@@ -128,7 +121,6 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
     Returns:
         dict: Results dictionary with statistics and output file path
     """
-    # Filter out comments and empty lines
     lines = []
     for line in raw_numbers.strip().splitlines():
         line = line.strip()
@@ -152,13 +144,10 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
 
     cleaned_numbers = sorted(cleaned_numbers)
 
-    # Handle output path
     output_path = Path(output_name)
 
-    # Create output directory if it doesn't exist
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Generate VCF file
     with open(output_path, "w") as f:
         for idx, number in enumerate(cleaned_numbers, start=1):
             f.write("BEGIN:VCARD\n")

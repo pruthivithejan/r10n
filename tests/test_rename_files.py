@@ -131,19 +131,17 @@ class TestSanitizeFilename:
     def test_sanitize_remove_leading_dots(self):
         """Test handling leading dots."""
         result = sanitize_filename("...hidden.txt")
-        # Should handle gracefully, not break
-        assert result is not None
+        assert result == "hidden.txt"
 
     def test_sanitize_trim_whitespace(self):
         """Test trimming whitespace."""
         result = sanitize_filename("  file.txt  ")
-        assert not result.startswith(" ")
-        assert not result.endswith(" ") or result.endswith(".txt")
+        assert result == "file.txt"
 
     def test_sanitize_unicode(self):
         """Test handling unicode characters."""
-        result = sanitize_filename("cafe_resume.txt")
-        assert result is not None
+        result = sanitize_filename("café résumé.txt")
+        assert result == "café résumé.txt"
 
     def test_sanitize_empty_result(self):
         """Test handling when sanitization would result in empty name."""
@@ -208,12 +206,6 @@ class TestFileRenamer:
     """Test FileRenamer class."""
 
     @pytest.fixture
-    def renamer(self):
-        """Create a FileRenamer instance for testing."""
-        config = RenameConfig(input_directory="./files")
-        return FileRenamer(config)
-
-    @pytest.fixture
     def setup_test_files(self):
         """Create test files for renaming."""
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -226,10 +218,6 @@ class TestFileRenamer:
             (temp_path / "photo.jpg").write_bytes(b"jpg content")
 
             yield temp_dir
-
-    def test_renamer_initialization(self, renamer):
-        """Test renamer initialization."""
-        assert renamer.config is not None
 
     def test_renamer_get_files(self, setup_test_files):
         """Test getting files from directory."""
@@ -301,7 +289,7 @@ class TestFileRenamer:
 
         assert result.renamed == 2
         renamed_names = [r["new"] for r in result.renamed_files]
-        assert any("001" in n or "002" in n for n in renamed_names)
+        assert set(renamed_names) == {"001_file1.txt", "002_file2.txt"}
 
     def test_renamer_lowercase(self, setup_test_files):
         """Test converting to lowercase."""

@@ -61,25 +61,20 @@ def sanitize_filename(filename: str, replace_spaces: bool = False) -> str:
     Returns:
         Sanitized filename
     """
-    # Strip leading/trailing whitespace from entire filename first
     filename = filename.strip()
 
-    # Split name and extension
     path = Path(filename)
     name = path.stem
     ext = path.suffix
 
-    # Strip leading/trailing whitespace from name
     name = name.strip()
 
-    # Remove invalid characters
     name = INVALID_CHARS.sub("", name)
 
     # Handle leading dots (but preserve extension dots)
     while name.startswith(".") and len(name) > 1:
         name = name[1:]
 
-    # Replace spaces if requested
     if replace_spaces:
         name = name.replace(" ", "_")
 
@@ -131,7 +126,6 @@ def apply_pattern(
 
     result = pattern
 
-    # Replace placeholders
     result = result.replace("{name}", name)
     result = result.replace("{ext}", ext)
     result = result.replace("{original}", original_name)
@@ -201,7 +195,6 @@ class FileRenamer:
         original_name = file_path.name
         new_name = original_name
 
-        # Apply pattern if specified
         if self.config.pattern:
             new_name = apply_pattern(
                 original_name,
@@ -211,37 +204,30 @@ class FileRenamer:
                 sequence_padding=self.config.sequence_padding,
             )
         else:
-            # Apply individual transformations
             path = Path(new_name)
             stem = path.stem
             ext = path.suffix
 
-            # Replace text
             if self.config.replace_from is not None:
                 replace_to = self.config.replace_to if self.config.replace_to is not None else ""
                 stem = stem.replace(self.config.replace_from, replace_to)
 
-            # Add prefix
             if self.config.prefix:
                 stem = self.config.prefix + stem
 
-            # Add suffix
             if self.config.suffix:
                 stem = stem + self.config.suffix
 
-            # Add sequence
             if self.config.add_sequence:
                 seq_str = str(sequence).zfill(self.config.sequence_padding)
                 stem = f"{seq_str}_{stem}"
 
-            # Add date
             if self.config.add_date:
                 date_str = datetime.now().strftime("%Y%m%d")
                 stem = f"{date_str}_{stem}"
 
             new_name = stem + ext
 
-        # Apply case transformation
         if self.config.lowercase:
             new_name = new_name.lower()
         elif self.config.uppercase:
@@ -276,7 +262,6 @@ class FileRenamer:
             new_name = self.generate_new_name(file_path, sequence)
             new_path = file_path.parent / new_name
 
-            # Skip if name hasn't changed
             if old_name == new_name:
                 result.skipped += 1
                 sequence += 1
@@ -299,7 +284,6 @@ class FileRenamer:
                 sequence += 1
                 continue
 
-            # Record the rename
             result.renamed_files.append(
                 {
                     "old": old_name,
@@ -307,7 +291,6 @@ class FileRenamer:
                 }
             )
 
-            # Actually rename if not dry run
             if not self.config.dry_run:
                 try:
                     file_path.rename(new_path)

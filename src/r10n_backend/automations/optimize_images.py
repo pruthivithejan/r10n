@@ -55,7 +55,6 @@ class ImageOptimizer:
         if not self.config.preserve_aspect_ratio:
             return min(width, self.config.max_width), min(height, self.config.max_height)
 
-        # Calculate scaling factor
         width_ratio = self.config.max_width / width
         height_ratio = self.config.max_height / height
         scale_ratio = min(width_ratio, height_ratio, 1.0)  # Don't upscale
@@ -70,12 +69,9 @@ class ImageOptimizer:
         try:
             print(f"🖼️  Processing: {input_path.name}")
 
-            # Record original size
             original_size_mb = self.get_file_size_mb(input_path)
 
-            # Open and process image
             with Image.open(input_path) as img:
-                # Auto-orient if enabled
                 if self.config.auto_orient:
                     img = ImageOps.exif_transpose(img)
 
@@ -90,23 +86,18 @@ class ImageOptimizer:
                 elif img.mode != "RGB" and not self.config.convert_to_webp:
                     img = img.convert("RGB")
 
-                # Calculate new dimensions
                 new_width, new_height = self.calculate_new_dimensions(img.width, img.height)
 
-                # Resize if necessary
                 if new_width != img.width or new_height != img.height:
                     img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     print(f"  📏 Resized from {input_path.stem}: {img.width}x{img.height}")
 
-                # Determine output format and extension
                 output_format = "WEBP" if self.config.convert_to_webp else "JPEG"
 
-                # Save with initial quality
                 current_quality = self.config.quality
                 temp_output = output_path
 
                 while current_quality >= 10:
-                    # Save with current quality
                     save_kwargs = {
                         "format": output_format,
                         "optimize": True,
@@ -118,13 +109,11 @@ class ImageOptimizer:
 
                     img.save(temp_output, **save_kwargs)
 
-                    # Check file size
                     new_size_mb = self.get_file_size_mb(temp_output)
 
                     if new_size_mb <= self.config.max_size_mb or current_quality <= 10:
                         break
 
-                    # Reduce quality and try again
                     current_quality -= 5
                     print(
                         f"  🔄 Reducing quality to {current_quality}% (size: {new_size_mb:.2f}MB)"
@@ -132,7 +121,6 @@ class ImageOptimizer:
 
                 final_size_mb = self.get_file_size_mb(output_path)
 
-                # Create result info
                 result = {
                     "success": True,
                     "original_file": str(input_path),
@@ -175,14 +163,11 @@ class ImageOptimizer:
         if self.config.preserve_filename:
             # Preserve original filename but change extension if converting to WebP
             if self.config.convert_to_webp:
-                # Remove original extension and add .webp
                 name_without_ext = Path(original_name).stem
                 return f"{name_without_ext}.webp"
             else:
-                # Keep original extension
                 return original_name
         else:
-            # Use prefix + index naming
             if self.config.convert_to_webp:
                 extension = ".webp"
             else:
@@ -196,14 +181,11 @@ class ImageOptimizer:
             input_path = Path(self.config.input_directory)
             output_path = Path(self.config.output_directory)
 
-            # Validate input directory
             if not input_path.exists():
                 raise Exception(f"Input directory does not exist: {input_path}")
 
-            # Create output directory
             output_path.mkdir(parents=True, exist_ok=True)
 
-            # Get all image files
             image_files = self.get_image_files(input_path)
 
             if not image_files:
@@ -219,14 +201,12 @@ class ImageOptimizer:
             )
             print()
 
-            # Process each image
             for index, image_file in enumerate(image_files, 1):
                 output_filename = self.generate_output_filename(
                     index, image_file.name, image_file.suffix
                 )
                 output_file_path = output_path / output_filename
 
-                # Skip if output file already exists
                 if output_file_path.exists():
                     print(f"⏭️  Skipping {image_file.name} (output exists)")
                     self.results["skipped"] += 1
@@ -234,7 +214,6 @@ class ImageOptimizer:
                         self.progress_callback(index, len(image_files))
                     continue
 
-                # Process the image
                 result = self.optimize_image(image_file, output_file_path)
 
                 if result["success"]:
@@ -249,7 +228,6 @@ class ImageOptimizer:
                     self.progress_callback(index, len(image_files))
                 print()
 
-            # Print summary
             self.print_summary()
 
             return self.results
@@ -310,15 +288,12 @@ def optimize_images(
     """Main function to optimize images"""
     try:
         if config_file:
-            # Load from config file
             config = load_config(config_file)
-            # Override with command line arguments if provided
             if output_dir:
                 config.output_directory = output_dir
             if prefix != "img":
                 config.prefix = prefix
         else:
-            # Create config from parameters
             if not output_dir:
                 output_dir = str(Path(input_dir) / "optimized")
 
@@ -333,7 +308,6 @@ def optimize_images(
                 preserve_filename=preserve_filename,
             )
 
-        # Create optimizer and process
         optimizer = ImageOptimizer(config, progress_callback=progress_callback)
         results = optimizer.process_directory()
 

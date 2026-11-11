@@ -256,11 +256,9 @@ class CsvValidator:
         """
         errors = []
 
-        # Trim whitespace if configured
         if self.config.trim_whitespace:
             value = value.strip()
 
-        # Check required
         if not self.validate_required(value, field_schema):
             errors.append(
                 {
@@ -271,11 +269,9 @@ class CsvValidator:
             )
             return errors  # Skip other validations for empty required fields
 
-        # Skip other validations for empty optional fields
         if value == "":
             return errors
 
-        # Check type
         field_type = field_schema.get("type", "string")
         if not self.validate_type(value, field_type):
             errors.append(
@@ -286,7 +282,6 @@ class CsvValidator:
                 }
             )
 
-        # Check range (for numeric types)
         if field_type in ("integer", "float"):
             if "min" in field_schema or "max" in field_schema:
                 if not self.validate_range(value, field_schema):
@@ -298,7 +293,6 @@ class CsvValidator:
                         }
                     )
 
-        # Check length (for strings)
         if field_type == "string":
             if "min_length" in field_schema or "max_length" in field_schema:
                 if not self.validate_length(value, field_schema):
@@ -310,7 +304,6 @@ class CsvValidator:
                         }
                     )
 
-        # Check pattern
         if "pattern" in field_schema:
             if not self.validate_pattern(value, field_schema):
                 errors.append(
@@ -321,7 +314,6 @@ class CsvValidator:
                     }
                 )
 
-        # Check enum
         if "enum" in field_schema:
             if not self.validate_enum(value, field_schema):
                 errors.append(
@@ -365,13 +357,11 @@ class CsvValidator:
             reader = csv.DictReader(f)
             headers = reader.fieldnames or []
 
-            # Get field schemas if available
             field_schemas = {}
             if schema and "fields" in schema:
                 field_schemas = schema["fields"]
 
             for row_num, row in enumerate(reader, start=2):  # Start at 2 (1 is header)
-                # Check for empty rows
                 if self.config.skip_empty_rows:
                     if all(not v or v.strip() == "" for v in row.values()):
                         continue
@@ -379,7 +369,6 @@ class CsvValidator:
                 total_rows += 1
                 row_errors = []
 
-                # Check column count consistency
                 if len(row) != len(headers):
                     all_warnings.append(
                         {
@@ -389,7 +378,6 @@ class CsvValidator:
                         }
                     )
 
-                # Validate each field
                 for field_name, value in row.items():
                     if field_name is None:
                         continue
@@ -569,7 +557,6 @@ def clean_csv(
         reader = csv.DictReader(infile)
         headers = reader.fieldnames or []
 
-        # Create output directory if needed
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(output_path, "w", encoding=encoding, newline="") as outfile:
@@ -579,29 +566,24 @@ def clean_csv(
             for row in reader:
                 rows_read += 1
 
-                # Check for empty rows
                 if remove_empty_rows:
                     if all(not v or v.strip() == "" for v in row.values()):
                         rows_removed += 1
                         continue
 
-                # Clean values
                 cleaned_row = {}
                 for key, value in row.items():
                     if value is None:
                         value = ""
 
-                    # Trim whitespace
                     if trim_whitespace:
                         value = value.strip()
 
-                    # Normalize case
                     if normalize_case == "lower":
                         value = value.lower()
                     elif normalize_case == "upper":
                         value = value.upper()
 
-                    # Fill missing
                     if fill_missing and key in fill_missing and value == "":
                         value = fill_missing[key]
 

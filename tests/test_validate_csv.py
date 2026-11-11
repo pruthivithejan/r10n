@@ -147,8 +147,7 @@ class TestLoadSchema:
 
         try:
             schema = load_schema(file_path)
-            assert schema["fields"]["phone"]["pattern"] is not None
-            assert "active" in schema["fields"]["status"]["enum"]
+            assert schema == schema_data
         finally:
             Path(file_path).unlink()
 
@@ -172,11 +171,6 @@ class TestCsvValidator:
             writer.writerow(["Bob", "25", "bob@example.com"])
             writer.writerow(["Charlie", "35", "charlie@example.com"])
             return f.name
-
-    def test_validator_initialization(self, validator):
-        """Test validator initialization."""
-        assert validator.config is not None
-        assert validator.config.input_file == "test.csv"
 
     def test_validate_type_string(self, validator):
         """Test string type validation."""

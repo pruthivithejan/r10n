@@ -565,7 +565,6 @@ def convert_colors(
     }
 
     if file:
-        # Process single file
         file_path = Path(file)
         if not file_path.exists():
             raise FileNotFoundError(f"File not found: {file}")
@@ -577,7 +576,6 @@ def convert_colors(
         if file_result["modified"]:
             results["files_modified"] = 1
     else:
-        # Process directory
         root_path = Path(path)
         if not root_path.exists():
             raise FileNotFoundError(f"Directory not found: {path}")
