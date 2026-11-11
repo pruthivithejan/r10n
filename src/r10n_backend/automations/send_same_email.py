@@ -12,6 +12,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from smtplib import SMTPResponseException, SMTPServerDisconnected
+from typing import Any
 
 
 @dataclass
@@ -140,20 +141,34 @@ class SimpleEmailSender:
         for i, email in enumerate(email_list, 1):
             print(f"📤 Sending email {i}/{len(email_list)} to {email}...")
 
-            try:
-                msg = self.create_message(email, subject, body, attachments)
-                self.send_message_with_retry(msg)
-                results["sent"] += 1
-                print("✅ Email sent successfully")
-            except Exception as e:
-                results["failed"] += 1
-                results["failed_emails"].append(email)
-                print(f"❌ Failed to send email: {e!s}")
+            _deliver_recipient(
+                self,
+                email,
+                results,
+                lambda email=email: self.create_message(email, subject, body, attachments),
+            )
             # Gentle throttle to avoid rate limiting
             time.sleep(0.8)
 
         self.disconnect()
         return results
+
+
+def _deliver_recipient(
+    sender: SimpleEmailSender,
+    email: str,
+    results: dict[str, Any],
+    prepare_message: Callable[[], MIMEMultipart],
+) -> None:
+    """Send one prepared message and record its delivery outcome."""
+    try:
+        sender.send_message_with_retry(prepare_message())
+        results["sent"] += 1
+        print("✅ Email sent successfully")
+    except Exception as e:
+        results["failed"] += 1
+        results["failed_emails"].append(email)
+        print(f"❌ Failed to send email: {e!s}")
 
 
 def load_simple_config(config_path: str) -> SimpleEmailConfig:
@@ -267,33 +282,22 @@ def send_personalized_emails_with_certificates(
 
             print(f"📧 Processing {i}/{len(recipients)}: {name} ({email})")
 
-            try:
-                # Find matching certificate
+            def prepare_message(name: str = name, email: str = email) -> MIMEMultipart:
                 certificate_path = find_matching_certificate(name, certificate_files)
 
                 if not certificate_path:
                     print(f"⚠️  No matching certificate found for {name}")
                     results["missing_certificates"].append(name)
-                    # Still send email without certificate
                     attachments = []
                 else:
                     print(f"📎 Found certificate: {Path(certificate_path).name}")
                     attachments = [certificate_path]
 
-                # Personalize email body
                 personalized_body = body_template.format(name=name)
 
-                # Create and send email
-                msg = sender.create_message(email, subject, personalized_body, attachments)
-                sender.send_message_with_retry(msg)
+                return sender.create_message(email, subject, personalized_body, attachments)
 
-                results["sent"] += 1
-                print("✅ Email sent successfully")
-
-            except Exception as e:
-                results["failed"] += 1
-                results["failed_emails"].append(email)
-                print(f"❌ Failed to send email: {e!s}")
+            _deliver_recipient(sender, email, results, prepare_message)
 
             if progress_callback:
                 progress_callback(i, len(recipients))

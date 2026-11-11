@@ -579,6 +579,36 @@ class TestSendPersonalizedEmailsWithCertificates:
 
     @patch("smtplib.SMTP")
     @patch("time.sleep")
+    def test_personalized_delivery_reports_failures_and_progress(
+        self, mock_sleep, mock_smtp, setup_email_files
+    ):
+        """A failed recipient is reported while later progress still advances."""
+        smtp = mock_smtp.return_value
+        smtp.send_message.side_effect = [RuntimeError("delivery failed"), None]
+        progress = []
+        config = SimpleEmailConfig("smtp.example.com", 587, "sender@example.com", "test", "Subject")
+        files = setup_email_files
+
+        results = send_personalized_emails_with_certificates(
+            email_list_file=files["email_list"],
+            subject="Subject",
+            body_template="Hello {name}",
+            config_file="missing-config.json",
+            certificates_dir=files["certs_dir"],
+            smtp_config=config,
+            progress_callback=lambda current, total: progress.append((current, total)),
+        )
+
+        assert results["sent"] == 1
+        assert results["failed"] == 1
+        assert results["failed_emails"] == ["alice@example.com"]
+        assert progress == [(1, 2), (2, 2)]
+        messages = [call.args[0] for call in smtp.send_message.call_args_list]
+        assert [message["To"] for message in messages] == ["alice@example.com", "bob@example.com"]
+        assert messages[1].get_payload(0).get_payload(decode=True) == b"Hello Bob Jones"
+
+    @patch("smtplib.SMTP")
+    @patch("time.sleep")
     def test_send_personalized_missing_certificate(self, mock_sleep, mock_smtp, setup_email_files):
         """Test handling of missing certificates."""
         mock_smtp_instance = MagicMock()
