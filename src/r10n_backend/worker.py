@@ -116,9 +116,9 @@ def find_artifacts(result: dict[str, Any], fields: tuple[tuple[str, ...], ...]) 
             for item in value:
                 visit(item, (*path, "*"))
         elif isinstance(value, str) and path in fields:
-            path = Path(value).expanduser()
-            if path.exists():
-                normalized = str(path.resolve())
+            artifact = Path(value).expanduser()
+            if artifact.exists():
+                normalized = str(artifact.resolve())
                 if normalized not in artifacts:
                     artifacts.append(normalized)
 

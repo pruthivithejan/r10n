@@ -260,7 +260,7 @@ def send_personalized_emails_with_certificates(
         print(f"📎 Found {len(certificate_files)} certificate files")
 
         # Initialize results
-        results = {
+        results: dict[str, Any] = {
             "sent": 0,
             "failed": 0,
             "total": len(recipients),
