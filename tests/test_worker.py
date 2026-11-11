@@ -1,8 +1,10 @@
 """Tests for the versioned automation worker protocol."""
 
 import json
+from dataclasses import replace
 
 from r10n_backend.__main__ import main
+from r10n_backend.registry import get_automation
 from r10n_backend.worker import PROTOCOL_VERSION, find_artifacts, run_automation
 
 
@@ -65,7 +67,34 @@ class TestWorkerProtocol:
                 "report_file": str(report),
                 "output_file": str(tmp_path / "missing.txt"),
                 "message": str(report),
-            }
+            },
+            get_automation("validate").artifact_fields,
         )
 
         assert artifacts == [str(report.resolve())]
+
+    def test_nested_artifacts_follow_declared_result_fields(self, tmp_path, monkeypatch):
+        """Logo outputs are reported once, in result order, without unrelated paths."""
+        directory = tmp_path / "logos"
+        directory.mkdir()
+        logo = directory / "logo.svg"
+        logo.write_text("<svg/>", encoding="utf-8")
+        manifest = directory / "logos_manifest.json"
+        manifest.write_text("{}", encoding="utf-8")
+        result = {
+            "output_directory": str(directory),
+            "logos": [{"output_file": str(logo)}, {"output_file": str(logo)}],
+            "manifest_file": str(manifest),
+            "output_unrelated": str(tmp_path),
+        }
+        spec = replace(get_automation("logos"), executor=lambda inputs, emit: result)
+        monkeypatch.setattr("r10n_backend.worker.get_automation", lambda automation_id: spec)
+        events = []
+
+        run_automation("logos", {"names": "Example"}, events.append)
+
+        assert [event["path"] for event in events if event["type"] == "artifact"] == [
+            str(directory.resolve()),
+            str(logo.resolve()),
+            str(manifest.resolve()),
+        ]

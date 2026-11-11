@@ -96,28 +96,26 @@ def _json_safe(value: Any) -> Any:
     return value
 
 
-def find_artifacts(result: dict[str, Any]) -> list[str]:
-    """Discover existing output paths in a result dictionary.
+def find_artifacts(result: dict[str, Any], fields: tuple[tuple[str, ...], ...]) -> list[str]:
+    """Discover existing paths at the automation's declared result fields.
 
     Args:
         result: Normalized automation result.
+        fields: Paths into the result; ``*`` selects each item in a list.
 
     Returns:
         Unique artifact paths in encounter order.
     """
     artifacts: list[str] = []
 
-    def visit(value: Any, key: str = "") -> None:
+    def visit(value: Any, path: tuple[str, ...] = ()) -> None:
         if isinstance(value, dict):
             for child_key, child_value in value.items():
-                visit(child_value, str(child_key))
+                visit(child_value, (*path, str(child_key)))
         elif isinstance(value, list):
             for item in value:
-                visit(item, key)
-        elif isinstance(value, str) and any(
-            token in key.lower()
-            for token in ("output", "artifact", "manifest", "report", "cleaned")
-        ):
+                visit(item, (*path, "*"))
+        elif isinstance(value, str) and path in fields:
             path = Path(value).expanduser()
             if path.exists():
                 normalized = str(path.resolve())
@@ -165,7 +163,7 @@ def run_automation(
     error_writer.flush()
 
     normalized = _json_safe(normalize_result(result))
-    for artifact_path in find_artifacts(normalized):
+    for artifact_path in find_artifacts(normalized, spec.artifact_fields):
         emit({"type": "artifact", "path": artifact_path})
     emit(
         {

@@ -236,6 +236,7 @@ class AutomationSpec:
     input_model: type[AutomationInput]
     executor: Executor
     confirmation: str | None = None
+    artifact_fields: tuple[tuple[str, ...], ...] = ()
 
     def input_schema(self) -> dict[str, Any]:
         """Return the form schema with named profiles and user output defaults."""
@@ -586,6 +587,7 @@ AUTOMATIONS = (
         roles=("operations", "sales", "events"),
         input_model=ContactsInput,
         executor=_run_contacts,
+        artifact_fields=(("output_file",),),
     ),
     AutomationSpec(
         id="fill-pdfs",
@@ -595,6 +597,7 @@ AUTOMATIONS = (
         roles=("operations", "people", "events"),
         input_model=FillPdfsInput,
         executor=_run_fill_pdfs,
+        artifact_fields=(("output_directory",),),
     ),
     AutomationSpec(
         id="images",
@@ -604,6 +607,7 @@ AUTOMATIONS = (
         roles=("marketing", "design", "web"),
         input_model=ImagesInput,
         executor=_run_images,
+        artifact_fields=(("files", "*", "output_file"),),
     ),
     AutomationSpec(
         id="website-images",
@@ -613,6 +617,11 @@ AUTOMATIONS = (
         roles=("marketing", "design", "web"),
         input_model=WebsiteImagesInput,
         executor=_run_website_images,
+        artifact_fields=(
+            ("output_directory",),
+            ("pages", "*", "output_directory"),
+            ("files", "*", "output_file"),
+        ),
     ),
     AutomationSpec(
         id="logos",
@@ -622,6 +631,7 @@ AUTOMATIONS = (
         roles=("marketing", "design", "sales"),
         input_model=LogosInput,
         executor=_run_logos,
+        artifact_fields=(("output_directory",), ("logos", "*", "output_file"), ("manifest_file",)),
     ),
     AutomationSpec(
         id="email",
@@ -661,6 +671,7 @@ AUTOMATIONS = (
         roles=("operations", "finance", "people"),
         input_model=ValidateCsvInput,
         executor=_run_validate,
+        artifact_fields=(("report_file",), ("cleaned_file",)),
     ),
     AutomationSpec(
         id="md2pdf",
@@ -670,6 +681,7 @@ AUTOMATIONS = (
         roles=("operations", "marketing", "documentation"),
         input_model=MarkdownToPdfInput,
         executor=_run_markdown_to_pdf,
+        artifact_fields=(("output_path",), ("files", "*", "output")),
     ),
 )
 
