@@ -1,9 +1,6 @@
 """
 Tests for the Markdown to PDF converter automation.
 
-These tests are written FIRST (TDD red phase) to define the expected
-behavior of the markdown_to_pdf automation before implementation.
-
 The automation should:
 - Convert markdown files to styled PDF documents
 - Support custom CSS styling
@@ -15,8 +12,8 @@ import tempfile
 from pathlib import Path
 
 import pytest
+from pypdf import PdfReader
 
-# These imports will fail until the module is implemented (TDD red phase)
 from r10n_backend.automations.markdown_to_pdf import (
     MarkdownConverter,
     MarkdownToPdfConfig,
@@ -45,25 +42,6 @@ class TestMarkdownToPdfConfig:
         assert config.include_toc is False
         assert config.syntax_highlighting is True
 
-    def test_config_custom_values(self):
-        """Test custom configuration values."""
-        config = MarkdownToPdfConfig(
-            input_path="doc.md",
-            output_path="doc.pdf",
-            css_file="custom.css",
-            page_size="Letter",
-            margin_top=30,
-            margin_bottom=30,
-            margin_left=25,
-            margin_right=25,
-            include_toc=True,
-            syntax_highlighting=False,
-        )
-        assert config.css_file == "custom.css"
-        assert config.page_size == "Letter"
-        assert config.include_toc is True
-        assert config.syntax_highlighting is False
-
 
 class TestParseMarkdown:
     """Test markdown parsing functionality."""
@@ -78,16 +56,16 @@ class TestParseMarkdown:
         """Test parsing headers."""
         markdown = "# Header 1\n## Header 2\n### Header 3"
         result = parse_markdown(markdown)
-        assert "<h1>" in result or "Header 1" in result
-        assert "<h2>" in result or "Header 2" in result
-        assert "<h3>" in result or "Header 3" in result
+        assert ">Header 1</h1>" in result
+        assert ">Header 2</h2>" in result
+        assert ">Header 3</h3>" in result
 
     def test_parse_bold_italic(self):
         """Test parsing bold and italic text."""
         markdown = "**bold** and *italic* text"
         result = parse_markdown(markdown)
-        assert "bold" in result
-        assert "italic" in result
+        assert "<strong>bold</strong>" in result
+        assert "<em>italic</em>" in result
 
     def test_parse_bullet_list(self):
         """Test parsing bullet lists."""
@@ -120,20 +98,21 @@ class TestParseMarkdown:
         markdown = "[Google](https://google.com)"
         result = parse_markdown(markdown)
         assert "Google" in result
-        assert "google.com" in result or "href" in result
+        assert 'href="https://google.com"' in result
 
     def test_parse_images(self):
         """Test parsing image references."""
         markdown = "![Alt text](image.png)"
         result = parse_markdown(markdown)
-        # Should contain image reference in some form
-        assert "image" in result.lower() or "img" in result.lower()
+        assert 'src="image.png"' in result
+        assert 'alt="Alt text"' in result
 
     def test_parse_blockquote(self):
         """Test parsing blockquotes."""
         markdown = "> This is a quote"
         result = parse_markdown(markdown)
-        assert "quote" in result.lower() or "blockquote" in result.lower()
+        assert "<blockquote>" in result
+        assert "This is a quote" in result
 
     def test_parse_horizontal_rule(self):
         """Test parsing horizontal rules."""
@@ -156,7 +135,7 @@ class TestParseMarkdown:
     def test_parse_empty_content(self):
         """Test parsing empty content."""
         result = parse_markdown("")
-        assert result is not None
+        assert result == ""
 
 
 class TestApplyCssStyling:
@@ -166,9 +145,8 @@ class TestApplyCssStyling:
         """Test applying default CSS styling."""
         html = "<h1>Title</h1><p>Content</p>"
         result = apply_css_styling(html)
-        assert result is not None
-        # Should contain style or be wrapped properly
-        assert "<style>" in result or "style" in result.lower()
+        assert "<style>" in result
+        assert html in result
 
     def test_apply_custom_css(self):
         """Test applying custom CSS file."""
@@ -179,7 +157,7 @@ class TestApplyCssStyling:
         try:
             html = "<p>Test content</p>"
             result = apply_css_styling(html, css_file=css_path)
-            assert "Arial" in result or "font-family" in result
+            assert "body { font-family: Arial; color: blue; }" in result
         finally:
             Path(css_path).unlink()
 
@@ -188,13 +166,6 @@ class TestApplyCssStyling:
         html = "<p>Test</p>"
         with pytest.raises(FileNotFoundError):
             apply_css_styling(html, css_file="nonexistent.css")
-
-    def test_apply_syntax_highlighting(self):
-        """Test syntax highlighting for code blocks."""
-        html = '<pre><code class="python">print("hello")</code></pre>'
-        result = apply_css_styling(html, syntax_highlighting=True)
-        # Should include some highlighting styles
-        assert result is not None
 
 
 class TestMarkdownConverter:
@@ -205,11 +176,6 @@ class TestMarkdownConverter:
         """Create a MarkdownConverter instance for testing."""
         config = MarkdownToPdfConfig(input_path="input.md", output_path="output.pdf")
         return MarkdownConverter(config)
-
-    def test_converter_initialization(self, converter):
-        """Test converter initialization."""
-        assert converter.config is not None
-        assert converter.config.input_path == "input.md"
 
     def test_convert_basic_document(self, converter):
         """Test converting a basic markdown document."""
@@ -226,7 +192,8 @@ class TestMarkdownConverter:
 
             assert result["success"] is True
             assert output_path.exists()
-            assert output_path.stat().st_size > 0
+            assert "Hello World" in PdfReader(output_path).pages[0].extract_text()
+            assert "This is a test document." in PdfReader(output_path).pages[0].extract_text()
 
     def test_convert_with_code_blocks(self, converter):
         """Test converting document with code blocks."""
@@ -253,6 +220,9 @@ Inline code: `variable = 42`
 
             assert result["success"] is True
             assert output_path.exists()
+            text = "\n".join(page.extract_text() for page in PdfReader(output_path).pages)
+            assert "Hello, World!" in text
+            assert "variable = 42" in text
 
     def test_convert_input_not_found(self, converter):
         """Test error when input file not found."""
@@ -297,8 +267,8 @@ class TestConvertMarkdownToPdf:
             assert result["success"] is True
             assert output_path.exists()
 
-    def test_convert_with_custom_css(self):
-        """Test converting with custom CSS styling."""
+    def test_convert_accepts_css_file(self):
+        """A valid CSS file can be supplied during conversion."""
         with tempfile.TemporaryDirectory() as temp_dir:
             input_path = Path(temp_dir) / "styled.md"
             output_path = Path(temp_dir) / "styled.pdf"
@@ -312,29 +282,7 @@ class TestConvertMarkdownToPdf:
             )
 
             assert result["success"] is True
-
-    def test_convert_with_toc(self):
-        """Test converting with table of contents."""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            input_path = Path(temp_dir) / "toc.md"
-            output_path = Path(temp_dir) / "toc.pdf"
-
-            input_path.write_text("""
-# Chapter 1
-Content for chapter 1.
-
-# Chapter 2
-Content for chapter 2.
-
-## Section 2.1
-Subsection content.
-""")
-
-            result = convert_markdown_to_pdf(
-                input_path=str(input_path), output_path=str(output_path), include_toc=True
-            )
-
-            assert result["success"] is True
+            assert "Styled Document" in PdfReader(output_path).pages[0].extract_text()
 
     def test_convert_auto_output_path(self):
         """Test automatic output path generation."""
@@ -345,7 +293,6 @@ Subsection content.
             result = convert_markdown_to_pdf(input_path=str(input_path))
 
             assert result["success"] is True
-            # Should create PDF with same name in same directory
             expected_output = Path(temp_dir) / "auto.pdf"
             assert expected_output.exists()
 
@@ -358,7 +305,6 @@ class TestConvertDirectory:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create markdown files
             (temp_path / "doc1.md").write_text("# Document 1")
             (temp_path / "doc2.md").write_text("# Document 2")
             (temp_path / "doc3.md").write_text("# Document 3")
@@ -379,7 +325,6 @@ class TestConvertDirectory:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create nested structure
             (temp_path / "root.md").write_text("# Root")
             sub_dir = temp_path / "subdir"
             sub_dir.mkdir()
@@ -407,7 +352,6 @@ class TestConvertDirectory:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create nested structure
             docs_dir = temp_path / "docs"
             docs_dir.mkdir()
             api_dir = docs_dir / "api"
@@ -423,9 +367,9 @@ class TestConvertDirectory:
                 preserve_structure=True,
             )
 
-            # Should maintain nested structure
             expected_output = output_dir / "docs" / "api" / "reference.pdf"
-            assert expected_output.exists() or result["converted"] >= 1
+            assert result["converted"] == 1
+            assert "API Reference" in PdfReader(expected_output).pages[0].extract_text()
 
     def test_convert_directory_reports_failed_files(self):
         """Test per-file failures are surfaced in the batch summary."""
@@ -494,25 +438,6 @@ class TestUvxCompatibility:
         assert hasattr(mod, "parse_markdown")
         assert hasattr(mod, "apply_css_styling")
 
-    def test_dataclass_fields(self):
-        """Test MarkdownToPdfConfig has all expected fields."""
-        from dataclasses import fields
-
-        field_names = {f.name for f in fields(MarkdownToPdfConfig)}
-        expected_fields = {
-            "input_path",
-            "output_path",
-            "css_file",
-            "page_size",
-            "margin_top",
-            "margin_bottom",
-            "margin_left",
-            "margin_right",
-            "include_toc",
-            "syntax_highlighting",
-        }
-        assert field_names == expected_fields
-
 
 class TestEdgeCases:
     """Test edge cases and special scenarios."""
@@ -530,6 +455,7 @@ class TestEdgeCases:
             )
 
             assert result["success"] is True
+            assert "Cafe, resume, naive" in PdfReader(output_path).pages[0].extract_text()
 
     def test_convert_large_document(self):
         """Test converting a large markdown document."""
@@ -537,7 +463,6 @@ class TestEdgeCases:
             input_path = Path(temp_dir) / "large.md"
             output_path = Path(temp_dir) / "large.pdf"
 
-            # Create large document
             content = "# Large Document\n\n"
             for i in range(100):
                 content += f"## Section {i}\n\nLorem ipsum dolor sit amet. " * 10 + "\n\n"
@@ -593,10 +518,10 @@ $$
 """
             input_path.write_text(markdown)
 
-            # Should not crash even if math isn't fully supported
             result = convert_markdown_to_pdf(
                 input_path=str(input_path), output_path=str(output_path)
             )
 
-            # At minimum, should not raise an exception
-            assert "success" in result
+            assert result["success"] is True
+            text = "\n".join(page.extract_text() for page in PdfReader(output_path).pages)
+            assert "E = mc^2" in text

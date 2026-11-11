@@ -25,7 +25,6 @@ from reportlab.platypus import (
     TableStyle,
 )
 
-# Page size mapping
 PAGE_SIZES = {
     "A4": A4,
     "Letter": LETTER,
@@ -59,7 +58,6 @@ def parse_markdown(content: str) -> str:
     Returns:
         HTML string
     """
-    # Use markdown library with common extensions
     extensions = [
         "markdown.extensions.tables",
         "markdown.extensions.fenced_code",
@@ -90,7 +88,6 @@ def apply_css_styling(
     Returns:
         HTML with embedded styles
     """
-    # Default styles
     default_css = """
     body { font-family: Helvetica, Arial, sans-serif; }
     h1 { font-size: 24pt; color: #333; margin-top: 20pt; }
@@ -102,7 +99,6 @@ def apply_css_styling(
     blockquote { border-left: 3pt solid #ccc; padding-left: 10pt; color: #666; }
     """
 
-    # Syntax highlighting styles
     highlight_css = """
     .codehilite { background: #f8f8f8; padding: 10pt; }
     .codehilite .k { color: #008000; font-weight: bold; }
@@ -115,14 +111,12 @@ def apply_css_styling(
     if syntax_highlighting:
         css += highlight_css
 
-    # Load custom CSS if provided
     if css_file:
         css_path = Path(css_file)
         if not css_path.exists():
             raise FileNotFoundError(f"CSS file not found: {css_file}")
         css += css_path.read_text()
 
-    # Wrap HTML with style
     styled_html = f"""
     <html>
     <head>
@@ -155,7 +149,6 @@ class MarkdownConverter:
 
     def _setup_styles(self):
         """Set up custom paragraph styles."""
-        # Heading styles
         self.styles.add(
             ParagraphStyle(
                 name="Heading1Custom",
@@ -219,8 +212,6 @@ class MarkdownConverter:
         """
         elements = []
 
-        # Simple HTML parsing using regex
-        # Remove html/head/body tags
         html = re.sub(
             r"<html[^>]*>|</html>|<head[^>]*>.*?</head>|<body[^>]*>|</body>",
             "",
@@ -229,7 +220,6 @@ class MarkdownConverter:
         )
         html = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL | re.IGNORECASE)
 
-        # Process headings
         html = re.sub(
             r"<h1[^>]*>(.*?)</h1>", r"|||H1|||\1|||/H1|||", html, flags=re.DOTALL | re.IGNORECASE
         )
@@ -249,12 +239,10 @@ class MarkdownConverter:
             r"<h6[^>]*>(.*?)</h6>", r"|||H6|||\1|||/H6|||", html, flags=re.DOTALL | re.IGNORECASE
         )
 
-        # Process paragraphs
         html = re.sub(
             r"<p[^>]*>(.*?)</p>", r"|||P|||\1|||/P|||", html, flags=re.DOTALL | re.IGNORECASE
         )
 
-        # Process code blocks
         html = re.sub(
             r"<pre[^>]*><code[^>]*>(.*?)</code></pre>",
             r"|||CODE|||\1|||/CODE|||",
@@ -268,7 +256,6 @@ class MarkdownConverter:
             flags=re.DOTALL | re.IGNORECASE,
         )
 
-        # Process blockquotes
         html = re.sub(
             r"<blockquote[^>]*>(.*?)</blockquote>",
             r"|||QUOTE|||\1|||/QUOTE|||",
@@ -276,12 +263,10 @@ class MarkdownConverter:
             flags=re.DOTALL | re.IGNORECASE,
         )
 
-        # Process lists
         html = re.sub(
             r"<li[^>]*>(.*?)</li>", r"|||LI|||\1|||/LI|||", html, flags=re.DOTALL | re.IGNORECASE
         )
 
-        # Process tables
         html = re.sub(
             r"<table[^>]*>(.*?)</table>",
             r"|||TABLE|||\1|||/TABLE|||",
@@ -289,11 +274,9 @@ class MarkdownConverter:
             flags=re.DOTALL | re.IGNORECASE,
         )
 
-        # Clean up other HTML tags (convert to simple text)
         html = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
         html = re.sub(r"<hr\s*/?>", "|||HR|||", html, flags=re.IGNORECASE)
 
-        # Process inline formatting
         html = re.sub(
             r"<strong[^>]*>(.*?)</strong>", r"<b>\1</b>", html, flags=re.DOTALL | re.IGNORECASE
         )
@@ -311,7 +294,6 @@ class MarkdownConverter:
             flags=re.DOTALL | re.IGNORECASE,
         )
 
-        # Split by markers and process
         parts = re.split(r"\|\|\|", html)
 
         i = 0
@@ -387,7 +369,6 @@ class MarkdownConverter:
                 i += 1
 
             elif part == "TABLE":
-                # Simple table handling
                 table_html = parts[i + 1] if i + 1 < len(parts) else ""
                 table_elements = self._parse_table(table_html)
                 if table_elements:
@@ -395,7 +376,6 @@ class MarkdownConverter:
                 i += 3
 
             else:
-                # Handle any remaining content
                 if (
                     part
                     and not part.startswith("/")
@@ -411,7 +391,6 @@ class MarkdownConverter:
 
     def _clean_html(self, text: str) -> str:
         """Clean HTML text for reportlab."""
-        # Remove remaining HTML tags except reportlab-supported ones
         text = re.sub(r"<(?!b|/b|i|/i|u|/u|font|/font|link|/link)[^>]+>", "", text)
         text = self._unescape_html(text)
         return text.strip()
@@ -430,21 +409,18 @@ class MarkdownConverter:
         """Parse HTML table to reportlab Table."""
         elements = []
 
-        # Extract rows
         rows = re.findall(r"<tr[^>]*>(.*?)</tr>", table_html, flags=re.DOTALL | re.IGNORECASE)
         if not rows:
             return elements
 
         table_data = []
         for row in rows:
-            # Extract cells (th or td)
             cells = re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", row, flags=re.DOTALL | re.IGNORECASE)
             if cells:
                 cleaned_cells = [self._clean_html(cell) for cell in cells]
                 table_data.append(cleaned_cells)
 
         if table_data:
-            # Create table
             table = Table(table_data)
             table.setStyle(
                 TableStyle(
@@ -481,29 +457,22 @@ class MarkdownConverter:
 
         output_path = Path(self.config.output_path)
 
-        # Create output directory if needed
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Read markdown content
         content = input_path.read_text(encoding="utf-8")
 
-        # Parse markdown to HTML
         html = parse_markdown(content)
 
-        # Apply CSS styling
         styled_html = apply_css_styling(
             html,
             css_file=self.config.css_file,
             syntax_highlighting=self.config.syntax_highlighting,
         )
 
-        # Convert to PDF elements
         elements = self._parse_html_to_elements(styled_html)
 
-        # Get page size
         page_size = PAGE_SIZES.get(self.config.page_size, A4)
 
-        # Create PDF
         doc = SimpleDocTemplate(
             str(output_path),
             pagesize=page_size,
@@ -513,7 +482,6 @@ class MarkdownConverter:
             rightMargin=self.config.margin_right * mm,
         )
 
-        # Build PDF
         doc.build(elements)
 
         return {
@@ -554,7 +522,6 @@ def convert_markdown_to_pdf(
     Returns:
         Dictionary with conversion result
     """
-    # Auto-generate output path if not provided
     if output_path is None:
         input_file = Path(input_path)
         output_path = str(input_file.with_suffix(".pdf"))
@@ -603,14 +570,12 @@ def convert_directory(
     if not input_path.exists():
         raise FileNotFoundError(f"Input directory not found: {input_dir}")
 
-    # Default output directory
     if output_dir is None:
         output_dir = str(input_path / "pdf_output")
 
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Find markdown files
     if recursive:
         md_files = list(input_path.rglob("*.md"))
     else:
@@ -625,7 +590,6 @@ def convert_directory(
 
     for md_file in md_files:
         try:
-            # Determine output path
             if preserve_structure and recursive:
                 relative = md_file.relative_to(input_path)
                 pdf_output = output_path / relative.with_suffix(".pdf")
