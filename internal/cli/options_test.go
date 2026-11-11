@@ -52,6 +52,28 @@ func TestFlagAliasMatrix(t *testing.T) {
 	}
 }
 
+func TestFlagAliasesReferToRegistryFields(t *testing.T) {
+	for task := range aliases {
+		fields, ok := flagFieldTypes[task]
+		if !ok {
+			t.Errorf("aliases reference unknown automation %q", task)
+			continue
+		}
+		for name, mapped := range flagMap(task) {
+			field := strings.TrimPrefix(mapped, "!")
+			if task == "colors" && field == "@all" && !strings.HasPrefix(mapped, "!") {
+				continue
+			}
+			isBoolean, exists := fields[field]
+			if !exists {
+				t.Errorf("%s --%s references unknown registry field %q", task, name, field)
+			} else if strings.HasPrefix(mapped, "!") && !isBoolean {
+				t.Errorf("%s --%s negates non-boolean registry field %q", task, name, field)
+			}
+		}
+	}
+}
+
 func TestSchemaDrivenValuesAndDefaults(t *testing.T) {
 	min, max := float64(1), float64(100)
 	task := backend.Automation{ID: "website-images", InputSchema: backend.Schema{

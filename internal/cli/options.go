@@ -29,7 +29,7 @@ var aliases = map[string]string{
 }
 
 func isBooleanField(id, field string) bool {
-	return field == "@all" || booleanFields[id][field]
+	return field == "@all" || flagFieldTypes[id][field]
 }
 
 func flagMap(id string) map[string]string {
