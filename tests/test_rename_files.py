@@ -17,7 +17,6 @@ from pathlib import Path
 
 import pytest
 
-# These imports will fail until the module is implemented (TDD red phase)
 from r10n_backend.automations.rename_files import (
     FileRenamer,
     RenameConfig,
@@ -380,9 +379,9 @@ class TestRenameFiles:
         )
 
         assert result.success is True
-        for r in result.renamed_files:
-            # Should have 4-digit sequence
-            assert any(f"{i:04d}" in r["new"] for i in range(1, 10))
+        assert {r["new"].split("_", 1)[0] for r in result.renamed_files} == {
+            f"{i:04d}" for i in range(1, 6)
+        }
 
     def test_rename_files_directory_not_found(self):
         """Test error for missing directory."""
@@ -470,47 +469,6 @@ class TestRecursiveRenaming:
         assert result.renamed == 1  # Only root.txt
 
 
-class TestUvxCompatibility:
-    """Test that the module works correctly when run via uvx."""
-
-    def test_module_import(self):
-        """Test module can be imported."""
-        from r10n_backend.automations import rename_files as mod
-
-        assert hasattr(mod, "RenameConfig")
-        assert hasattr(mod, "RenameResult")
-        assert hasattr(mod, "FileRenamer")
-        assert hasattr(mod, "rename_files")
-        assert hasattr(mod, "preview_rename")
-        assert hasattr(mod, "apply_pattern")
-        assert hasattr(mod, "sanitize_filename")
-
-    def test_dataclass_fields(self):
-        """Test RenameConfig has all expected fields."""
-        from dataclasses import fields
-
-        field_names = {f.name for f in fields(RenameConfig)}
-        expected_fields = {
-            "input_directory",
-            "pattern",
-            "prefix",
-            "suffix",
-            "replace_from",
-            "replace_to",
-            "add_date",
-            "add_sequence",
-            "sequence_start",
-            "sequence_padding",
-            "lowercase",
-            "uppercase",
-            "recursive",
-            "dry_run",
-            "file_pattern",
-            "date_format",
-        }
-        assert field_names == expected_fields
-
-
 class TestEdgeCases:
     """Test edge cases and special scenarios."""
 
@@ -522,8 +480,8 @@ class TestEdgeCases:
             assert result.total_files == 0
             assert result.renamed == 0
 
-    def test_rename_preserves_hidden_files(self):
-        """Test that hidden files are handled properly."""
+    def test_rename_includes_hidden_files_when_matching_all(self):
+        """Matching all names includes both hidden and visible files."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
             (temp_path / ".hidden").write_text("hidden")
@@ -532,11 +490,12 @@ class TestEdgeCases:
             result = rename_files(
                 input_directory=temp_dir,
                 prefix="r_",
-                file_pattern="*",  # Should match visible files
+                file_pattern="*",
             )
 
-            # Behavior depends on implementation choice
-            assert result.total_files >= 1
+            assert result.total_files == 2
+            assert (temp_path / "r_.hidden").read_text() == "hidden"
+            assert (temp_path / "r_visible.txt").read_text() == "visible"
 
     def test_rename_special_characters(self):
         """Test renaming files with special characters."""

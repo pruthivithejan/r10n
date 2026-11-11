@@ -21,7 +21,6 @@ def register_futura_font():
     """Register Futura font with ReportLab if available"""
     try:
         if platform.system() == "Darwin":  # macOS
-            # Try to register Futura from system fonts
             futura_paths = [
                 "/System/Library/Fonts/Supplemental/Futura.ttc",
                 "/System/Library/Fonts/Futura.ttc",
@@ -42,7 +41,6 @@ def register_futura_font():
                         print(f"Failed to register Futura from {font_path}: {e}")
                         continue
 
-        # If we get here, Futura couldn't be registered
         print("Warning: Could not register Futura font. Using Helvetica as fallback.")
         return False
 
@@ -144,7 +142,6 @@ def load_recipients(recipients_file):
             with open(recipients_file, encoding="utf-8-sig", newline="") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    # Normalize keys to lowercase and strip
                     normalized = {
                         str(k).strip().lower(): (v.strip() if isinstance(v, str) else v)
                         for k, v in row.items()
@@ -156,7 +153,6 @@ def load_recipients(recipients_file):
                     if isinstance(extras, list):
                         extras = [e.strip() for e in extras if isinstance(e, str)]
 
-                    # Determine name with heuristics
                     raw_name = (
                         normalized.get("name")
                         or normalized.get("full_name")
@@ -170,7 +166,6 @@ def load_recipients(recipients_file):
                         return isinstance(x, str) and x.strip().isdigit()
 
                     if is_index_like(raw_name):
-                        # If Position holds the real name, use it
                         possible_name = (
                             normalized.get("position")
                             or normalized.get("role")
@@ -187,7 +182,6 @@ def load_recipients(recipients_file):
 
                     name = raw_name
                     if not name:
-                        # Skip rows without a discernible name
                         continue
                     normalized["name"] = name
                     recipients.append(normalized)
@@ -197,7 +191,6 @@ def load_recipients(recipients_file):
         with open(recipients_file, encoding="utf-8") as f:
             for line_num, line in enumerate(f, 1):
                 line = line.strip()
-                # Skip empty lines and comments
                 if not line or line.startswith("#"):
                     continue
 
@@ -242,16 +235,12 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
     """Create a PDF overlay with text fields"""
     buffer = BytesIO()
 
-    # Create canvas with the same page size as template
     c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
 
-    # Register Futura font if needed
     futura_available = register_futura_font()
 
-    # Get font family from config
     font_family = config.get("font_family", "Helvetica")
 
-    # Process each field
     for field_name, field_config in config["fields"].items():
         if recipient_data.get(field_name):
             text = recipient_data[field_name]
@@ -267,10 +256,8 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
             color = field_config.get("color", [0, 0, 0])
             alignment = field_config.get("alignment", "left")
 
-            # Set font with improved fallback handling
             font_name = None
 
-            # Define available standard fonts and their mappings
             font_mappings = {
                 "Helvetica": {"normal": "Helvetica", "bold": "Helvetica-Bold"},
                 "Times": {"normal": "Times-Roman", "bold": "Times-Bold"},
@@ -282,13 +269,11 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
                 "monospace": {"normal": "Courier", "bold": "Courier-Bold"},
             }
 
-            # Add Futura mapping if available
             if futura_available:
                 font_mappings["Futura"] = {"normal": "Futura", "bold": "Futura-Bold"}
             else:
                 font_mappings["Futura"] = {"normal": "Helvetica", "bold": "Helvetica-Bold"}
 
-            # Get the appropriate font
             weight = "bold" if numeric_weight >= 600 else "normal"
 
             local_font_name = None
@@ -330,10 +315,8 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
             elif font_family in font_mappings:
                 font_name = font_mappings[font_family][weight]
             else:
-                # Default fallback for unknown fonts
                 font_name = "Helvetica-Bold" if numeric_weight >= 600 else "Helvetica"
 
-            # Set the font with fallback
             try:
                 c.setFont(font_name, font_size)
                 if font_family == "Futura" and futura_available:
@@ -372,15 +355,11 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
                         f"{text[:30]}{'...' if len(text) > 30 else ''}"
                     )
 
-            # Set color (convert if needed)
             if all(isinstance(val, (int, float)) and 0 <= val <= 1 for val in color):
-                # Already normalized (0-1)
                 c.setFillColorRGB(color[0], color[1], color[2])
             else:
-                # Convert from 0-255 to 0-1
                 c.setFillColorRGB(color[0] / 255, color[1] / 255, color[2] / 255)
 
-            # Handle text alignment
             if alignment == "center":
                 text_width = c.stringWidth(text, font_name, font_size)
                 x = x - (text_width / 2)
@@ -388,7 +367,6 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
                 text_width = c.stringWidth(text, font_name, font_size)
                 x = x - text_width
 
-            # Draw text
             c.drawString(x, y, text)
 
     c.save()
@@ -450,10 +428,8 @@ def generate_certificates(
             return p
         return os.path.join(base, p) if base else p
 
-    # Resolve recipients and config paths
     recipients_file = _resolve_path(recipients_file, base_dir, is_dir=False)
 
-    # Load configuration and data
     if config_override is not None:
         config = config_override
     elif config_file is not None:
@@ -471,18 +447,15 @@ def generate_certificates(
     template_path = _resolve_path(config["template_pdf"], base_dir, is_dir=False)
     output_dir = _resolve_path(config["output_directory"], base_dir, is_dir=True)
 
-    # Validate template file
     if not os.path.exists(template_path):
         raise FileNotFoundError(f"Template PDF not found: {template_path}")
 
-    # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"Loaded {len(recipients)} recipients")
     print(f"Template: {template_path}")
     print(f"Output directory: {output_dir}")
 
-    # Initialize counters
     generated_count = 0
     failed_count = 0
     errors = []
@@ -511,7 +484,6 @@ def generate_certificates(
                 output_path = os.path.join(output_dir, candidate)
             used_names[candidate] = idx
 
-            # Fill certificate
             fill_certificate(template_path, config, recipient, output_path)
 
             generated_count += 1
@@ -527,7 +499,6 @@ def generate_certificates(
             if progress_callback:
                 progress_callback(i, len(recipients))
 
-    # Print summary
     print(f"\n{'=' * 50}")
     print("CERTIFICATE GENERATION SUMMARY")
     print(f"{'=' * 50}")

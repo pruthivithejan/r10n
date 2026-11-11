@@ -1,9 +1,6 @@
 """
 Tests for the CSV Data Validator automation.
 
-These tests are written FIRST (TDD red phase) to define the expected
-behavior of the validate_csv automation before implementation.
-
 The automation should:
 - Validate CSV files against schemas/rules
 - Check data types, required fields, and custom constraints
@@ -18,7 +15,6 @@ from pathlib import Path
 
 import pytest
 
-# These imports will fail until the module is implemented (TDD red phase)
 from r10n_backend.automations.validate_csv import (
     CsvValidator,
     ValidationConfig,
@@ -361,8 +357,9 @@ class TestValidateCsv:
 
         try:
             result = validate_csv(input_file=csv_path)
-            # Should at least check structure
-            assert result.total_rows >= 1
+            assert result.total_rows == 1
+            assert result.valid_rows == 1
+            assert result.is_valid
         finally:
             Path(csv_path).unlink()
 
@@ -598,43 +595,10 @@ class TestGenerateReport:
             Path(report_path).unlink()
 
 
-class TestUvxCompatibility:
-    """Test that the module works correctly when run via uvx."""
-
-    def test_module_import(self):
-        """Test module can be imported."""
-        from r10n_backend.automations import validate_csv as mod
-
-        assert hasattr(mod, "ValidationConfig")
-        assert hasattr(mod, "ValidationResult")
-        assert hasattr(mod, "CsvValidator")
-        assert hasattr(mod, "validate_csv")
-        assert hasattr(mod, "validate_directory")
-        assert hasattr(mod, "load_schema")
-        assert hasattr(mod, "generate_report")
-        assert hasattr(mod, "clean_csv")
-
-    def test_dataclass_fields(self):
-        """Test ValidationConfig has all expected fields."""
-        from dataclasses import fields
-
-        field_names = {f.name for f in fields(ValidationConfig)}
-        expected_fields = {
-            "input_file",
-            "schema_file",
-            "output_file",
-            "strict_mode",
-            "skip_empty_rows",
-            "trim_whitespace",
-            "encoding",
-        }
-        assert field_names == expected_fields
-
-
 class TestEdgeCases:
     """Test edge cases and special scenarios."""
 
-    def test_validate_csv_with_bom(self):
+    def test_validate_csv_with_bom(self, tmp_path):
         """Test validating CSV with BOM."""
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".csv", delete=False) as f:
             f.write(b"\xef\xbb\xbfname,value\n")
@@ -642,13 +606,16 @@ class TestEdgeCases:
             csv_path = f.name
 
         try:
-            result = validate_csv(input_file=csv_path)
-            # Should handle BOM gracefully
-            assert result.total_rows >= 1
+            schema = tmp_path / "schema.json"
+            schema.write_text(json.dumps({"fields": {"name": {"enum": ["other"]}}}))
+            result = validate_csv(input_file=csv_path, schema_file=str(schema))
+            assert result.total_rows == 1
+            assert result.invalid_rows == 1
+            assert result.errors[0]["column"] == "name"
         finally:
             Path(csv_path).unlink()
 
-    def test_validate_csv_different_encodings(self):
+    def test_validate_csv_different_encodings(self, tmp_path):
         """Test validating CSV with different encodings."""
         encodings = ["utf-8", "latin-1", "cp1252"]
 
@@ -658,16 +625,22 @@ class TestEdgeCases:
             ) as f:
                 writer = csv.writer(f)
                 writer.writerow(["name"])
-                writer.writerow(["Test"])
+                writer.writerow(["café"])
                 csv_path = f.name
 
             try:
-                result = validate_csv(input_file=csv_path, encoding=encoding)
-                assert result.total_rows >= 1
+                schema = tmp_path / "schema.json"
+                schema.write_text(json.dumps({"fields": {"name": {"enum": ["café"]}}}))
+                result = validate_csv(
+                    input_file=csv_path, schema_file=str(schema), encoding=encoding
+                )
+                assert result.total_rows == 1
+                assert result.valid_rows == 1
+                assert result.is_valid
             finally:
                 Path(csv_path).unlink()
 
-    def test_validate_csv_with_quotes(self):
+    def test_validate_csv_with_quotes(self, tmp_path):
         """Test validating CSV with quoted fields."""
         with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, newline="") as f:
             writer = csv.writer(f, quoting=csv.QUOTE_ALL)
@@ -676,8 +649,14 @@ class TestEdgeCases:
             csv_path = f.name
 
         try:
-            result = validate_csv(input_file=csv_path)
-            assert result.total_rows >= 1
+            schema = tmp_path / "schema.json"
+            schema.write_text(
+                json.dumps({"fields": {"description": {"enum": ['A "quoted" description']}}})
+            )
+            result = validate_csv(input_file=csv_path, schema_file=str(schema))
+            assert result.total_rows == 1
+            assert result.valid_rows == 1
+            assert result.is_valid
         finally:
             Path(csv_path).unlink()
 

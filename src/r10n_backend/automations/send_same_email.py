@@ -31,7 +31,6 @@ class SimpleEmailSender:
     def __init__(self, config: SimpleEmailConfig):
         self.config = config
         self.smtp_connection = None
-        # Retry and backoff configuration
         self.max_retries = 3
         self.base_backoff = 2.0  # seconds
 
@@ -63,7 +62,6 @@ class SimpleEmailSender:
         try:
             if self.smtp_connection is None:
                 return self.connect()
-            # NOOP to check connection health
             self.smtp_connection.noop()
             return True
         except Exception:
@@ -87,7 +85,6 @@ class SimpleEmailSender:
                 except (SMTPServerDisconnected, SMTPResponseException, smtplib.SMTPException) as e:
                     last_err = e
                     print(f"⚠️  SMTP send failed on attempt {attempt}/{self.max_retries}: {e!s}")
-            # Backoff before next attempt
             sleep_for = self.base_backoff * (2 ** (attempt - 1))
             time.sleep(sleep_for)
         raise last_err or RuntimeError("Unknown SMTP error during send")
@@ -101,10 +98,8 @@ class SimpleEmailSender:
         msg["To"] = to_email
         msg["Subject"] = subject
 
-        # Add body
         msg.attach(MIMEText(body, "plain"))
 
-        # Add attachments if provided
         if attachments:
             for file_path in attachments:
                 if Path(file_path).exists():
@@ -194,14 +189,11 @@ def send_same_email_to_all(
 ):
     """Send the same email to all recipients in the list"""
     try:
-        # Load configuration
         config = load_simple_config(config_file)
 
-        # Send emails
         sender = SimpleEmailSender(config)
         results = sender.send_same_email_to_multiple(email_list, config.subject, body, attachments)
 
-        # Print summary
         print("\n📊 Email Sending Summary:")
         print(f"Total recipients: {results['total']}")
         print(f"✅ Successfully sent: {results['sent']}")
@@ -231,10 +223,8 @@ def send_personalized_emails_with_certificates(
 ) -> dict:
     """Send personalized emails with individual certificate attachments"""
     try:
-        # Load configuration
         config = smtp_config or load_simple_config(config_file)
 
-        # Parse email list from CSV
         recipients = []
         with open(email_list_file, encoding="utf-8") as f:
             csv_reader = csv.DictReader(f)
@@ -249,7 +239,6 @@ def send_personalized_emails_with_certificates(
             print("❌ No valid recipients found in CSV file")
             return {"sent": 0, "failed": 0, "total": 0, "failed_emails": []}
 
-        # Create name to certificate mapping
         certificate_files = {}
         certificates_path = Path(certificates_dir)
         if certificates_path.exists():
@@ -259,7 +248,6 @@ def send_personalized_emails_with_certificates(
         print(f"📧 Found {len(recipients)} recipients")
         print(f"📎 Found {len(certificate_files)} certificate files")
 
-        # Initialize results
         results: dict[str, Any] = {
             "sent": 0,
             "failed": 0,
@@ -268,7 +256,6 @@ def send_personalized_emails_with_certificates(
             "missing_certificates": [],
         }
 
-        # Connect to SMTP
         sender = SimpleEmailSender(config)
         if not sender.connect():
             return results
@@ -308,7 +295,6 @@ def send_personalized_emails_with_certificates(
 
         sender.disconnect()
 
-        # Print summary
         print("📊 Email Sending Summary:")
         print(f"Total recipients: {results['total']}")
         print(f"✅ Successfully sent: {results['sent']}")
@@ -335,19 +321,15 @@ def send_personalized_emails_with_certificates(
 
 def find_matching_certificate(name: str, certificate_files: dict) -> str | None:
     """Find matching certificate file for a given name"""
-    # Normalize name for matching
     normalized_name = normalize_name_for_matching(name)
 
-    # Try exact match first
     for cert_name, cert_path in certificate_files.items():
         if normalized_name in cert_name.lower():
             return cert_path
 
-    # Try partial matching
     name_parts = normalized_name.split("_")
     for cert_name, cert_path in certificate_files.items():
         cert_name_lower = cert_name.lower()
-        # Check if most name parts are in certificate name
         matches = sum(1 for part in name_parts if part in cert_name_lower and len(part) > 2)
         if matches >= max(1, len(name_parts) // 2):  # At least half the parts match
             return cert_path
@@ -359,9 +341,7 @@ def normalize_name_for_matching(name: str) -> str:
     """Normalize name for certificate matching"""
     import re
 
-    # Remove special characters and normalize spacing
     normalized = re.sub(r"[^\w\s]", "", name).strip()
-    # Replace spaces with underscores and convert to lowercase
     normalized = re.sub(r"\s+", "_", normalized).lower()
     return normalized
 
@@ -371,14 +351,11 @@ def send_from_file(
 ) -> dict:
     """Send personalized emails from files with individual certificate attachments"""
     try:
-        # Load configuration to get subject
         config = load_simple_config(config_file)
 
-        # Read email body from file
         with open(body_file, encoding="utf-8") as f:
             body_template = f.read()
 
-        # Call the personalized email function
         return send_personalized_emails_with_certificates(
             email_list_file=email_list_file,
             subject=config.subject,
@@ -443,7 +420,6 @@ def preview_email_setup(
 ) -> dict:
     """Test email setup without sending actual emails"""
     try:
-        # Load configuration to get subject
         config = load_simple_config(config_file)
         print("📧 Email configuration loaded successfully")
         print(f"📬 SMTP Server: {config.smtp_server}:{config.smtp_port}")
@@ -451,7 +427,6 @@ def preview_email_setup(
         print(f"📋 Subject: {config.subject}")
         print()
 
-        # Parse email list from CSV
         recipients = []
         with open(email_list_file, encoding="utf-8") as f:
             csv_reader = csv.DictReader(f)
@@ -467,7 +442,6 @@ def preview_email_setup(
             print(f"  {i}. {recipient['name']} ({recipient['email']})")
         print()
 
-        # Read email body from file
         with open(body_file, encoding="utf-8") as f:
             body_template = f.read()
 
@@ -478,7 +452,6 @@ def preview_email_setup(
         print("=" * 50)
         print()
 
-        # Create name to certificate mapping
         certificate_files = {}
         certificates_path = Path(certificates_dir)
         if certificates_path.exists():
@@ -487,7 +460,6 @@ def preview_email_setup(
 
         print(f"📎 Found {len(certificate_files)} certificate files")
 
-        # Test certificate matching for each recipient
         for recipient in recipients:
             name = recipient["name"]
             email = recipient["email"]
@@ -500,7 +472,6 @@ def preview_email_setup(
             else:
                 print("❌ No matching certificate found")
 
-            # Test personalized email body
             personalized_body = body_template.format(name=name)
             print("📝 Personalized email preview:")
             print("-" * 30)

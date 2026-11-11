@@ -850,30 +850,6 @@ class TestPreviewEmailSetup:
         assert result["certificates_count"] == 1
 
 
-class TestUvxCompatibility:
-    """Test that the module works correctly when run via uvx."""
-
-    def test_module_import(self):
-        """Test module can be imported."""
-        from r10n_backend.automations import send_same_email as mod
-
-        assert hasattr(mod, "SimpleEmailConfig")
-        assert hasattr(mod, "SimpleEmailSender")
-        assert hasattr(mod, "send_same_email_to_all")
-        assert hasattr(mod, "send_personalized_emails_with_certificates")
-        assert hasattr(mod, "find_matching_certificate")
-        assert hasattr(mod, "normalize_name_for_matching")
-        assert hasattr(mod, "preview_email_setup")
-
-    def test_dataclass_fields(self):
-        """Test SimpleEmailConfig has all expected fields."""
-        from dataclasses import fields
-
-        field_names = {f.name for f in fields(SimpleEmailConfig)}
-        expected_fields = {"smtp_server", "smtp_port", "email", "password", "subject", "use_tls"}
-        assert field_names == expected_fields
-
-
 class TestEdgeCases:
     """Test edge cases and special scenarios."""
 

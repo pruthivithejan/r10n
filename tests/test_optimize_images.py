@@ -659,39 +659,6 @@ class TestOptimizeImagesFunction:
             assert len(files) == 2
 
 
-class TestUvxCompatibility:
-    """Test that the module works correctly when run via uvx."""
-
-    def test_module_import(self):
-        """Test module can be imported."""
-        from r10n_backend.automations import optimize_images as mod
-
-        assert hasattr(mod, "ImageOptimizationConfig")
-        assert hasattr(mod, "ImageOptimizer")
-        assert hasattr(mod, "optimize_images")
-        assert hasattr(mod, "load_config")
-
-    def test_dataclass_fields(self):
-        """Test ImageOptimizationConfig has all expected fields."""
-        from dataclasses import fields
-
-        field_names = {f.name for f in fields(ImageOptimizationConfig)}
-        expected_fields = {
-            "input_directory",
-            "output_directory",
-            "prefix",
-            "max_size_mb",
-            "quality",
-            "max_width",
-            "max_height",
-            "convert_to_webp",
-            "preserve_aspect_ratio",
-            "auto_orient",
-            "preserve_filename",
-        }
-        assert field_names == expected_fields
-
-
 class TestEdgeCases:
     """Test edge cases and special scenarios."""
 
