@@ -41,7 +41,7 @@ func TestFlagAliasMatrix(t *testing.T) {
 			// Each long spelling and short spelling must map to the same input.
 			for name, field := range flagMap(test.task) {
 				args := []string{"--" + name + "=value"}
-				if booleanFields[strings.TrimPrefix(field, "!")] {
+				if isBooleanField(test.task, strings.TrimPrefix(field, "!")) {
 					args = []string{"--" + name + "=true"}
 				}
 				if _, err := parseFlags(test.task, args); err != nil {

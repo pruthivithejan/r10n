@@ -1,5 +1,7 @@
 package cli
 
+//go:generate uv run --locked python ../../scripts/generate_flag_schema.py
+
 import (
 	"flag"
 	"fmt"
@@ -26,12 +28,8 @@ var aliases = map[string]string{
 	"md2pdf":         "input,i=input_path output,o=output_path css,c=css_file page-size=page_size toc=include_toc syntax-highlight=syntax_highlighting recursive,r=recursive",
 }
 
-var booleanFields = map[string]bool{
-	"preserve_filenames": true, "overwrite": true, "write_manifest": true,
-	"create_backups": true, "dry_run": true, "lowercase": true, "uppercase": true,
-	"add_date": true, "add_sequence": true, "recursive": true, "strict": true,
-	"clean_invalid": true, "trim_whitespace": true, "include_toc": true,
-	"syntax_highlighting": true, "@all": true,
+func isBooleanField(id, field string) bool {
+	return field == "@all" || booleanFields[id][field]
 }
 
 func flagMap(id string) map[string]string {
@@ -60,7 +58,7 @@ func printTaskHelp(id string) {
 		}
 		arg := " VALUE"
 		field := strings.TrimPrefix(flags[name], "!")
-		if booleanFields[field] {
+		if isBooleanField(id, field) {
 			arg = "[=true|false]"
 		}
 		fmt.Fprintf(stdout, "  %s%s%s\n", prefix, name, arg)
@@ -108,7 +106,7 @@ func parseFlags(id string, args []string) (flagOptions, error) {
 			return o, fmt.Errorf("unknown option: %s", arg)
 		}
 		field := strings.TrimPrefix(mapped, "!")
-		if booleanFields[field] {
+		if isBooleanField(id, field) {
 			if !hasValue {
 				value = "true"
 			}

@@ -4,6 +4,14 @@ import pytest
 from pydantic import ValidationError
 
 from r10n_backend.registry import get_automation, list_automations
+from scripts.generate_flag_schema import DESTINATION, render
+
+
+def test_offline_flag_schema_matches_registry():
+    """Offline CLI parsing stays synchronized with registry input types."""
+    assert (
+        DESTINATION.read_text(encoding="utf-8") == render()
+    ), "Run go generate ./internal/cli to refresh the offline flag schema"
 
 
 class TestAutomationRegistry:
