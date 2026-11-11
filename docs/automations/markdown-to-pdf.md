@@ -21,7 +21,6 @@ r10n md2pdf \
   --input /path/to/guide.md \
   --output /path/to/guide.pdf \
   --page-size Letter \
-  --toc \
   --yes
 ```
 
@@ -34,10 +33,10 @@ process nested Markdown files in a directory.
 |-----------|-------|----------|---------|-------------|
 | `--input` | `-i` | Yes | — | Markdown file or directory |
 | `--output` | `-o` | No | Beside input | PDF file or output directory |
-| `--css` | `-c` | No | — | Optional stylesheet |
+| `--css` | `-c` | No | — | Stylesheet path (currently does not affect PDF styling) |
 | `--page-size` | — | No | `A4` | Page size: A4, Letter, or Legal |
-| `--toc` | — | No | `false` | Include a table of contents |
-| `--syntax-highlight` | — | No | `true` | Highlight fenced code blocks |
+| `--toc` | — | No | `false` | Accepted for compatibility; a table of contents is not yet rendered |
+| `--syntax-highlight` | — | No | `true` | Accepted for compatibility; code highlighting is not yet rendered |
 | `--recursive` | `-r` | No | `false` | Process nested directories |
 | `--yes` | `-y` | No | `false` | Skip confirmation |
 
@@ -49,8 +48,7 @@ the destination before running a batch.
 
 ## Troubleshooting
 
-**Stylesheet not applied:** Confirm the CSS path is readable and contains valid
-styles.
+**Stylesheet not applied:** The current PDF renderer does not apply custom CSS.
 
 **Directory output missing files:** Use `--recursive` when Markdown files are
 in nested directories.

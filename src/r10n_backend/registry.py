@@ -215,12 +215,12 @@ class MarkdownToPdfInput(AutomationInput):
     )
     css_file: str | None = Field(
         None,
-        description="Optional custom CSS file",
+        description="CSS file (currently does not affect PDF styling)",
         json_schema_extra={"ui:widget": "file"},
     )
     page_size: Literal["A4", "Letter", "Legal"] = Field("A4", description="PDF page size")
-    include_toc: bool = Field(False, description="Include a table of contents")
-    syntax_highlighting: bool = Field(True, description="Highlight fenced code blocks")
+    include_toc: bool = Field(False, description="Table of contents (not yet rendered)")
+    syntax_highlighting: bool = Field(True, description="Code highlighting (not yet rendered)")
     recursive: bool = Field(False, description="Process nested directories")
 
 
@@ -406,7 +406,7 @@ def _run_website_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any
             },
         )
 
-    return download_website_images(
+    result = download_website_images(
         url=values.url,
         output_dir=values.output_directory,
         output_format=values.output_format,
@@ -415,6 +415,15 @@ def _run_website_images(inputs: BaseModel, emit: EventCallback) -> dict[str, Any
         max_pages=None if values.max_pages == 0 else values.max_pages,
         progress_callback=progress,
     )
+    failed_pages = sum(not page.get("success", False) for page in result["pages"])
+    failed_images = result["failed"]
+    result["success"] = not failed_pages and not failed_images
+    if not result["success"]:
+        completed_work = result["downloaded"] > 0 or (
+            failed_pages > 0 and result["pages_scanned"] > 0
+        )
+        result["status"] = "partial" if completed_work else "failed"
+    return result
 
 
 def _run_logos(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
@@ -437,7 +446,7 @@ def _run_logos(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
         )
         emit("log", {"message": f"Processed {item.get('company_name', 'logo')}"})
 
-    return download_logos(
+    result = download_logos(
         names=names,
         output_dir=values.output_directory,
         timeout=values.timeout,
@@ -446,6 +455,9 @@ def _run_logos(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
         write_manifest=values.write_manifest,
         progress_callback=on_progress,
     )
+    if not result["success"]:
+        result["status"] = "partial" if result["downloaded"] or result["skipped"] else "failed"
+    return result
 
 
 def _run_email(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
@@ -502,12 +514,17 @@ def _run_colors(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
 
     values = ColorsInput.model_validate(inputs)
     emit("log", {"message": "Scanning CSS color values"})
-    return convert_colors(
+    result = convert_colors(
         path=values.path,
         file=values.file,
         dry_run=values.dry_run,
         no_backup=not values.create_backups,
     )
+    failed = sum("error" in item for item in result["files"])
+    result["success"] = failed == 0
+    if failed:
+        result["status"] = "partial" if failed < len(result["files"]) else "failed"
+    return result
 
 
 def _run_rename(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
@@ -530,7 +547,10 @@ def _run_rename(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
         dry_run=values.dry_run,
         file_pattern=values.file_pattern,
     )
-    return normalize_result(result)
+    normalized = normalize_result(result)
+    if not result.success:
+        normalized["status"] = "partial" if result.renamed else "failed"
+    return normalized
 
 
 def _run_validate(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:

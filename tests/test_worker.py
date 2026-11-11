@@ -2,7 +2,11 @@
 
 import json
 from dataclasses import replace
+from email.message import Message
+from io import BytesIO
+from urllib.error import URLError
 
+import pytest
 from PIL import Image
 
 from r10n_backend.__main__ import main
@@ -12,6 +16,94 @@ from r10n_backend.worker import PROTOCOL_VERSION, find_artifacts, run_automation
 
 class TestWorkerProtocol:
     """Verify structured worker execution and artifact reporting."""
+
+    @pytest.mark.parametrize("include_valid, expected", [(False, "failed"), (True, "partial")])
+    def test_color_batch_reports_invalid_files(self, tmp_path, include_valid, expected):
+        (tmp_path / "broken.css").write_bytes(b"\xff")
+        if include_valid:
+            (tmp_path / "valid.css").write_text("p { color: #ff0000; }", encoding="utf-8")
+        events = []
+        run_automation("colors", {"path": str(tmp_path), "dry_run": True}, events.append)
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == expected
+        assert any("error" in item for item in events[-1]["result"]["files"])
+
+    def test_website_unavailable_reports_failure(self, tmp_path, monkeypatch):
+        def unavailable(request, timeout):
+            raise URLError("unavailable")
+
+        monkeypatch.setattr("urllib.request.urlopen", unavailable)
+        events = []
+        run_automation(
+            "website-images",
+            {"url": "https://example.test/", "output_directory": str(tmp_path)},
+            events.append,
+        )
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == "failed"
+        assert events[-1]["result"]["pages"][0]["success"] is False
+
+    def test_website_partial_download_reports_partial(self, tmp_path, monkeypatch):
+        image_bytes = BytesIO()
+        Image.new("RGB", (4, 4), "red").save(image_bytes, "PNG")
+
+        def respond(request, timeout):
+            if request.full_url.endswith("bad.png"):
+                raise URLError("unavailable")
+            body = (
+                b'<img src="/good.png"><img src="/bad.png">'
+                if request.full_url.endswith("/")
+                else image_bytes.getvalue()
+            )
+            class Response(BytesIO):
+                headers = Message()
+
+            return Response(body)
+
+        monkeypatch.setattr("urllib.request.urlopen", respond)
+        events = []
+        run_automation(
+            "website-images",
+            {"url": "https://example.test/", "output_directory": str(tmp_path)},
+            events.append,
+        )
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == "partial"
+        assert events[-1]["result"]["downloaded"] == 1
+        assert events[-1]["result"]["failed"] == 1
+
+    def test_rename_batch_with_conflict_reports_partial(self, tmp_path):
+        (tmp_path / "first.txt").write_text("first", encoding="utf-8")
+        (tmp_path / "second.txt").write_text("second", encoding="utf-8")
+        (tmp_path / "new_second.txt").write_text("existing", encoding="utf-8")
+        events = []
+        run_automation(
+            "rename",
+            {"input_directory": str(tmp_path), "prefix": "new_", "file_pattern": "*.txt"},
+            events.append,
+        )
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == "partial"
+        assert events[-1]["result"]["renamed"] >= 1
+        assert events[-1]["result"]["errors"]
+
+    def test_logo_batch_with_existing_and_unavailable_reports_partial(self, tmp_path, monkeypatch):
+        (tmp_path / "first.svg").write_text("<svg/>", encoding="utf-8")
+
+        def unavailable(request, timeout):
+            raise URLError("unavailable")
+
+        monkeypatch.setattr("urllib.request.urlopen", unavailable)
+        events = []
+        run_automation(
+            "logos",
+            {"names": "First, Second", "output_directory": str(tmp_path)},
+            events.append,
+        )
+        assert events[-1]["success"] is False
+        assert events[-1]["status"] == "partial"
+        assert events[-1]["result"]["skipped"] == 1
+        assert events[-1]["result"]["failed"] == 1
 
     def test_missing_image_directory_reports_failure(self, tmp_path):
         events = []
