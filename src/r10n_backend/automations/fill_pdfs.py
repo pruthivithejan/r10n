@@ -399,26 +399,19 @@ def create_text_overlay(config, recipient_data, page_width, page_height):
 def fill_certificate(template_path, config, recipient_data, output_path):
     """Fill a certificate template with recipient data"""
     try:
-        # Read template PDF
         with open(template_path, "rb") as template_file:
             template_reader = PdfReader(template_file)
-            template_page = template_reader.pages[0]
+            writer = PdfWriter()
+            template_page = writer.add_page(template_reader.pages[0])
 
-            # Get page dimensions
             page_width = float(template_page.mediabox.width)
             page_height = float(template_page.mediabox.height)
 
-            # Create text overlay
             overlay_buffer = create_text_overlay(config, recipient_data, page_width, page_height)
             overlay_reader = PdfReader(overlay_buffer)
             overlay_page = overlay_reader.pages[0]
 
-            # Merge template and overlay
             template_page.merge_page(overlay_page)
-
-            # Write output
-            writer = PdfWriter()
-            writer.add_page(template_page)
 
             with open(output_path, "wb") as output_file:
                 writer.write(output_file)
