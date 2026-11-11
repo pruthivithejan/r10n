@@ -49,3 +49,22 @@ policy, and rate limiting of both workflows.
   behavior. This changes output and potentially dependencies; it is not solved
   by forwarding flags. Existing tests that only asserted conversion success did
   not demonstrate these features and have been replaced with output checks.
+
+## Unify contact generation paths — implemented
+
+- File and text entry points independently implement normalization, deduplication,
+  sorting, serialization, and statistics. Delegate both to a shared path while
+  preserving input errors and generated VCF content.
+
+## Make automation outcomes explicit — implemented
+
+- Worker completion assumed success when a result omitted `success`; image,
+  color, website, and batch Markdown results could report failures that way.
+  Their adapters now translate domain results into completion outcomes, and
+  mixed logo and rename results report partial completion.
+
+## Share settings defaults without breaking existing reads — implemented
+
+- Go load and save paths duplicated version checks and defaults. They share
+  normalization while retaining the stricter write-time checks, so older files
+  remain readable. Numeric font-weight strings accepted by Python can be saved.
