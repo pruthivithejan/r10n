@@ -193,7 +193,7 @@ func configurePDF(ctx context.Context, args []string) error {
 		fontSize, _ := strconv.ParseFloat(value.FontSize, 64)
 		field := settings.PDFField{
 			X: x, Y: y, FontSize: fontSize, FontWeight: value.FontWeight,
-			Alignment: value.Alignment, Color: []int{0, 0, 0},
+			Alignment: value.Alignment, Color: []float64{0, 0, 0},
 		}
 		if strings.TrimSpace(value.MaxWidth) != "" {
 			field.MaxWidth, _ = strconv.ParseFloat(value.MaxWidth, 64)

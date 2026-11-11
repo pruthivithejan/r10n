@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Literal
 
 from platformdirs import user_config_path
 from pydantic import BaseModel, ConfigDict, Field
+
+_ENV_REFERENCE = re.compile(r"\$\{([^}]*)\}|\$([*#$@!?0-9-]|[a-zA-Z_][a-zA-Z_0-9]*)|\$\{")
 
 
 class SMTPProfile(BaseModel):
@@ -70,7 +73,10 @@ def settings_directory() -> Path:
     """Resolve the same system configuration path as the native frontend."""
     override = os.getenv("R10N_CONFIG_DIR")
     if override:
-        return Path(override).expanduser().resolve()
+        expanded = _ENV_REFERENCE.sub(
+            lambda match: os.environ.get(match.group(1) or match.group(2) or "", ""), override
+        )
+        return Path(expanded).expanduser().resolve()
     return Path(user_config_path(appname="r10n", appauthor=False))
 
 

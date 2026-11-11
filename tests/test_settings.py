@@ -8,6 +8,13 @@ import pytest
 from r10n_backend.settings import PDFProfile, Settings, load_settings, save_settings, settings_path
 
 
+def test_settings_directory_expands_environment_variables(tmp_path, monkeypatch):
+    monkeypatch.setenv("R10N_CONFIG_SEGMENT", "expanded")
+    monkeypatch.setenv("R10N_CONFIG_DIR", str(tmp_path / "$R10N_CONFIG_SEGMENT"))
+
+    assert settings_path() == tmp_path / "expanded" / "config.json"
+
+
 def test_loading_defaults_does_not_create_config_directories(tmp_path, monkeypatch):
     destination = tmp_path / "settings"
     monkeypatch.setenv("R10N_CONFIG_DIR", str(destination))

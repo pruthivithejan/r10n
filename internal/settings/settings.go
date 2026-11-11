@@ -44,14 +44,14 @@ type PDFProfile struct {
 }
 
 type PDFField struct {
-	X          float64 `json:"x"`
-	Y          float64 `json:"y"`
-	FontSize   float64 `json:"font_size"`
-	FontWeight any     `json:"font_weight,omitempty"`
-	Alignment  string  `json:"alignment"`
-	Color      []int   `json:"color,omitempty"`
-	MaxWidth   float64 `json:"max_width,omitempty"`
-	FontPath   string  `json:"font_path,omitempty"`
+	X          float64   `json:"x"`
+	Y          float64   `json:"y"`
+	FontSize   float64   `json:"font_size"`
+	FontWeight any       `json:"font_weight,omitempty"`
+	Alignment  string    `json:"alignment"`
+	Color      []float64 `json:"color,omitempty"`
+	MaxWidth   float64   `json:"max_width,omitempty"`
+	FontPath   string    `json:"font_path,omitempty"`
 }
 
 func defaults() Document {
@@ -196,8 +196,31 @@ func Save(document Document) (string, error) {
 			if fieldName == "" || field.X < 0 || field.Y < 0 || field.FontSize <= 0 {
 				return "", fmt.Errorf("PDF profile %q contains invalid settings for field %q", name, fieldName)
 			}
-			if field.Alignment != "" && field.Alignment != "left" && field.Alignment != "center" && field.Alignment != "right" {
+			if field.Alignment == "" {
+				field.Alignment = "left"
+				profile.Fields[fieldName] = field
+			}
+			if field.Alignment != "left" && field.Alignment != "center" && field.Alignment != "right" {
 				return "", fmt.Errorf("PDF profile %q has unsupported alignment for field %q", name, fieldName)
+			}
+			if len(field.Color) != 0 && len(field.Color) != 3 {
+				return "", fmt.Errorf("PDF profile %q needs three color components for field %q", name, fieldName)
+			}
+			if field.MaxWidth < 0 {
+				return "", fmt.Errorf("PDF profile %q has invalid maximum width for field %q", name, fieldName)
+			}
+			switch weight := field.FontWeight.(type) {
+			case nil, int:
+			case float64:
+				if weight != float64(int64(weight)) {
+					return "", fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
+				}
+			case string:
+				if weight != "bold" && weight != "normal" {
+					return "", fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
+				}
+			default:
+				return "", fmt.Errorf("PDF profile %q has invalid font weight for field %q", name, fieldName)
 			}
 		}
 	}
