@@ -18,7 +18,6 @@ def clean_number(number: str) -> str | None:
     """
     number = number.strip()
 
-    # Handle comma-separated or multiple space-separated numbers
     if "," in number:
         parts = [p.strip() for p in number.split(",")]
         for part in parts:
@@ -30,17 +29,13 @@ def clean_number(number: str) -> str | None:
 
     number = re.sub(r"\D", "", number)
 
-    # Strip leading zeros (e.g., 007123456789 -> 7123456789)
     number = number.lstrip("0")
 
     if number.startswith("94") and len(number) == 11:
         number = "+" + number
-    elif number.startswith("0"):
-        number = "+94" + number[1:]
-    elif not number.startswith("+94"):
+    else:
         number = "+94" + number
 
-    # Validate final format: +94 followed by exactly 9 digits
     return number if re.fullmatch(r"\+94\d{9}", number) else None
 
 
@@ -65,48 +60,7 @@ def generate_vcf_from_file(
     with open(input_path) as f:
         raw_numbers = f.read()
 
-    lines = []
-    for line in raw_numbers.strip().splitlines():
-        line = line.strip()
-        if line and not line.startswith("#"):
-            lines.append(line)
-
-    total_numbers = len(lines)
-    cleaned_numbers = set()
-    duplicate_count = 0
-    invalid_count = 0
-
-    for num in lines:
-        cleaned = clean_number(num)
-        if cleaned:
-            if cleaned in cleaned_numbers:
-                duplicate_count += 1
-            else:
-                cleaned_numbers.add(cleaned)
-        else:
-            invalid_count += 1
-
-    cleaned_numbers = sorted(cleaned_numbers)
-
-    output_path = Path(output_name)
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(output_path, "w") as f:
-        for idx, number in enumerate(cleaned_numbers, start=1):
-            f.write("BEGIN:VCARD\n")
-            f.write("VERSION:3.0\n")
-            f.write(f"FN:{prefix} {idx}\n")
-            f.write(f"TEL;TYPE=CELL:{number}\n")
-            f.write("END:VCARD\n")
-
-    return {
-        "total": total_numbers,
-        "valid": len(cleaned_numbers),
-        "duplicates": duplicate_count,
-        "invalid": invalid_count,
-        "output_file": str(output_path),
-    }
+    return generate_vcf(raw_numbers, output_name, prefix)
 
 
 def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: str = "Contact"):
@@ -166,7 +120,6 @@ def generate_vcf(raw_numbers: str, output_name: str = "contacts.vcf", prefix: st
 
 
 if __name__ == "__main__":
-    # Example usage
     sample_numbers = """
     0729553860
     0785952202

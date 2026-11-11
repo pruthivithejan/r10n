@@ -81,6 +81,32 @@ class TestCleanNumber:
 class TestGenerateVcfFromFile:
     """Test VCF generation from file."""
 
+    def test_file_and_string_inputs_have_the_same_results(self, tmp_path):
+        """Both entry points produce the same cards and statistics."""
+        numbers = "# ignored\n0781234567\n0771234567\n+94771234567\ninvalid\n"
+        input_file = tmp_path / "numbers.txt"
+        input_file.write_text(numbers, encoding="utf-8")
+        from_file = tmp_path / "file.vcf"
+        from_string = tmp_path / "string.vcf"
+
+        file_result = generate_vcf_from_file(str(input_file), str(from_file), "Guest")
+        string_result = generate_vcf(numbers, str(from_string), "Guest")
+
+        assert {key: value for key, value in file_result.items() if key != "output_file"} == {
+            "total": 4,
+            "valid": 2,
+            "duplicates": 1,
+            "invalid": 1,
+        }
+        assert {key: value for key, value in string_result.items() if key != "output_file"} == {
+            "total": 4,
+            "valid": 2,
+            "duplicates": 1,
+            "invalid": 1,
+        }
+        assert from_file.read_text(encoding="utf-8") == from_string.read_text(encoding="utf-8")
+        assert "FN:Guest 1\nTEL;TYPE=CELL:+94771234567" in from_file.read_text(encoding="utf-8")
+
     def test_bare_output_filename_stays_at_the_explicit_working_directory(
         self, monkeypatch, tmp_path
     ):
