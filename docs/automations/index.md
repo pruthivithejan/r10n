@@ -70,6 +70,11 @@ All r10n automations are listed below. Click any card to view the full guide wit
   <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Convert Markdown files to PDF</span>
 </a>
 
+<a href="router-sms/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-accent-fg-color--lightest)">
+  <span style="font-weight:600; margin-top:.5em;">Router SMS</span>
+  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Read and send SMS using a ZLT S10 router</span>
+</a>
+
 </div>
 
 ---
@@ -84,6 +89,7 @@ All r10n automations are listed below. Click any card to view the full guide wit
 | [Website Images](website-images/) | `r10n website-images` | Download images into page folders |
 | [Logos](logos/) | `r10n logos` | Download company logos from SVGL |
 | [Email](email/) | `r10n email` | Send bulk emails |
+| [Router SMS](router-sms/) | `r10n sms` | Read and send router SMS |
 | [Colors](colors/) | `r10n colors` | Convert CSS to oklch() |
 | [Rename Files](rename-files/) | `r10n rename` | Batch rename files |
 | [Validate CSV](validate-csv/) | `r10n validate` | Validate CSV files |

@@ -30,6 +30,7 @@ Usage:
   r10n list [--json]          List the Python registry
   r10n run <automation> [--input-json <object> | --input-file <path>]
   r10n configure --template PATH [--recipients PATH] [--name PROFILE]
+  r10n sms                    Read, send, and delete router SMS
   r10n setup                  Edit per-user terminal preferences
   r10n config <action>        Inspect profiles and system settings
   r10n status [--json]        Report system settings and runtime status
@@ -85,7 +86,7 @@ flagsParsed:
 			return nil
 		}
 		switch args[0] {
-		case "run", "list", "tui", "configure", "setup", "config", "status", "upgrade":
+		case "run", "list", "tui", "configure", "setup", "config", "status", "upgrade", "sms":
 			fmt.Fprint(stdout, help)
 			return nil
 		}
@@ -101,6 +102,8 @@ flagsParsed:
 				return usage(err)
 			}
 			return runJSON(ctx, o)
+		case "sms":
+			return runSMS(ctx, args[1:])
 		case "setup":
 			return editSettings(ctx)
 		case "config":
@@ -188,7 +191,7 @@ flagsParsed:
 		}
 		return tui.RunTask(ctx, engine, task)
 	}
-	return tui.Picker(ctx, engine, catalog)
+	return tui.Picker(ctx, engine, catalog, tui.LauncherCommand{ID: "sms", Title: "Router SMS", Description: "Read and send messages", Run: func(ctx context.Context) error { return runSMS(ctx, nil) }})
 }
 
 func findTask(c backend.Catalog, id string) (backend.Automation, error) {

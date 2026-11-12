@@ -70,7 +70,7 @@ jobs:
         include:
           - os: ubuntu-latest
             asset: r10n-linux-x86_64.tar.gz
-          - os: macos-14
+          - os: macos-15
             asset: r10n-macos-arm64.tar.gz
           - os: windows-latest
             asset: r10n-windows-x86_64.exe

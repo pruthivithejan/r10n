@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/pruthivithejan/r10n/internal/backend"
 	"github.com/pruthivithejan/r10n/internal/brand"
@@ -170,7 +170,7 @@ func RunTask(ctx context.Context, engine backend.Backend, task backend.Automatio
 	return Execute(ctx, engine, task, payload, false, false)
 }
 
-func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog) error {
+func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog, commands ...LauncherCommand) error {
 	if !Interactive() {
 		return &backend.RunError{Code: 2, Message: "native forms require a terminal"}
 	}
@@ -178,21 +178,44 @@ func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog
 	if ctx, err = ResolveSettings(ctx); err != nil {
 		return err
 	}
+	entries := make([]launcherEntry, 0, len(catalog.Automations)+len(commands))
+	for _, task := range catalog.Automations {
+		entries = append(entries, launcherEntry{id: task.ID, title: task.Title, description: task.Description})
+	}
+	for _, command := range commands {
+		entries = append(entries, launcherEntry{id: command.ID, title: command.Title, description: command.Description})
+	}
 	for {
-		options := make([]huh.Option[string], 0, len(catalog.Automations))
-		for _, task := range catalog.Automations {
-			label := task.ID + " · " + task.Title + " · " + task.Category + " — " + task.Description
-			if len(task.Roles) > 0 {
-				label += " (" + strings.Join(task.Roles, ", ") + ")"
-			}
-			options = append(options, huh.NewOption(SafeText(label), task.ID))
-		}
-		var selected string
 		prefs := DisplayPreferences(ctx)
-		title := prefs.Palette.Banner(prefs.Accessible) + "\nr10n · Routine automation"
-		if err := runForm(ctx, huh.NewForm(huh.NewGroup(huh.NewSelect[string]().Title(title).
-			Description("Choose a task. Press / to filter.").Options(options...).Value(&selected)))); err != nil {
-			return err
+		var selected string
+		if prefs.Accessible {
+			options := make([]huh.Option[string], 0, len(entries))
+			for _, entry := range entries {
+				options = append(options, huh.NewOption(SafeText(entry.id+" · "+entry.title+" — "+entry.description), entry.id))
+			}
+			if err := runForm(ctx, huh.NewForm(huh.NewGroup(huh.NewSelect[string]().Title("r10n · Routine automation").
+				Description("Choose a command.").Options(options...).Value(&selected)))); err != nil {
+				return err
+			}
+		} else {
+			model := newLauncher(entries, prefs)
+			final, err := tea.NewProgram(model, tea.WithContext(ctx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
+			if err != nil {
+				return err
+			}
+			selected = final.(launcherModel).selected
+			if selected == "" {
+				return nil
+			}
+		}
+		for _, command := range commands {
+			if command.ID == selected && command.Run != nil {
+				if err := command.Run(ctx); err != nil {
+					return err
+				}
+				selected = ""
+				break
+			}
 		}
 		for _, task := range catalog.Automations {
 			if task.ID == selected {
@@ -201,12 +224,14 @@ func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog
 				}
 			}
 		}
-		var again bool
-		if err := runForm(ctx, huh.NewForm(huh.NewGroup(huh.NewConfirm().Title("Run another automation?").Value(&again)))); err != nil {
-			return err
-		}
-		if !again {
-			return nil
+		if prefs.Accessible {
+			var again bool
+			if err := runForm(ctx, huh.NewForm(huh.NewGroup(huh.NewConfirm().Title("Run another automation?").Value(&again)))); err != nil {
+				return err
+			}
+			if !again {
+				return nil
+			}
 		}
 	}
 }

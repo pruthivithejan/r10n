@@ -85,7 +85,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     inspect_parser.add_argument("--template", required=True, help="PDF template path")
     inspect_parser.add_argument("--recipients", help="CSV/XLSX/TXT recipient file")
     commands.add_parser("pdf-preview", help="Render a private sample PDF to terminal text")
+    commands.add_parser("router-sms", help="Manage messages on a configured ZLT S10 router")
     options = parser.parse_args(argv)
+
+    if options.command == "router-sms":
+        from r10n_backend.router_sms import perform
+
+        try:
+            result = perform(json.load(sys.stdin))
+        except (ValueError, RuntimeError, OSError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
+        except Exception:
+            print("Router SMS failed; check your router and credential service", file=sys.stderr)
+            return 1
+        json.dump(result, sys.stdout, ensure_ascii=False)
+        sys.stdout.write("\n")
+        return 0
 
     if options.command == "catalog":
         json.dump(build_catalog(), sys.stdout, ensure_ascii=False)
