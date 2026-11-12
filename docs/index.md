@@ -69,7 +69,7 @@ version with [uvx](https://docs.astral.sh/uv/).
     uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
     ```
 
-    uvx requires Python 3.10+ and may need Go for unreleased source versions.
+    uvx requires Python 3.11+ and may need Go for unreleased source versions.
 
 === "Configure in the terminal"
 
@@ -109,7 +109,7 @@ Review the resolved paths in the terminal form, then confirm to run.
 ## Requirements
 
 - Standalone installer: `curl` on Linux x86_64 or macOS arm64; Python is not required
-- uvx: [uv](https://docs.astral.sh/uv/) and Python 3.10+ (uv can provision Python)
+- uvx: [uv](https://docs.astral.sh/uv/) and Python 3.11+ (uv can provision Python)
 - Windows x86_64: download the standalone `.exe` from GitHub Releases
 
 Install uv only when you plan to use `uvx`:

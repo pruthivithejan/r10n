@@ -15,7 +15,7 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/) and verify
 uv --version
 ```
 
-The package launcher needs Python 3.10+ (uv can provision it).
+The package launcher needs Python 3.11+ (uv can provision it).
 It resolves/builds a matching Go executable when the Go toolchain is available,
 or downloads the matching published native release and verifies its checksum.
 Unreleased versions and platforms without release assets require Go.

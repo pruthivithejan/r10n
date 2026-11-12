@@ -26,7 +26,7 @@ instructions.
 uvx --from git+https://github.com/pruthivithejan/r10n.git r10n
 ```
 
-`uvx` needs Python 3.10+ and may use Go to build an unpublished version. Use the
+`uvx` needs Python 3.11+ and may use Go to build an unpublished version. Use the
 standalone binary when you want a self-contained installed command.
 
 ## Choose an automation

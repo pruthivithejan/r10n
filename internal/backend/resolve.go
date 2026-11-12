@@ -88,7 +88,7 @@ func Resolve() (Backend, error) {
 	}
 	python, err := exec.LookPath("python3")
 	if err != nil {
-		return Backend{}, fmt.Errorf("source installs require uv or Python 3.10+: %w", err)
+		return Backend{}, fmt.Errorf("source installs require uv or Python 3.11+: %w", err)
 	}
 	return Backend{python, []string{"-u", "-X", "utf8", entry}, env}, nil
 }

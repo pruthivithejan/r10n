@@ -2,7 +2,7 @@
 
 **Routine automation in an accessible, keyboard-first terminal.**
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Go](https://img.shields.io/badge/Go-native-00ADD8.svg)](https://go.dev/)
 [![uv](https://img.shields.io/badge/uv-Package%20Manager-green.svg)](https://docs.astral.sh/uv/)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
