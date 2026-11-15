@@ -22,7 +22,7 @@ class TestAutomationRegistry:
         automations = list_automations()
         ids = [automation.id for automation in automations]
 
-        assert len(automations) == 10
+        assert len(automations) == 11
         assert len(ids) == len(set(ids))
         assert all(automation.roles for automation in automations)
 

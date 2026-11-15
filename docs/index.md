@@ -92,6 +92,7 @@ version with [uvx](https://docs.astral.sh/uv/).
 | [Logos](automations/logos/) | `r10n logos` | Download company logos from SVGL |
 | [Email](automations/email/) | `r10n email` | Send bulk emails with attachments |
 | [Colors](automations/colors/) | `r10n colors` | Convert CSS colors to oklch() |
+| [Asset Video](automations/video/) | `r10n video` | Turn images and PDF pages into an MP4 |
 
 Browse all: [Automations](automations/)
 

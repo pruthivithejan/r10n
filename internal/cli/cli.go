@@ -38,7 +38,7 @@ Usage:
   r10n --version             Print version without Python
 Execution: --yes/-y skips confirmation; --json streams JSON Lines.
 Tasks: contacts, fill-pdfs, images, website-images, logos, email, colors,
-       rename, validate, md2pdf. Use <command> --help for supported flags.
+       rename, validate, md2pdf, video. Use <command> --help for supported flags.
 `
 
 func usage(err error) error {

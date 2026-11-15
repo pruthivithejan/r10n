@@ -40,6 +40,7 @@ directly:
 ```bash
 r10n contacts
 r10n images
+r10n video --input ./brand-export
 r10n list
 ```
 

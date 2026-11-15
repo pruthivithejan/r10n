@@ -30,6 +30,7 @@ nav = [
         "automations/rename-files.md",
         "automations/validate-csv.md",
         "automations/markdown-to-pdf.md",
+        "automations/video.md",
     ]},
 ]
 extra_css = ["stylesheets/extra.css"]

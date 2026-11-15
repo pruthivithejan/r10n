@@ -47,7 +47,7 @@ func TestNativeCommandsOutsideCheckout(t *testing.T) {
 		{"configure", "--help"}, {"status", "--help"}, {"upgrade", "--help"},
 		{"contacts", "--help"}, {"fill-pdfs", "--help"}, {"images", "--help"},
 		{"website-images", "--help"}, {"logos", "--help"}, {"email", "--help"},
-		{"colors", "--help"}, {"rename", "--help"}, {"validate", "--help"}, {"md2pdf", "--help"},
+		{"colors", "--help"}, {"rename", "--help"}, {"validate", "--help"}, {"md2pdf", "--help"}, {"video", "--help"},
 	} {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			output, err := run(args...)

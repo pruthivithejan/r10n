@@ -80,4 +80,18 @@ var flagFieldTypes = map[string]map[string]bool{
 		"recursive":           true,
 		"syntax_highlighting": true,
 	},
+	"video": {
+		"aspect":          false,
+		"background":      false,
+		"crf":             false,
+		"duration":        false,
+		"fade":            false,
+		"fit":             false,
+		"fps":             false,
+		"input_directory": false,
+		"order":           false,
+		"output_file":     false,
+		"recursive":       true,
+		"size":            false,
+	},
 }

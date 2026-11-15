@@ -1,6 +1,6 @@
 [project]
 name = "r10n"
-version = "0.14.1"
+version = "0.15.0"
 description = "r10n (routine automation): Automates repetitive routines like emails, PDF filling, contacts, images, and more"
 readme = "README.md"
 license = { text = "MIT" }
@@ -40,6 +40,7 @@ dependencies = [
     "certifi>=2026.7.22",
     "platformdirs>=4.0.0",
     "keyring>=25.0.0",
+    "imageio-ffmpeg>=0.5.1",
 ]
 
 [project.urls]

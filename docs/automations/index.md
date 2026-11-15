@@ -70,6 +70,12 @@ All r10n automations are listed below. Click any card to view the full guide wit
   <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Convert Markdown files to PDF</span>
 </a>
 
+<a href="video/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-accent-fg-color--lightest)">
+  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 13 5.223 3.482a.5.5 0 0 0 .777-.416V7.87a.5.5 0 0 0-.752-.432L16 10.5"/><rect x="2" y="6" width="14" height="12" rx="2"/></svg>
+  <span style="font-weight:600; margin-top:.5em;">Asset Video</span>
+  <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Turn images and PDF pages into a short MP4</span>
+</a>
+
 <a href="router-sms/" style="text-decoration:none; border:1px solid var(--md-default-fg-color--lightest); border-radius:1rem; padding:1.15rem 1rem; display:flex; flex-direction:column; align-items:center; background:var(--md-accent-fg-color--lightest)">
   <span style="font-weight:600; margin-top:.5em;">Router SMS</span>
   <span style="font-size:.9em; margin-top:4px; color:var(--md-default-fg-color--light); text-align:center;">Read and send SMS using a ZLT S10 router</span>
@@ -94,6 +100,7 @@ All r10n automations are listed below. Click any card to view the full guide wit
 | [Rename Files](rename-files/) | `r10n rename` | Batch rename files |
 | [Validate CSV](validate-csv/) | `r10n validate` | Validate CSV files |
 | [Markdown to PDF](markdown-to-pdf/) | `r10n md2pdf` | Convert Markdown to PDF |
+| [Asset Video](video/) | `r10n video` | Turn images and PDF pages into an MP4 |
 
 ---
 

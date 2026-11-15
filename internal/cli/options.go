@@ -26,6 +26,7 @@ var aliases = map[string]string{
 	"rename":         "input,i=input_directory pattern,p=pattern prefix=prefix suffix=suffix replace-from=replace_from replace-to=replace_to lowercase=lowercase uppercase=uppercase add-date=add_date add-sequence=add_sequence recursive,r=recursive dry-run,n=dry_run no-dry-run=!dry_run file-pattern=file_pattern",
 	"validate":       "input,i=input_file schema,s=schema_file output,o=report_file strict=strict clean=clean_invalid format,f=report_format trim-whitespace=trim_whitespace",
 	"md2pdf":         "input,i=input_path output,o=output_path css,c=css_file page-size=page_size toc=include_toc syntax-highlight=syntax_highlighting recursive,r=recursive",
+	"video":          "input,i=input_directory output,o=output_file order=order duration,d=duration fps=fps aspect=aspect size=size fit=fit background,b=background fade=fade crf=crf recursive,r=recursive",
 }
 
 func isBooleanField(id, field string) bool {

@@ -199,6 +199,37 @@ class ValidateCsvInput(AutomationInput):
     clean_invalid: bool = Field(False, description="Write a cleaned CSV when validation fails")
 
 
+class VideoInput(AutomationInput):
+    """Inputs for turning images and PDF pages into a video."""
+
+    input_directory: str = Field(
+        ...,
+        min_length=1,
+        description="Folder containing images and PDFs",
+        json_schema_extra={"ui:widget": "directory"},
+    )
+    output_file: str = Field(
+        "r10n-output/video/asset-video.mp4",
+        description="MP4 file to create",
+        json_schema_extra={"ui:widget": "save_file"},
+    )
+    order: str | None = Field(
+        None,
+        description="Optional order like 'cover.png;brand.pdf:1-3;logo.png'",
+    )
+    duration: float = Field(0.5, gt=0, le=60, description="Seconds each slide is visible")
+    fps: int = Field(30, ge=1, le=60, description="Video frame rate")
+    aspect: Literal["9:16", "1:1", "4:5", "16:9"] = Field("16:9", description="Output aspect ratio")
+    size: str | None = Field(None, description="Optional WIDTHxHEIGHT override, such as 1920x1080")
+    fit: Literal["contain", "cover"] = Field(
+        "contain", description="Show the whole asset or crop it to fill the frame"
+    )
+    background: str = Field("#ffffff", description="Background color for contain mode")
+    fade: float = Field(0.0, ge=0, le=5, description="Crossfade seconds between slides")
+    crf: int = Field(18, ge=0, le=51, description="H.264 quality; lower is better")
+    recursive: bool = Field(False, description="Include images and PDFs in subfolders")
+
+
 class MarkdownToPdfInput(AutomationInput):
     """Inputs for Markdown-to-PDF conversion."""
 
@@ -608,6 +639,42 @@ def _run_markdown_to_pdf(inputs: BaseModel, emit: EventCallback) -> dict[str, An
     )
 
 
+def _run_video(inputs: BaseModel, emit: EventCallback) -> dict[str, Any]:
+    from r10n_backend.automations.asset_video import create_asset_video
+
+    values = VideoInput.model_validate(inputs)
+    emit("log", {"message": "Discovering images and PDFs"})
+
+    def on_progress(event: dict[str, Any]) -> None:
+        if event.get("stage") == "slide":
+            emit(
+                "progress",
+                {
+                    "current": event.get("current", 0),
+                    "total": event.get("total", 1),
+                    "message": event.get("message", "Rendering slides"),
+                },
+            )
+
+    result = create_asset_video(
+        input_dir=values.input_directory,
+        output_file=values.output_file,
+        order=values.order,
+        duration=values.duration,
+        fps=values.fps,
+        aspect=values.aspect,
+        size=values.size,
+        fit=values.fit,
+        background=values.background,
+        fade=values.fade,
+        crf=values.crf,
+        recursive=values.recursive,
+        progress_callback=on_progress,
+    )
+    result["status"] = "complete"
+    return result
+
+
 AUTOMATIONS = (
     AutomationSpec(
         id="contacts",
@@ -712,6 +779,16 @@ AUTOMATIONS = (
         input_model=MarkdownToPdfInput,
         executor=_run_markdown_to_pdf,
         artifact_fields=(("output_path",), ("files", "*", "output")),
+    ),
+    AutomationSpec(
+        id="video",
+        title="Create asset video",
+        description="Turn images and PDF pages into a short MP4.",
+        category="Media",
+        roles=("marketing", "design", "social"),
+        input_model=VideoInput,
+        executor=_run_video,
+        artifact_fields=(("output_file",),),
     ),
 )
 
