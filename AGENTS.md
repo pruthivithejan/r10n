@@ -4,6 +4,12 @@ r10n automates repetitive workflows through one native Go CLI and a Python
 automation worker. The standalone binary, `uv run`, and `uvx` share the same
 commands, Charm terminal UI, registry contract, and worker protocol.
 
+# Preserve user changes
+
+- Do not overwrite, restore, reset, or discard user-authored changes.
+- Before editing a file, inspect its current contents and working-tree diff. Use narrow patches that preserve unrelated edits.
+- Recheck the working tree before each write. Treat newly appearing changes as active user work and preserve them; if an edit conflicts, stop and ask how to proceed.
+
 ## Architecture and ownership
 
 ```text
@@ -67,6 +73,11 @@ go run ./cmd/r10n                # Native development entry point
 
 `setup.sh` is developer tooling only. It must not initialize runtime folders or
 write project-local user configuration.
+
+## Browser previews
+
+Use `agent-browser` for local pages and screenshots. Do not launch Chrome or use
+the Chrome DevTools browser for previews.
 
 Hooks and CI share `scripts/check.py`. Pre-commit checks staged Go with gofmt
 without silently writing or restaging files. Pre-push checks Go format/tidy/vet/test,
