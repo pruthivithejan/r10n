@@ -54,6 +54,9 @@ Thumbs.db
 site/
 htmlcov/
 
+local/
+templates/
+workspace/
 # Test coverage
 .coverage
 
