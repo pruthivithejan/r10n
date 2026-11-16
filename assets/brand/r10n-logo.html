@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>r10n</title>
+<link rel="icon" type="image/svg+xml" href="r10n-favicon.svg">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap');
+
+  /* palette */
+  :root {
+    --midnight-violet: #0d0221;
+    --deep-twilight: #0f084b;
+    --french-blue: #26408b;
+    --light-blue: #a6cfd5;
+    --frozen-water: #c2e7d9;
+
+    --letter-gap: 1ch;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 72px;
+    background: var(--midnight-violet);
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+  }
+
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4rem;
+  }
+
+  /* wordmark — solid blocks only, no shadow glyphs, no stripes */
+  .ascii {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--letter-gap);    /* space between letters */
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 26px;
+    line-height: 1.16;         /* strip height + gap */
+    font-weight: 800;
+  }
+
+  .ascii span {
+    white-space: pre;
+    background: linear-gradient(180deg, var(--light-blue), var(--frozen-water));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* favicon — R only */
+  .favicons {
+    display: flex;
+    align-items: flex-end;
+    gap: 1.5rem;
+  }
+
+  .favicon {
+    display: grid;
+    justify-items: center;
+    gap: 0.6rem;
+  }
+
+  .favicon .tile {
+    display: grid;
+    place-items: center;
+    padding: 10px;
+    border: 1px solid var(--french-blue);
+    border-radius: 10px;
+    background: var(--deep-twilight);
+  }
+
+  .favicon img {
+    display: block;
+  }
+
+  .favicon span {
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--light-blue);
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="ascii" role="img" aria-label="r10n">
+  <span>██████
+██   ██
+██████
+██   ██
+██   ██</span>
+  <span> ██
+███
+ ██
+ ██
+ ██</span>
+  <span> ██████
+██  ████
+██ ██ ██
+████  ██
+ ██████</span>
+  <span>███    ██
+████   ██
+██ ██  ██
+██  ██ ██
+██   ████</span>
+</div>
+
+  <div class="favicons">
+    <div class="favicon">
+      <div class="tile"><img src="r10n-favicon.svg" width="16" height="16" alt=""></div>
+      <span>16px</span>
+    </div>
+    <div class="favicon">
+      <div class="tile"><img src="r10n-favicon.svg" width="32" height="32" alt=""></div>
+      <span>32px</span>
+    </div>
+    <div class="favicon">
+      <div class="tile"><img src="r10n-favicon.svg" width="48" height="48" alt=""></div>
+      <span>48px</span>
+    </div>
+    <div class="favicon">
+      <div class="tile"><img src="r10n-favicon.svg" width="96" height="96" alt=""></div>
+      <span>96px</span>
+    </div>
+  </div>
+</main>
+
+</body>
+</html>
