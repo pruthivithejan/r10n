@@ -1,4 +1,4 @@
-<img src="docs/assets/brand/r10n.svg" width="220" alt="r10n — striped routine automation wordmark">
+<img src="docs/assets/brand/r10n.svg" width="220" alt="r10n — solid block wordmark">
 
 **Routine automation in an accessible, keyboard-first terminal.**
 

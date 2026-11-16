@@ -1,34 +1,39 @@
 :root {
-  --r10n-primary: #12f7d6;
-  --r10n-secondary: #00d1ff;
-  --r10n-electric-blue: #007bff;
-  --r10n-light-link: #0058b8;
-  --r10n-dark-ink: #0b1320;
-  --r10n-dark-background: #0b1320;
-  --r10n-light-background: #f8faff;
-  --r10n-dark-surface: #0b1320;
-  --r10n-dark-text: #f8faff;
-  --r10n-dark-muted: #00d1ff;
+  /* Two-tone documentation chrome; the logo keeps its own palette gradient. */
+  --r10n-ink: #070113;
+  --r10n-paper: #f4f1fb;
 }
 
 [data-md-color-scheme="default"] {
-  --md-default-bg-color: var(--r10n-light-background);
-  --md-default-fg-color: var(--r10n-dark-ink);
-  --md-primary-fg-color: var(--r10n-dark-ink);
-  --md-primary-bg-color: var(--r10n-light-background);
-  --md-accent-fg-color: var(--r10n-electric-blue);
-  --md-typeset-a-color: var(--r10n-light-link);
-  --r10n-focus: var(--r10n-electric-blue);
+  --md-default-bg-color: var(--r10n-paper);
+  --md-default-fg-color: var(--r10n-ink);
+  --md-primary-fg-color: var(--r10n-ink);
+  --md-primary-bg-color: var(--r10n-paper);
+  --md-accent-fg-color: var(--r10n-ink);
+  --md-typeset-a-color: var(--r10n-ink);
+  --r10n-focus: var(--r10n-ink);
 }
 
 [data-md-color-scheme="slate"] {
-  --md-default-bg-color: var(--r10n-dark-background);
-  --md-default-fg-color: var(--r10n-dark-text);
-  --md-primary-fg-color: var(--r10n-dark-background);
-  --md-primary-bg-color: var(--r10n-dark-text);
-  --md-accent-fg-color: var(--r10n-primary);
-  --md-typeset-a-color: var(--r10n-secondary);
-  --r10n-focus: var(--r10n-primary);
+  --md-default-bg-color: var(--r10n-ink);
+  --md-default-fg-color: var(--r10n-paper);
+  --md-primary-fg-color: var(--r10n-ink);
+  --md-primary-bg-color: var(--r10n-paper);
+  --md-accent-fg-color: var(--r10n-paper);
+  --md-typeset-a-color: var(--r10n-paper);
+  --r10n-focus: var(--r10n-paper);
+}
+
+/* Links stay plain: same ink as body text, marked only by an underline. */
+.md-typeset a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.15em;
+}
+
+/* Light mode puts the header on paper, so use the ink cut of the wordmark. */
+[data-md-color-scheme="default"] .md-header__button.md-logo img {
+  content: url("../assets/brand/r10n-dark.svg");
 }
 
 .md-header__button.md-logo {
