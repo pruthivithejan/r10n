@@ -10,7 +10,7 @@ import (
 )
 
 func TestEmbeddedLogoMatchesCanonicalSource(t *testing.T) {
-	canonical, err := os.ReadFile("../../assets/brand/r10n-ascii.txt")
+	canonical, err := os.ReadFile("../../assets/brand/r10n-wordmark.txt")
 	if err != nil {
 		t.Fatal(err)
 	}
