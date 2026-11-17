@@ -66,6 +66,12 @@ func launcherKey(model launcherModel, key string) launcherModel {
 		msg.Type = tea.KeyDown
 	case "esc":
 		msg.Type = tea.KeyEsc
+	case "ctrl+c":
+		msg.Type = tea.KeyCtrlC
+	case "right":
+		msg.Type = tea.KeyRight
+	case "tab":
+		msg.Type = tea.KeyTab
 	default:
 		msg.Type = tea.KeyRunes
 		msg.Runes = []rune(key)
@@ -74,17 +80,60 @@ func launcherKey(model launcherModel, key string) launcherModel {
 	return next.(launcherModel)
 }
 
-func TestLauncherHeaderShowsBrandVersionAndRules(t *testing.T) {
+func TestLauncherHeaderShowsBrandLogoVersionAndField(t *testing.T) {
 	model := newLauncher(nil, Preferences{})
 	view := ansi.Strip(model.View())
 	if !strings.Contains(view, "routine automation") || !strings.Contains(view, "v"+r10n.Version) {
 		t.Fatalf("header should show the brand and version: %s", view)
 	}
-	if !strings.Contains(view, "─") {
-		t.Fatalf("header should use horizontal rules: %s", view)
+	if !strings.Contains(view, "╱") {
+		t.Fatalf("header should use diagonal ASCII fields: %s", view)
 	}
-	if !strings.Contains(view, "What would you like to automate?") {
-		t.Fatalf("home prompt missing: %s", view)
+	if strings.Contains(view, "─") {
+		t.Fatalf("header should not use horizontal rules: %s", view)
+	}
+	if !strings.Contains(view, "type to search") {
+		t.Fatalf("home footer missing: %s", view)
+	}
+}
+
+func TestLauncherTypingOpensFilteredDialog(t *testing.T) {
+	model := newLauncher([]launcherEntry{
+		{id: "contacts", title: "Create contacts"},
+		{id: "sms", title: "Router SMS"},
+	}, Preferences{})
+	model = launcherKey(model, "s")
+	model = launcherKey(model, "m")
+	view := ansi.Strip(model.View())
+	if !strings.Contains(view, "Automations") || !strings.Contains(view, "/sms") {
+		t.Fatalf("typing should open the filtered dialog: %s", view)
+	}
+	if strings.Contains(view, "/contacts") {
+		t.Fatalf("typing should filter the dialog: %s", view)
+	}
+}
+
+func TestLauncherCtrlCConfirmsQuit(t *testing.T) {
+	model := newLauncher([]launcherEntry{{id: "sms", title: "Router SMS"}}, Preferences{})
+	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	model = next.(launcherModel)
+	if cmd != nil {
+		t.Fatal("ctrl+c should ask before quitting")
+	}
+	if !strings.Contains(ansi.Strip(model.View()), "Quit r10n?") {
+		t.Fatalf("quit confirmation missing: %s", ansi.Strip(model.View()))
+	}
+	next, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	if next.(launcherModel).confirmQuit {
+		t.Fatal("n should cancel the quit dialog")
+	}
+	next, _ = model.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	model = next.(launcherModel)
+	next, cmd = model.Update(tea.KeyMsg{Type: tea.KeyRight})
+	model = next.(launcherModel)
+	next, cmd = model.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if cmd == nil {
+		t.Fatal("enter on Yes should quit")
 	}
 }
 
@@ -94,8 +143,8 @@ func TestLauncherSlashOpensAndEscapeClosesDialog(t *testing.T) {
 	if !strings.Contains(opened, "Automations") || !strings.Contains(opened, "╭") {
 		t.Fatalf("slash should open the automation dialog: %s", opened)
 	}
-	if strings.Contains(opened, "What would you like to automate?") {
-		t.Fatalf("dialog should replace the home prompt: %s", opened)
+	if strings.Contains(opened, "type to search") {
+		t.Fatalf("dialog should replace the home input: %s", opened)
 	}
 	closed := ansi.Strip(launcherKey(launcherKey(model, "/"), "esc").View())
 	if strings.Contains(closed, "Automations") {
