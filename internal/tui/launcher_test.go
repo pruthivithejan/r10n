@@ -83,11 +83,11 @@ func launcherKey(model launcherModel, key string) launcherModel {
 func TestLauncherHeaderShowsBrandLogoVersionAndField(t *testing.T) {
 	model := newLauncher(nil, Preferences{})
 	view := ansi.Strip(model.View())
-	if !strings.Contains(view, "routine automation") || !strings.Contains(view, "v"+r10n.Version) {
+	if !strings.Contains(view, "r10n") || !strings.Contains(view, "v"+r10n.Version) {
 		t.Fatalf("header should show the brand and version: %s", view)
 	}
-	if !strings.Contains(view, "·") {
-		t.Fatalf("header should use ASCII fields: %s", view)
+	if !strings.Contains(view, "-") {
+		t.Fatalf("header should use dashed decoration: %s", view)
 	}
 	if strings.Contains(view, "─") {
 		t.Fatalf("header should not use horizontal rules: %s", view)
@@ -120,7 +120,7 @@ func TestLauncherCtrlCConfirmsQuit(t *testing.T) {
 	if cmd != nil {
 		t.Fatal("ctrl+c should ask before quitting")
 	}
-	if !strings.Contains(ansi.Strip(model.View()), "Quit r10n?") {
+	if !strings.Contains(ansi.Strip(model.View()), "Are you sure you want to quit?") {
 		t.Fatalf("quit confirmation missing: %s", ansi.Strip(model.View()))
 	}
 	next, _ = model.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
@@ -179,7 +179,17 @@ func TestLauncherShowsRecentAutomations(t *testing.T) {
 
 func TestExitBannerPrintsPatternAndThanks(t *testing.T) {
 	view := ansi.Strip(exitBanner(Preferences{}))
-	if !strings.Contains(view, "Thanks for using r10n.") || !strings.Contains(view, "·") {
+	if !strings.Contains(view, "Thanks for using r10n.") || !strings.Contains(view, "-") {
 		t.Fatalf("exit banner missing pattern or greeting: %s", view)
+	}
+}
+
+func TestLauncherCtrlCTwiceQuits(t *testing.T) {
+	model := newLauncher([]launcherEntry{{id: "sms", title: "Router SMS"}}, Preferences{})
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	model = next.(launcherModel)
+	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyCtrlC})
+	if cmd == nil {
+		t.Fatal("a second ctrl+c should quit")
 	}
 }
