@@ -30,7 +30,7 @@ case "$command" in
     uv run --locked --no-dev --group build python scripts/build_native.py "$@"
     ;;
   check) uv run --locked python scripts/check.py all ;;
-  docs) uv run --locked zensical build --clean ;;
+  docs) uv run --locked python scripts/render_home_automations.py && uv run --locked zensical build --clean ;;
   version)
     go run ./cmd/r10n --version
     uv run --locked python -c 'from importlib.metadata import version; print("Python package:", version("r10n"))'

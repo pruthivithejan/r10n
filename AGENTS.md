@@ -142,6 +142,10 @@ troubleshooting, and related links. Do not describe project-local configuration
 folders or browser-based setup. Document `--yes` as skipping confirmation,
 not validation.
 
+The homepage automation cards are generated from the registry. Regenerate them
+with `uv run --locked python scripts/render_home_automations.py` after adding or
+renaming an automation; `./setup.sh docs` does it automatically.
+
 ## Versioning and releases
 
 `pyproject.toml` `[project].version` is the only human-edited version. Regenerate
