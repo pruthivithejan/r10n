@@ -11,6 +11,62 @@ r10n combines a native Go terminal interface with Python automations. It helps
 you generate contacts, personalize PDFs, optimize images, send email, validate
 CSV data, and handle other repetitive tasks.
 
+## Run Locally
+
+Work from the repository root.
+
+### Nix (optional)
+
+```bash
+nix develop          # Go, Python 3.12, uv, just, lefthook
+# or, with direnv:
+direnv allow
+```
+
+### Standard toolchain
+
+Go (version from `go.mod`), Python 3.11–3.12, and uv:
+
+```bash
+./setup.sh setup     # uv sync, go mod download, lefthook install
+```
+
+### CLI from source
+
+```bash
+go run ./cmd/r10n              # picker
+go run ./cmd/r10n list         # registry
+./setup.sh run contacts        # forwards flags to the native CLI
+```
+
+The native CLI resolves the Python backend from the source checkout with
+`uv run --locked` unless `R10N_BACKEND` or `R10N_PYTHON` is set.
+
+### Documentation
+
+```bash
+uv run --locked python scripts/render_home_automations.py
+uv run --locked zensical serve -o      # http://localhost:8000
+./setup.sh docs                        # one-off build into site/
+```
+
+### Checks, tests, and builds
+
+```bash
+./setup.sh check     # Go + Python + docs + generated-artifact drift
+./setup.sh test      # go test ./... + pytest
+./setup.sh build     # native bundle and outside-checkout smoke test
+go test ./tests/go/...   # standalone compiled-command suite only
+```
+
+If `just` is installed, the same entry points are available as `just setup`,
+`just check`, `just test`, `just run <args>`, `just gen`, `just serve`,
+`just docs`, and `just build`.
+
+Go owns command routing, Charm forms, progress, and release downloads. Python
+owns the registry and automation worker; both communicate through versioned JSON
+Lines protocol v2.
+
 ## Install
 
 The standalone installer is the recommended way to use r10n. It verifies the
@@ -76,28 +132,6 @@ exports use explicit paths; exports never include credential values.
 Inputs and outputs are ordinary paths that you choose. The default output root
 is `./r10n-output`; change it in `r10n setup` to use another directory. r10n
 does not create a project-local configuration tree or load project `.env` files.
-
-## Developer checks
-
-The following commands are for contributors working in a source checkout, not
-for setting up the installed application:
-
-```bash
-./setup.sh setup
-./setup.sh test
-./setup.sh check
-./setup.sh build
-```
-
-Go owns command routing, Charm forms, progress, and release downloads. Python
-owns the registry and automation worker. Both communicate through a versioned
-JSON Lines contract. The native build packages the matching worker and smoke
-tests the bundle outside the checkout.
-
-Go unit and private-hook component tests stay beside their packages. Standalone
-compiled-command integration/end-to-end tests live in [`tests/go/`](tests/go/README.md):
-run them with `go test ./tests/go/...`. The standard `go test ./...` check includes
-both groups without special configuration.
 
 ## Documentation
 
