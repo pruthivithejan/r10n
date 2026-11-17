@@ -58,7 +58,8 @@ as a shared Go/Python contract and update tests in both languages when it change
 
 Install Go (version from `go.mod`), Python 3.10–3.12 and uv for source
 development. Use committed `go.sum` and `uv.lock`; do not replace locked sync
-with unconstrained pip installs.
+with unconstrained pip installs. `flake.nix` provides the same toolchain for Nix
+users (`nix develop`, or direnv with `.envrc`).
 
 ```bash
 ./setup.sh setup                 # Contributor tools, Go modules and hooks
@@ -145,6 +146,11 @@ not validation.
 The homepage automation cards are generated from the registry. Regenerate them
 with `uv run --locked python scripts/render_home_automations.py` after adding or
 renaming an automation; `./setup.sh docs` does it automatically.
+
+## Agent skills
+
+Repository skills live in `.agents/skills/<name>/SKILL.md`. Never put skills or
+decision logs under `docs/`, because every file there is published.
 
 ## Versioning and releases
 

@@ -25,6 +25,7 @@ tmp/
 
 # Virtual Environment
 .venv/
+.direnv/
 venv/
 ENV/
 
