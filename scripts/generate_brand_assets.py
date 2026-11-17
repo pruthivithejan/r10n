@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import shlex
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -166,39 +167,66 @@ def render_installer_banner(lines: list[str]) -> str:
     return "\n".join(result)
 
 
+def installer_with_banner(content: str, lines: list[str]) -> str:
+    """Return installer content with only the marked banner block replaced."""
+    start = content.index(INSTALLER_START)
+    end = content.index(INSTALLER_END, start) + len(INSTALLER_END)
+    return content[:start] + render_installer_banner(lines) + content[end:]
+
+
 def update_installer_banner(lines: list[str]) -> None:
     """Update only the marked banner block in the standalone installer."""
     content = INSTALLER_PATH.read_text(encoding="utf-8")
-    start = content.index(INSTALLER_START)
-    end = content.index(INSTALLER_END, start) + len(INSTALLER_END)
-    updated = content[:start] + render_installer_banner(lines) + content[end:]
-    INSTALLER_PATH.write_text(updated, encoding="utf-8")
+    INSTALLER_PATH.write_text(installer_with_banner(content, lines), encoding="utf-8")
 
 
-def main() -> None:
-    """Regenerate the native CLI logo, docs wordmark, and R favicon."""
-    lines, tokens = read_logo()
+def generated_files(lines: list[str], tokens: dict[str, str]) -> dict[Path, str]:
+    """Return every generated brand asset and its expected content."""
     wordmark = render_wordmark(lines, tokens)
     favicon = render_favicon(lines, tokens)
     ink = tokens["doc_ink"]
     dark_wordmark = render_wordmark(lines, tokens, color=ink)
     dark_favicon = render_favicon(lines, tokens, color=ink)
+    installer = installer_with_banner(INSTALLER_PATH.read_text(encoding="utf-8"), lines)
+    return {
+        RUNTIME_BRAND / "logo.txt": WORDMARK_PATH.read_text(encoding="utf-8"),
+        ASSETS_BRAND / "r10n-wordmark.svg": wordmark,
+        ASSETS_BRAND / "r10n-favicon.svg": favicon,
+        ASSETS_BRAND / "r10n-wordmark-dark.svg": dark_wordmark,
+        ASSETS_BRAND / "r10n-favicon-dark.svg": dark_favicon,
+        DOC_ASSETS / "r10n.svg": wordmark,
+        DOC_ASSETS / "r10n-dark.svg": dark_wordmark,
+        DOC_ASSETS / "favicon.svg": favicon,
+        DOC_ASSETS / "favicon-dark.svg": dark_favicon,
+        INSTALLER_PATH: installer,
+    }
+
+
+def main() -> int:
+    """Regenerate brand assets, or verify them with --check."""
+    lines, tokens = read_logo()
+    files = generated_files(lines, tokens)
+    if sys.argv[1:] == ["--check"]:
+        stale = [
+            path
+            for path, content in files.items()
+            if not path.exists() or path.read_text(encoding="utf-8") != content
+        ]
+        if stale:
+            for path in stale:
+                print(f"Stale generated brand asset: {path.relative_to(ROOT)}", file=sys.stderr)
+            return 1
+        return 0
+    if sys.argv[1:]:
+        print("Usage: generate_brand_assets.py [--check]", file=sys.stderr)
+        return 2
     DOC_ASSETS.mkdir(parents=True, exist_ok=True)
     ASSETS_BRAND.mkdir(parents=True, exist_ok=True)
     RUNTIME_BRAND.mkdir(parents=True, exist_ok=True)
-    (RUNTIME_BRAND / "logo.txt").write_text(
-        WORDMARK_PATH.read_text(encoding="utf-8"), encoding="utf-8"
-    )
-    (ASSETS_BRAND / "r10n-wordmark.svg").write_text(wordmark, encoding="utf-8")
-    (ASSETS_BRAND / "r10n-favicon.svg").write_text(favicon, encoding="utf-8")
-    (ASSETS_BRAND / "r10n-wordmark-dark.svg").write_text(dark_wordmark, encoding="utf-8")
-    (ASSETS_BRAND / "r10n-favicon-dark.svg").write_text(dark_favicon, encoding="utf-8")
-    (DOC_ASSETS / "r10n.svg").write_text(wordmark, encoding="utf-8")
-    (DOC_ASSETS / "r10n-dark.svg").write_text(dark_wordmark, encoding="utf-8")
-    (DOC_ASSETS / "favicon.svg").write_text(favicon, encoding="utf-8")
-    (DOC_ASSETS / "favicon-dark.svg").write_text(dark_favicon, encoding="utf-8")
-    update_installer_banner(lines)
+    for path, content in files.items():
+        path.write_text(content, encoding="utf-8")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

@@ -68,6 +68,7 @@ go run ./cmd/r10n                # Native development entry point
 ./setup.sh test                  # Both test suites
 ./setup.sh format                # Explicit Black and gofmt rewrites
 ./setup.sh check                 # Full checks including docs
+just check                       # Same gate through the root Justfile
 ./setup.sh build                 # Host-native bundle and outside-checkout smoke tests
 ./setup.sh docs                  # Zensical build
 ```
@@ -148,7 +149,8 @@ not validation.
 
 The homepage automation cards are generated from the registry. Regenerate them
 with `uv run --locked python scripts/render_home_automations.py` after adding or
-renaming an automation; `./setup.sh docs` does it automatically.
+renaming an automation; `./setup.sh docs` does it automatically. `scripts/check.py`
+also verifies flag, homepage, and brand artifacts for drift.
 
 ## Agent skills
 

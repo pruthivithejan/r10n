@@ -16,6 +16,7 @@
             python312
             uv
             lefthook
+            just
             git
           ];
 

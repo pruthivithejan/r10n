@@ -50,10 +50,18 @@ def check_go() -> None:
     run("go", "test", "./...")
 
 
+def check_generated() -> None:
+    """Fail when registry-derived or brand artifacts are stale."""
+    run("uv", "run", "--locked", "python", "scripts/generate_flag_schema.py", "--check")
+    run("uv", "run", "--locked", "python", "scripts/render_home_automations.py", "--check")
+    run("uv", "run", "--locked", "python", "scripts/generate_brand_assets.py", "--check")
+
+
 def check_python() -> None:
     """Check the lockfile, versions, formatting, lint, types, and Python tests."""
     run("uv", "lock", "--check")
     run("uv", "run", "--locked", "python", "scripts/release_version.py", "--check")
+    check_generated()
     run("uv", "run", "--locked", "black", "--check", *PYTHON_PATHS)
     run("uv", "run", "--locked", "ruff", "check", *PYTHON_PATHS)
     run("uv", "run", "--locked", "ty", "check", *PYTHON_PATHS)
@@ -107,7 +115,15 @@ def check_staged() -> None:
         run("uv", "lock", "--check")
         run("uv", "run", "--locked", "python", "scripts/release_version.py", "--check")
     if any(name.startswith(("src/", "tests/")) for name in files):
+        check_generated()
         run("uv", "run", "--locked", "pytest")
+    if any(
+        name.startswith(("assets/brand/", "docs/assets/brand/", "overrides/partials/"))
+        or name
+        in {"install.sh", "internal/cli/flag_schema_generated.go", "internal/brand/logo.txt"}
+        for name in files
+    ):
+        check_generated()
     if any(name.startswith("docs/") or name == "zensical.toml" for name in files):
         run("uv", "run", "--locked", "zensical", "build", "--clean")
 

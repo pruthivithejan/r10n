@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from html import escape
 from pathlib import Path
 
@@ -43,11 +44,24 @@ def render_cards() -> str:
     return "\n".join(cards) + "\n"
 
 
-def main() -> None:
-    """Write the generated automation-card fragment."""
+def main() -> int:
+    """Write the card fragment, or verify it with --check."""
+    output = render_cards()
+    if sys.argv[1:] == ["--check"]:
+        if not FRAGMENT.exists() or FRAGMENT.read_text(encoding="utf-8") != output:
+            print(
+                "Homepage automation cards are stale; run scripts/render_home_automations.py",
+                file=sys.stderr,
+            )
+            return 1
+        return 0
+    if sys.argv[1:]:
+        print("Usage: render_home_automations.py [--check]", file=sys.stderr)
+        return 2
     FRAGMENT.parent.mkdir(parents=True, exist_ok=True)
-    FRAGMENT.write_text(render_cards(), encoding="utf-8")
+    FRAGMENT.write_text(output, encoding="utf-8")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
