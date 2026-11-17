@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/cursor"
@@ -64,18 +65,28 @@ func newLauncher(entries []launcherEntry, prefs Preferences, recent ...string) l
 
 func (m launcherModel) Init() tea.Cmd { return nil }
 
-// stripe paints the dashed decoration used above and below the wordmark.
-func stripe(palette brand.Palette, width int) string {
-	const segment = 3
-	var b strings.Builder
-	for index := 0; index < width; index += segment {
-		style := lipgloss.NewStyle().Foreground(palette.Accent())
-		if (index/segment)%2 == 1 {
-			style = lipgloss.NewStyle().Foreground(palette.Muted())
-		}
-		b.WriteString(style.Render(strings.Repeat("-", min(segment, width-index))))
+// hatch paints the \__\ decoration used around the wordmark.
+func hatch(palette brand.Palette, width, row int) string {
+	if width <= 0 {
+		return ""
 	}
-	return b.String()
+	const unit = `\__\ `
+	repeats := width/len(unit) + 2
+	line := strings.Repeat(" ", row%len(unit)) + strings.Repeat(unit, repeats)
+	return lipgloss.NewStyle().Foreground(palette.Accent()).Render(ansi.Truncate(line, width, ""))
+}
+
+// currentLocation returns the working directory with the home prefix shortened.
+func currentLocation() string {
+	directory, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	home, err := os.UserHomeDir()
+	if err == nil && home != "" && strings.HasPrefix(directory, home) {
+		directory = "~" + strings.TrimPrefix(directory, home)
+	}
+	return directory
 }
 
 func (m launcherModel) matches() []launcherEntry {
@@ -222,7 +233,7 @@ func (m launcherModel) header(width int) string {
 	if gap < 1 {
 		return lipgloss.NewStyle().Padding(0, 1).Render(name + " " + version)
 	}
-	rows := []string{name + " " + stripe(m.palette, gap) + " " + version}
+	rows := []string{name + " " + hatch(m.palette, gap, 0) + " " + version}
 
 	banner := strings.Split(m.palette.Banner(false), "\n")
 	logoWidth := 0
@@ -230,18 +241,28 @@ func (m launcherModel) header(width int) string {
 		logoWidth = max(logoWidth, ansi.StringWidth(line))
 	}
 	if m.height >= 14 && contentWidth >= logoWidth {
-		for _, line := range banner {
-			rows = append(rows, lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, line))
+		sideWidth := 6
+		rightWidth := contentWidth - sideWidth*2 - logoWidth - 2
+		if rightWidth >= 1 {
+			for index, line := range banner {
+				logo := lipgloss.PlaceHorizontal(logoWidth, lipgloss.Center, line)
+				rows = append(rows, hatch(m.palette, sideWidth, index)+" "+logo+" "+hatch(m.palette, rightWidth, index))
+			}
 		}
 	}
-	rows = append(rows, stripe(m.palette, contentWidth))
+	location := ansi.Truncate(currentLocation(), max(1, contentWidth-8), "…")
+	fill := max(1, contentWidth-lipgloss.Width(location)-1)
+	rows = append(rows, chrome.Render(location)+" "+hatch(m.palette, fill, 0))
 	return lipgloss.NewStyle().Padding(0, 1).Render(lipgloss.JoinVertical(lipgloss.Left, rows...))
 }
 
-func (m launcherModel) columns() string {
-	chrome := lipgloss.NewStyle().Foreground(m.palette.Chrome())
-	column := chrome.Render("-   -   -")
-	return strings.Join([]string{column, column, column}, "\n")
+func (m launcherModel) columns(contentWidth int) string {
+	width := min(44, max(16, contentWidth/2))
+	lines := []string{
+		lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, hatch(m.palette, width, 0)),
+		lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, hatch(m.palette, width, 1)),
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m launcherModel) homeBody(width, height int) string {
@@ -257,17 +278,8 @@ func (m launcherModel) homeBody(width, height int) string {
 		Align(lipgloss.Center).
 		Render(chrome.Render("/ commands  ·  ctrl+c quit"))
 
-	bottomParts := []string{input.View(), ""}
-	if height >= 14 {
-		bottomParts = append(bottomParts, m.columns(), "")
-	}
-	bottomParts = append(bottomParts, footer)
-	bottom := lipgloss.NewStyle().Padding(0, 1).Render(
-		lipgloss.JoinVertical(lipgloss.Left, bottomParts...),
-	)
-
-	top := ""
-	if entries := m.recentEntries(); len(entries) > 0 && height >= 9 {
+	parts := []string{}
+	if entries := m.recentEntries(); len(entries) > 0 && height >= 10 {
 		idWidth := 0
 		for _, entry := range entries {
 			idWidth = max(idWidth, ansi.StringWidth("/"+SafeText(entry.id)))
@@ -281,22 +293,19 @@ func (m launcherModel) homeBody(width, height int) string {
 				"  " + foreground.Render(SafeText(entry.title))
 			lines = append(lines, line)
 		}
-		top = lipgloss.NewStyle().Padding(0, 1).Render(strings.Join(lines, "\n"))
+		block := lipgloss.PlaceHorizontal(contentWidth, lipgloss.Center, strings.Join(lines, "\n"))
+		parts = append(parts, block, "")
 	}
-
-	topHeight := 0
-	if top != "" {
-		topHeight = lipgloss.Height(top)
+	parts = append(parts, input.View(), "")
+	if height >= 14 {
+		parts = append(parts, m.columns(contentWidth), "")
 	}
-	bottomHeight := lipgloss.Height(bottom)
-	if topHeight+bottomHeight+1 > height {
-		top, topHeight = "", 0
-	}
-	gap := max(1, height-topHeight-bottomHeight)
-	if top == "" {
-		return strings.Repeat("\n", gap) + bottom
-	}
-	return top + strings.Repeat("\n", gap) + bottom
+	parts = append(parts, footer)
+	bottom := lipgloss.NewStyle().Padding(0, 1).Render(
+		lipgloss.JoinVertical(lipgloss.Left, parts...),
+	)
+	gap := max(1, height-lipgloss.Height(bottom))
+	return strings.Repeat("\n", gap) + bottom
 }
 
 func (m launcherModel) dialogView(width, height int) string {
@@ -310,7 +319,7 @@ func (m launcherModel) dialogView(width, height int) string {
 	title := accent.Render("Automations")
 	fill := innerWidth - lipgloss.Width(title) - 1
 	if fill > 0 {
-		title += " " + stripe(m.palette, fill)
+		title += " " + hatch(m.palette, fill, 0)
 	}
 	content.WriteString(title)
 	content.WriteString("\n")
@@ -386,7 +395,7 @@ func (m launcherModel) dialogView(width, height int) string {
 
 func (m launcherModel) quitButton(label, shortcut string, selected bool) string {
 	text := lipgloss.NewStyle().Underline(true).Render(shortcut) + label[len(shortcut):]
-	style := lipgloss.NewStyle().Padding(0, 1)
+	style := lipgloss.NewStyle().Padding(0, 1).Width(8).Align(lipgloss.Center)
 	if selected {
 		style = style.
 			Background(m.palette.Accent()).

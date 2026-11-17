@@ -86,8 +86,8 @@ func TestLauncherHeaderShowsBrandLogoVersionAndField(t *testing.T) {
 	if !strings.Contains(view, "r10n") || !strings.Contains(view, "v"+r10n.Version) {
 		t.Fatalf("header should show the brand and version: %s", view)
 	}
-	if !strings.Contains(view, "-") {
-		t.Fatalf("header should use dashed decoration: %s", view)
+	if !strings.Contains(view, `\__\`) {
+		t.Fatalf("header should use the decoration pattern: %s", view)
 	}
 	if strings.Contains(view, "─") {
 		t.Fatalf("header should not use horizontal rules: %s", view)
@@ -179,7 +179,7 @@ func TestLauncherShowsRecentAutomations(t *testing.T) {
 
 func TestExitBannerPrintsPatternAndThanks(t *testing.T) {
 	view := ansi.Strip(exitBanner(Preferences{}))
-	if !strings.Contains(view, "Thanks for using r10n.") || !strings.Contains(view, "-") {
+	if !strings.Contains(view, "Thanks for using r10n.") || !strings.Contains(view, `\__\`) {
 		t.Fatalf("exit banner missing pattern or greeting: %s", view)
 	}
 }

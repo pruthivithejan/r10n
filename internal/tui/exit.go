@@ -17,11 +17,11 @@ func exitBanner(prefs Preferences) string {
 	version := chrome.Render("v" + r10n.Version)
 	gap := width - ansi.StringWidth(name) - ansi.StringWidth(version) - 2
 
-	rows := []string{name + " " + stripe(prefs.Palette, max(1, gap)) + " " + version}
+	rows := []string{name + " " + hatch(prefs.Palette, max(1, gap), 0) + " " + version}
 	for _, line := range strings.Split(prefs.Palette.Banner(false), "\n") {
 		rows = append(rows, lipgloss.PlaceHorizontal(width, lipgloss.Center, line))
 	}
-	rows = append(rows, stripe(prefs.Palette, width), "")
+	rows = append(rows, hatch(prefs.Palette, width, 0), "")
 	rows = append(rows, "  "+chrome.Render("Thanks for using r10n."))
 	return lipgloss.NewStyle().Padding(0, 1).Render(strings.Join(rows, "\n"))
 }

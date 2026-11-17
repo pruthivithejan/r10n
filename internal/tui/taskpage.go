@@ -4,6 +4,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 	r10n "github.com/pruthivithejan/r10n"
 	"github.com/pruthivithejan/r10n/internal/backend"
 	"github.com/pruthivithejan/r10n/internal/brand"
@@ -71,10 +72,12 @@ func (m *taskPage) rail() string {
 	width := m.railWidth()
 	lines := []string{
 		strong.Render("r10n"),
-		stripe(m.palette, max(1, width-2)),
+		hatch(m.palette, max(1, width-2), 0),
 		chrome.Render("v" + r10n.Version),
 		"",
-		chrome.Render("routine automation"),
+		chrome.Render(ansi.Truncate(currentLocation(), max(1, width-2), "…")),
+		"",
+		hatch(m.palette, max(1, width-2), 1),
 	}
 	return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }
@@ -91,7 +94,7 @@ func (m *taskPage) View() string {
 
 	if rail := m.railWidth(); rail > 0 {
 		return lipgloss.NewStyle().Padding(1, 1).Render(
-			lipgloss.JoinHorizontal(lipgloss.Top, m.rail(), "  ", right),
+			lipgloss.JoinHorizontal(lipgloss.Top, right, "  ", m.rail()),
 		)
 	}
 	return lipgloss.NewStyle().Padding(1, 1).Render(right)
