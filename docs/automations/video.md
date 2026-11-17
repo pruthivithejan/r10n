@@ -6,6 +6,10 @@ icon: lucide/clapperboard
 
 Turn exported images and PDF pages into a short MP4.
 
+r10n uses your system `ffmpeg`. When it is missing, r10n installs it on demand
+with the available package manager (Homebrew, MacPorts, apt, dnf, zypper,
+pacman, apk, winget, Chocolatey, or Scoop).
+
 ## Run
 
 Open the native form:
@@ -139,9 +143,10 @@ color. With `cover`, the asset is scaled and center-cropped to fill the frame.
 
 ## Troubleshooting
 
-**`ffmpeg is required to create videos`:** Reinstall r10n so the bundled
-`imageio-ffmpeg` binary is present, or install ffmpeg with your system package
-manager.
+**`ffmpeg is required but could not be installed automatically`:** r10n first
+looks for ffmpeg on your system and then tries your package manager. If that
+fails, run the install command printed in the error once and rerun the
+automation.
 
 **`Video width and height must be even`:** H.264 `yuv420p` requires even
 dimensions. Use `1080x1350`, not `1081x1351`.

@@ -101,6 +101,9 @@ Python lock/versions/Black/Ruff/ty/pytest, and documentation.
   status when motion is disabled.
 - Preserve worker error codes, cancellation, artifact paths, output redaction,
   and process cleanup guarantees.
+- Resolve external binaries with `r10n_backend.deps`; install a missing tool
+  through the host package manager when the automation runs. Do not bundle
+  heavyweight tools such as ffmpeg in the native payload.
 
 ## Code quality
 

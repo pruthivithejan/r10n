@@ -341,8 +341,6 @@ def build(root: Path = ROOT, *, smoke: bool = True) -> Path:
                 "pypdfium2",
                 "--collect-all",
                 "PIL",
-                "--collect-all",
-                "imageio_ffmpeg",
                 "--collect-submodules",
                 "pygments.lexers",
                 "--collect-data",

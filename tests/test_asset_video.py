@@ -1,14 +1,17 @@
 """Tests for the asset video automation."""
 
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 from PIL import Image
 from reportlab.pdfgen import canvas
 
+from r10n_backend import deps
 from r10n_backend.automations import asset_video
+from r10n_backend.deps import find_tool
+
+requires_ffmpeg = pytest.mark.skipif(find_tool("ffmpeg") is None, reason="ffmpeg is not installed")
 
 
 def make_pdf(path, pages=2):
@@ -221,6 +224,7 @@ class TestValidation:
         with pytest.raises(ValueError, match="CRF"):
             asset_video.render_video([slide], tmp_path / "out.mp4", crf=99)
 
+    @requires_ffmpeg
     def test_output_directory_gets_default_filename(self, tmp_path):
         """Passing an existing directory places the video inside it."""
         Image.new("RGB", (40, 40), "red").save(tmp_path / "cover.png")
@@ -237,13 +241,18 @@ class TestValidation:
 
         assert result["output_file"] == str(output_dir / "asset-video.mp4")
 
-    def test_ffmpeg_falls_back_to_system_binary(self, monkeypatch):
-        """A system ffmpeg is used when the bundled binary is unavailable."""
-        monkeypatch.setitem(sys.modules, "imageio_ffmpeg", None)
-        monkeypatch.setattr(asset_video.shutil, "which", lambda name: "/opt/ffmpeg")
+    def test_find_ffmpeg_uses_the_dependency_resolver(self, monkeypatch):
+        """The shared resolver supplies the ffmpeg path."""
+        monkeypatch.setattr(asset_video, "ensure_tool", lambda name: "/opt/ffmpeg")
         assert asset_video.find_ffmpeg() == "/opt/ffmpeg"
 
-        monkeypatch.setattr(asset_video.shutil, "which", lambda name: None)
+    def test_find_ffmpeg_surfaces_install_failures(self, monkeypatch):
+        """An unavailable tool raises the resolver error."""
+
+        def missing(name):
+            raise deps.ToolUnavailableError("ffmpeg is required")
+
+        monkeypatch.setattr(asset_video, "ensure_tool", missing)
         with pytest.raises(RuntimeError, match="ffmpeg is required"):
             asset_video.find_ffmpeg()
 
@@ -334,6 +343,7 @@ class TestRendering:
 
         assert frame.size == (100, 150)
 
+    @requires_ffmpeg
     def test_end_to_end_video(self, tmp_path):
         """Images and PDF pages encode into a decodable MP4."""
         Image.new("RGB", (120, 80), "red").save(tmp_path / "cover.png")
@@ -368,6 +378,7 @@ class TestRendering:
         )
         assert decoded.returncode == 0, decoded.stderr
 
+    @requires_ffmpeg
     def test_default_output_path(self, tmp_path, monkeypatch):
         """The default output uses the caller's output root."""
         monkeypatch.chdir(tmp_path)

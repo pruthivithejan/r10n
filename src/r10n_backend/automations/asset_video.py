@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import math
 import re
-import shutil
 import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
@@ -19,6 +18,8 @@ from typing import Any, Literal
 
 import pypdfium2 as pdfium
 from PIL import Image, ImageColor, ImageOps
+
+from r10n_backend.deps import ensure_tool
 
 IMAGE_EXTENSIONS = {
     ".png",
@@ -461,29 +462,15 @@ def resolve_canvas(aspect: str = DEFAULT_ASPECT, size: str | None = None) -> tup
 
 
 def find_ffmpeg() -> str:
-    """Locate an ffmpeg executable.
+    """Locate ffmpeg, installing it on demand when it is missing.
 
     Returns:
-        Path to a bundled or system ffmpeg binary.
+        Path to the system ffmpeg binary.
 
     Raises:
-        RuntimeError: If ffmpeg is unavailable.
+        RuntimeError: If ffmpeg is unavailable and cannot be installed.
     """
-    try:
-        import imageio_ffmpeg
-
-        return imageio_ffmpeg.get_ffmpeg_exe()
-    except Exception:
-        pass
-
-    system_ffmpeg = shutil.which("ffmpeg")
-    if system_ffmpeg:
-        return system_ffmpeg
-
-    raise RuntimeError(
-        "ffmpeg is required to create videos. Install it with "
-        "`brew install ffmpeg`, `apt install ffmpeg`, or `pip install imageio-ffmpeg`."
-    )
+    return ensure_tool("ffmpeg")
 
 
 def _parse_background(color: str) -> tuple[int, int, int]:
