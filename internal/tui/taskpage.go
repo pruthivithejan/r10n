@@ -71,13 +71,12 @@ func (m *taskPage) rail() string {
 	chrome := lipgloss.NewStyle().Foreground(m.palette.Chrome())
 	width := m.railWidth()
 	lines := []string{
-		strong.Render("r10n"),
 		hatch(m.palette, max(1, width-2), 0),
-		chrome.Render("v" + r10n.Version),
-		"",
-		chrome.Render(ansi.Truncate(currentLocation(), max(1, width-2), "…")),
-		"",
+		strong.Render("r10n"),
 		hatch(m.palette, max(1, width-2), 1),
+		"",
+		chrome.Render("v" + r10n.Version),
+		chrome.Render(ansi.Truncate(currentLocation(), max(1, width-2), "…")),
 	}
 	return lipgloss.NewStyle().Width(width).Padding(0, 1).Render(lipgloss.JoinVertical(lipgloss.Left, lines...))
 }

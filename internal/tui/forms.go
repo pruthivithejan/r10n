@@ -197,32 +197,32 @@ func theme(palettes ...brand.Palette) *huh.Theme {
 	colors := palette.Accent()
 	focus := brand.FocusAccent()
 	onAccent := palette.OnAccent()
-	text, muted := palette.Foreground(), palette.Muted()
-	// Start from the uncolored layout, not Charm's pink/purple theme. Define
-	// every field state before copying blurred styles so accents cannot leak.
+	text, chrome := palette.Foreground(), palette.Chrome()
+	// Start from the uncolored layout, not Charm's pink/purple theme. Field
+	// text stays white/gray; the palette is reserved for chrome and decoration.
 	t := huh.ThemeBase()
 	t.Focused.Base = t.Focused.Base.BorderForeground(focus)
 	t.Focused.Card = t.Focused.Base
-	t.Focused.Title = t.Focused.Title.Foreground(colors).Bold(true)
+	t.Focused.Title = t.Focused.Title.Foreground(text).Bold(true)
 	t.Focused.NoteTitle = t.Focused.Title.MarginBottom(1)
-	t.Focused.Description = t.Focused.Description.Foreground(muted)
+	t.Focused.Description = t.Focused.Description.Foreground(chrome)
 	t.Focused.ErrorIndicator = t.Focused.ErrorIndicator.Foreground(lipgloss.Color("1"))
 	t.Focused.ErrorMessage = t.Focused.ErrorMessage.Foreground(lipgloss.Color("1"))
-	t.Focused.Directory = t.Focused.Directory.Foreground(colors)
+	t.Focused.Directory = t.Focused.Directory.Foreground(chrome)
 	t.Focused.File = t.Focused.File.Foreground(text)
 	t.Focused.SelectSelector = t.Focused.SelectSelector.Foreground(focus)
 	t.Focused.NextIndicator = t.Focused.NextIndicator.Foreground(focus)
 	t.Focused.PrevIndicator = t.Focused.PrevIndicator.Foreground(focus)
 	t.Focused.Option = t.Focused.Option.Foreground(text)
 	t.Focused.MultiSelectSelector = t.Focused.MultiSelectSelector.Foreground(focus)
-	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(colors)
+	t.Focused.SelectedOption = t.Focused.SelectedOption.Foreground(text)
 	t.Focused.SelectedPrefix = t.Focused.SelectedPrefix.Foreground(focus)
 	t.Focused.UnselectedOption = t.Focused.UnselectedOption.Foreground(text)
-	t.Focused.UnselectedPrefix = t.Focused.UnselectedPrefix.Foreground(muted)
+	t.Focused.UnselectedPrefix = t.Focused.UnselectedPrefix.Foreground(chrome)
 	t.Focused.TextInput.Cursor = t.Focused.TextInput.Cursor.Foreground(focus)
-	t.Focused.TextInput.Prompt = t.Focused.TextInput.Prompt.Foreground(colors)
+	t.Focused.TextInput.Prompt = t.Focused.TextInput.Prompt.Foreground(chrome)
 	t.Focused.TextInput.Text = t.Focused.TextInput.Text.Foreground(text)
-	t.Focused.TextInput.Placeholder = t.Focused.TextInput.Placeholder.Foreground(muted)
+	t.Focused.TextInput.Placeholder = t.Focused.TextInput.Placeholder.Foreground(chrome)
 	t.Focused.FocusedButton = t.Focused.FocusedButton.Foreground(onAccent).Background(colors)
 	t.Focused.BlurredButton = t.Focused.BlurredButton.Foreground(text).Background(palette.Surface())
 	t.Focused.Next = t.Focused.FocusedButton
@@ -235,11 +235,11 @@ func theme(palettes ...brand.Palette) *huh.Theme {
 	t.Blurred.PrevIndicator = lipgloss.NewStyle()
 	t.Group.Title = t.Focused.Title
 	t.Group.Description = t.Focused.Description
-	t.Help.ShortKey = t.Help.ShortKey.Foreground(colors)
-	t.Help.FullKey = t.Help.FullKey.Foreground(colors)
-	t.Help.ShortDesc = t.Help.ShortDesc.Foreground(muted)
-	t.Help.FullDesc = t.Help.FullDesc.Foreground(muted)
-	t.Help.ShortSeparator = t.Help.ShortSeparator.Foreground(muted)
-	t.Help.FullSeparator = t.Help.FullSeparator.Foreground(muted)
+	t.Help.ShortKey = t.Help.ShortKey.Foreground(chrome)
+	t.Help.FullKey = t.Help.FullKey.Foreground(chrome)
+	t.Help.ShortDesc = t.Help.ShortDesc.Foreground(chrome)
+	t.Help.FullDesc = t.Help.FullDesc.Foreground(chrome)
+	t.Help.ShortSeparator = t.Help.ShortSeparator.Foreground(chrome)
+	t.Help.FullSeparator = t.Help.FullSeparator.Foreground(chrome)
 	return t
 }

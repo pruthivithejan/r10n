@@ -18,11 +18,14 @@ func TestThemeAppliesPaletteToFocusedAndBlurredStates(t *testing.T) {
 			} {
 				for role, style := range map[string]lipgloss.Style{
 					"title": field.Title, "note": field.NoteTitle,
-					"selected option": field.SelectedOption, "prompt": field.TextInput.Prompt,
+					"selected option": field.SelectedOption,
 				} {
-					if style.GetForeground() != brand.Accent() {
-						t.Errorf("%s %s does not use brand accent: %v", name, role, style.GetForeground())
+					if style.GetForeground() != brand.Foreground() {
+						t.Errorf("%s %s does not use the body foreground: %v", name, role, style.GetForeground())
 					}
+				}
+				if field.TextInput.Prompt.GetForeground() != brand.Palette(mode).Chrome() {
+					t.Errorf("%s prompt is not gray", name)
 				}
 				for role, style := range map[string]lipgloss.Style{
 					"selector": field.SelectSelector, "selected prefix": field.SelectedPrefix,
@@ -32,8 +35,8 @@ func TestThemeAppliesPaletteToFocusedAndBlurredStates(t *testing.T) {
 						t.Errorf("%s %s does not use focus accent", name, role)
 					}
 				}
-				if field.Description.GetForeground() != brand.Muted() ||
-					field.TextInput.Placeholder.GetForeground() != brand.Muted() ||
+				if field.Description.GetForeground() != brand.Palette(mode).Chrome() ||
+					field.TextInput.Placeholder.GetForeground() != brand.Palette(mode).Chrome() ||
 					field.Option.GetForeground() != brand.Foreground() {
 					t.Errorf("%s text colors do not match theme", name)
 				}

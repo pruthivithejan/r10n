@@ -393,9 +393,8 @@ func (m launcherModel) dialogView(width, height int) string {
 	return lipgloss.Place(width, max(1, height), lipgloss.Center, lipgloss.Center, dialog)
 }
 
-func (m launcherModel) quitButton(label, shortcut string, selected bool) string {
-	text := lipgloss.NewStyle().Underline(true).Render(shortcut) + label[len(shortcut):]
-	style := lipgloss.NewStyle().Padding(0, 1).Width(8).Align(lipgloss.Center)
+func (m launcherModel) quitButton(label string, selected bool) string {
+	style := lipgloss.NewStyle().Padding(0, 1).Width(6).Align(lipgloss.Center)
 	if selected {
 		style = style.
 			Background(m.palette.Accent()).
@@ -406,7 +405,7 @@ func (m launcherModel) quitButton(label, shortcut string, selected bool) string 
 			Background(m.palette.Panel()).
 			Foreground(m.palette.Foreground())
 	}
-	return style.Render(text)
+	return style.Render(label)
 }
 
 func (m launcherModel) quitView(width, height int) string {
@@ -415,8 +414,8 @@ func (m launcherModel) quitView(width, height int) string {
 	boxWidth := min(48, max(28, width-8))
 	innerWidth := max(20, boxWidth-4)
 
-	no := m.quitButton("Nope", "N", m.quitChoice == 0)
-	yes := m.quitButton("Yep!", "Y", m.quitChoice == 1)
+	no := m.quitButton("No", m.quitChoice == 0)
+	yes := m.quitButton("Yes", m.quitChoice == 1)
 	buttons := lipgloss.PlaceHorizontal(innerWidth, lipgloss.Center, no+"  "+yes)
 	title := "Are you sure you want to quit?"
 	hints := []string{"To quit without confirmation", "press ctrl+c twice."}

@@ -18,8 +18,20 @@ func exitBanner(prefs Preferences) string {
 	gap := width - ansi.StringWidth(name) - ansi.StringWidth(version) - 2
 
 	rows := []string{name + " " + hatch(prefs.Palette, max(1, gap), 0) + " " + version}
-	for _, line := range strings.Split(prefs.Palette.Banner(false), "\n") {
-		rows = append(rows, lipgloss.PlaceHorizontal(width, lipgloss.Center, line))
+	banner := strings.Split(prefs.Palette.Banner(false), "\n")
+	logoWidth := 0
+	for _, line := range banner {
+		logoWidth = max(logoWidth, ansi.StringWidth(line))
+	}
+	const sideWidth = 6
+	rightWidth := width - sideWidth*2 - logoWidth - 2
+	if rightWidth > 0 {
+		for index, line := range banner {
+			logo := lipgloss.PlaceHorizontal(logoWidth, lipgloss.Center, line)
+			rows = append(rows,
+				hatch(prefs.Palette, sideWidth, index)+" "+logo+" "+hatch(prefs.Palette, rightWidth, index),
+			)
+		}
 	}
 	rows = append(rows, hatch(prefs.Palette, width, 0), "")
 	rows = append(rows, "  "+chrome.Render("Thanks for using r10n."))
