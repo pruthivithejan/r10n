@@ -27,6 +27,7 @@ type launcherEntry struct {
 
 type launcherModel struct {
 	entries     []launcherEntry
+	recent      []string
 	input       textinput.Model
 	palette     brand.Palette
 	width       int
@@ -39,18 +40,26 @@ type launcherModel struct {
 	quitChoice  int
 }
 
-func newLauncher(entries []launcherEntry, prefs Preferences) launcherModel {
+func newLauncher(entries []launcherEntry, prefs Preferences, recent ...string) launcherModel {
 	input := textinput.New()
 	input.Prompt = "› "
 	input.CharLimit = 128
-	input.PromptStyle = lipgloss.NewStyle().Foreground(prefs.Palette.Muted())
-	input.PlaceholderStyle = lipgloss.NewStyle().Foreground(prefs.Palette.Muted())
+	chrome := lipgloss.NewStyle().Foreground(prefs.Palette.Chrome())
+	input.PromptStyle = chrome
+	input.PlaceholderStyle = chrome
 	input.TextStyle = lipgloss.NewStyle().Foreground(prefs.Palette.Foreground())
 	input.Cursor.Style = lipgloss.NewStyle().Foreground(brand.FocusAccent())
 	input.Focus()
 	// A steady cursor avoids distracting animation and respects reduced motion.
 	input.Cursor.SetMode(cursor.CursorStatic)
-	return launcherModel{entries: entries, input: input, palette: prefs.Palette, width: 80, height: 24}
+	return launcherModel{
+		entries: entries,
+		recent:  recent,
+		input:   input,
+		palette: prefs.Palette,
+		width:   80,
+		height:  24,
+	}
 }
 
 func (m launcherModel) Init() tea.Cmd { return nil }
@@ -69,6 +78,27 @@ func (m launcherModel) matches() []launcherEntry {
 		}
 	}
 	return matches
+}
+
+func (m launcherModel) recentEntries() []launcherEntry {
+	recent := make([]launcherEntry, 0, 5)
+	seen := map[string]bool{}
+	for _, id := range m.recent {
+		if seen[id] {
+			continue
+		}
+		for _, entry := range m.entries {
+			if entry.id == id {
+				recent = append(recent, entry)
+				seen[id] = true
+				break
+			}
+		}
+		if len(recent) == 5 {
+			break
+		}
+	}
+	return recent
 }
 
 func (m launcherModel) openDialog(query string) launcherModel {
@@ -169,14 +199,13 @@ func (m launcherModel) dialogWidth() int {
 }
 
 func (m launcherModel) header(width int) string {
-	accent := lipgloss.NewStyle().Foreground(m.palette.Accent()).Bold(true)
-	muted := lipgloss.NewStyle().Foreground(m.palette.Muted())
+	chrome := lipgloss.NewStyle().Foreground(m.palette.Chrome())
 	contentWidth := max(1, width-2)
-	metaLeft := muted.Render("r10n")
+	metaLeft := chrome.Render("r10n")
 	if contentWidth >= 54 {
-		metaLeft = muted.Render("r10n  ·  routine automation")
+		metaLeft = chrome.Render("r10n  ·  routine automation")
 	}
-	metaRight := muted.Render("v" + r10n.Version)
+	metaRight := chrome.Render("v" + r10n.Version)
 	gap := max(1, contentWidth-lipgloss.Width(metaLeft)-lipgloss.Width(metaRight))
 	meta := metaLeft + strings.Repeat(" ", gap) + metaRight
 
@@ -193,40 +222,72 @@ func (m launcherModel) header(width int) string {
 
 	rows := []string{meta}
 	for index, line := range banner {
-		left := muted.Render(strings.Repeat("╱", fieldWidth))
-		right := muted.Render(strings.Repeat("╱", max(0, rightWidth-index)))
-		logo := lipgloss.NewStyle().Width(logoWidth).Align(lipgloss.Center).Render(accent.Render(line))
+		left := chrome.Render(strings.Repeat("·", fieldWidth))
+		right := chrome.Render(strings.Repeat("·", max(0, rightWidth-index)))
+		logo := lipgloss.NewStyle().Width(logoWidth).Align(lipgloss.Center).Render(
+			lipgloss.NewStyle().Foreground(m.palette.Accent()).Render(line),
+		)
 		rows = append(rows, left+" "+logo+" "+right)
 	}
 	return lipgloss.NewStyle().Padding(0, 1).Render(lipgloss.JoinVertical(lipgloss.Left, rows...))
 }
 
 func (m launcherModel) homeBody(width, height int) string {
-	muted := lipgloss.NewStyle().Foreground(m.palette.Muted())
+	chrome := lipgloss.NewStyle().Foreground(m.palette.Chrome())
 	input := m.input
 	input.Width = max(1, width-4)
-	footer := muted.Render("type to search  ·  ctrl+c quit")
-	block := lipgloss.NewStyle().Padding(0, 1).Render(
-		lipgloss.JoinVertical(lipgloss.Left, input.View(), footer),
+	footer := chrome.Render("/ commands  ·  ctrl+c quit")
+	bottom := lipgloss.NewStyle().Padding(0, 1).Render(
+		lipgloss.JoinVertical(lipgloss.Left, input.View(), "", footer),
 	)
-	return lipgloss.Place(width, max(1, height), lipgloss.Left, lipgloss.Bottom, block)
+
+	top := ""
+	if entries := m.recentEntries(); len(entries) > 0 && height >= 9 {
+		idWidth := 0
+		for _, entry := range entries {
+			idWidth = max(idWidth, lipgloss.Width("/"+SafeText(entry.id)))
+		}
+		idWidth = min(idWidth, 18)
+		lines := []string{chrome.Render("Recent")}
+		for _, entry := range entries {
+			name := ansi.Truncate("/"+SafeText(entry.id), idWidth, "…")
+			line := "  " + lipgloss.NewStyle().Width(idWidth).Render(chrome.Render(name)) +
+				"  " + chrome.Render(SafeText(entry.title))
+			lines = append(lines, line)
+		}
+		top = lipgloss.NewStyle().Padding(0, 1).Render(strings.Join(lines, "\n"))
+	}
+
+	topHeight := 0
+	if top != "" {
+		topHeight = lipgloss.Height(top)
+	}
+	bottomHeight := lipgloss.Height(bottom)
+	if topHeight+bottomHeight+1 > height {
+		top, topHeight = "", 0
+	}
+	gap := max(1, height-topHeight-bottomHeight)
+	if top == "" {
+		return strings.Repeat("\n", gap) + bottom
+	}
+	return top + strings.Repeat("\n", gap) + bottom
 }
 
 func (m launcherModel) dialogView(width, height int) string {
-	accent := lipgloss.NewStyle().Foreground(m.palette.Accent()).Bold(true)
-	muted := lipgloss.NewStyle().Foreground(m.palette.Muted())
+	chrome := lipgloss.NewStyle().Foreground(m.palette.Chrome())
+	strong := lipgloss.NewStyle().Foreground(m.palette.Foreground()).Bold(true)
 	innerWidth := max(10, m.dialogWidth()-4)
 	m.input.Width = max(8, innerWidth-4)
 
 	var content strings.Builder
-	content.WriteString(accent.Render("Automations"))
+	content.WriteString(strong.Render("Automations"))
 	content.WriteString("\n")
 	content.WriteString(m.input.View())
 	content.WriteString("\n\n")
 
 	matches := m.matches()
 	if len(matches) == 0 {
-		content.WriteString(muted.Render("No matching automations."))
+		content.WriteString(chrome.Render("No matching automations."))
 	} else {
 		idWidth := 0
 		for _, entry := range matches {
@@ -243,36 +304,37 @@ func (m launcherModel) dialogView(width, height int) string {
 				prefix = "❯ "
 			}
 			name := ansi.Truncate("/"+SafeText(entry.id), idWidth, "…")
-			line := prefix + lipgloss.NewStyle().Width(idWidth).Render(name) + "  " + SafeText(entry.title)
+			line := prefix + lipgloss.NewStyle().Width(idWidth).Render(chrome.Render(name)) +
+				"  " + chrome.Render(SafeText(entry.title))
 			if innerWidth >= 56 {
-				line += "  " + muted.Render(SafeText(entry.description))
+				line += "  " + chrome.Render(SafeText(entry.description))
 			}
 			line = ansi.Truncate(line, innerWidth, "…")
 			if index == m.active {
-				line = accent.Render(line)
+				line = strong.Render(line)
 			}
 			content.WriteString(line)
 			content.WriteString("\n")
 		}
 		if len(matches) > limit {
-			content.WriteString(muted.Render(fmt.Sprintf("%d of %d automations", m.active+1, len(matches))))
+			content.WriteString(chrome.Render(fmt.Sprintf("%d of %d automations", m.active+1, len(matches))))
 			content.WriteString("\n")
 		}
 	}
 	if m.message != "" {
 		content.WriteString("\n")
-		content.WriteString(muted.Render(m.message))
+		content.WriteString(chrome.Render(m.message))
 	}
 	content.WriteString("\n")
 	dialogHelp := "↑/↓ choose  ·  enter open  ·  esc close"
 	if innerWidth < 44 {
 		dialogHelp = "↑/↓  ·  enter  ·  esc"
 	}
-	content.WriteString(muted.Render(dialogHelp))
+	content.WriteString(chrome.Render(dialogHelp))
 
 	dialog := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(m.palette.Muted()).
+		BorderForeground(m.palette.Chrome()).
 		Padding(0, 1).
 		Width(m.dialogWidth()).
 		Render(content.String())
@@ -280,13 +342,13 @@ func (m launcherModel) dialogView(width, height int) string {
 }
 
 func (m launcherModel) quitView(width, height int) string {
-	accent := lipgloss.NewStyle().Foreground(m.palette.Accent()).Bold(true)
-	muted := lipgloss.NewStyle().Foreground(m.palette.Muted())
-	no, yes := muted.Render("No"), muted.Render("Yes")
+	chrome := lipgloss.NewStyle().Foreground(m.palette.Chrome())
+	strong := lipgloss.NewStyle().Foreground(m.palette.Foreground()).Bold(true)
+	no, yes := chrome.Render("No"), chrome.Render("Yes")
 	if m.quitChoice == 0 {
-		no = accent.Render("❯ No")
+		no = strong.Render("❯ No")
 	} else {
-		yes = accent.Render("❯ Yes")
+		yes = strong.Render("❯ Yes")
 	}
 	boxWidth := min(52, max(24, width-8))
 	help := "←/→ choose  ·  enter confirm  ·  esc cancel"
@@ -295,15 +357,13 @@ func (m launcherModel) quitView(width, height int) string {
 	}
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
-		accent.Render("Quit r10n?"),
-		"",
+		strong.Render("Quit r10n?"),
 		no+"    "+yes,
-		"",
-		muted.Render(help),
+		chrome.Render(help),
 	)
 	dialog := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(m.palette.Muted()).
+		BorderForeground(m.palette.Chrome()).
 		Padding(0, 1).
 		Width(boxWidth).
 		Render(content)
@@ -321,5 +381,5 @@ func (m launcherModel) View() string {
 	if m.confirmQuit {
 		body = m.quitView(width, bodyHeight)
 	}
-	return header + "\n" + body
+	return header + "\n\n" + body
 }

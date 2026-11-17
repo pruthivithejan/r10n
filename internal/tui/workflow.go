@@ -198,15 +198,21 @@ func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog
 				return err
 			}
 		} else {
-			model := newLauncher(entries, prefs)
+			recent := []string{}
+			if document, err := settings.Load(); err == nil {
+				recent = document.RecentAutomations
+			}
+			model := newLauncher(entries, prefs, recent...)
 			final, err := tea.NewProgram(model, tea.WithContext(ctx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
 			if err != nil {
 				return err
 			}
 			selected = final.(launcherModel).selected
 			if selected == "" {
+				fmt.Fprintln(stderr, exitBanner(prefs))
 				return nil
 			}
+			_ = settings.RecordRecent(selected)
 		}
 		for _, command := range commands {
 			if command.ID == selected && command.Run != nil {

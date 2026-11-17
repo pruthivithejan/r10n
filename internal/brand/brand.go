@@ -49,6 +49,21 @@ func (p Palette) Foreground() lipgloss.Color { return p.themeColor(DarkBackgroun
 // Muted returns the supporting text color for the palette.
 func (p Palette) Muted() lipgloss.Color { return p.themeColor(LightAccent, Secondary) }
 
+// Chrome returns a low-emphasis gray for instructions, metadata, and decoration.
+func (p Palette) Chrome() lipgloss.Color {
+	switch p {
+	case "dark":
+		return lipgloss.Color("#8B96A5")
+	case "light":
+		return lipgloss.Color("#5C6673")
+	default:
+		if lipgloss.HasDarkBackground() {
+			return lipgloss.Color("#8B96A5")
+		}
+		return lipgloss.Color("#5C6673")
+	}
+}
+
 // Surface returns the inactive control background for the palette.
 func (p Palette) Surface() lipgloss.Color { return p.themeColor(LightForeground, DarkBackground) }
 

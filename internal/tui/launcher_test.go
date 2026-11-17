@@ -86,13 +86,13 @@ func TestLauncherHeaderShowsBrandLogoVersionAndField(t *testing.T) {
 	if !strings.Contains(view, "routine automation") || !strings.Contains(view, "v"+r10n.Version) {
 		t.Fatalf("header should show the brand and version: %s", view)
 	}
-	if !strings.Contains(view, "╱") {
-		t.Fatalf("header should use diagonal ASCII fields: %s", view)
+	if !strings.Contains(view, "·") {
+		t.Fatalf("header should use ASCII fields: %s", view)
 	}
 	if strings.Contains(view, "─") {
 		t.Fatalf("header should not use horizontal rules: %s", view)
 	}
-	if !strings.Contains(view, "type to search") {
+	if !strings.Contains(view, "/ commands") || !strings.Contains(view, "ctrl+c quit") {
 		t.Fatalf("home footer missing: %s", view)
 	}
 }
@@ -143,7 +143,7 @@ func TestLauncherSlashOpensAndEscapeClosesDialog(t *testing.T) {
 	if !strings.Contains(opened, "Automations") || !strings.Contains(opened, "╭") {
 		t.Fatalf("slash should open the automation dialog: %s", opened)
 	}
-	if strings.Contains(opened, "type to search") {
+	if strings.Contains(opened, "/ commands") {
 		t.Fatalf("dialog should replace the home input: %s", opened)
 	}
 	closed := ansi.Strip(launcherKey(launcherKey(model, "/"), "esc").View())
@@ -159,5 +159,27 @@ func TestLauncherCompactHeaderFitsSmallTerminal(t *testing.T) {
 	view := ansi.Strip(model.View())
 	if !strings.Contains(view, "r10n") || !strings.Contains(view, "v"+r10n.Version) {
 		t.Fatalf("compact header should keep the brand and version: %s", view)
+	}
+}
+
+func TestLauncherShowsRecentAutomations(t *testing.T) {
+	model := newLauncher([]launcherEntry{
+		{id: "contacts", title: "Create contacts"},
+		{id: "images", title: "Optimize images"},
+		{id: "sms", title: "Router SMS"},
+	}, Preferences{}, "images", "contacts")
+	view := ansi.Strip(model.View())
+	if !strings.Contains(view, "Recent") || !strings.Contains(view, "/images") || !strings.Contains(view, "/contacts") {
+		t.Fatalf("recent automations missing: %s", view)
+	}
+	if strings.Contains(view, "/sms") {
+		t.Fatalf("unused automation shown as recent: %s", view)
+	}
+}
+
+func TestExitBannerPrintsPatternAndThanks(t *testing.T) {
+	view := ansi.Strip(exitBanner(Preferences{}))
+	if !strings.Contains(view, "Thanks for using r10n.") || !strings.Contains(view, "·") {
+		t.Fatalf("exit banner missing pattern or greeting: %s", view)
 	}
 }
