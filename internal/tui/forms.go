@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/pruthivithejan/r10n/internal/backend"
@@ -125,7 +126,7 @@ func inputForm(task backend.Automation) (*huh.Form, func() (map[string]any, erro
 	groups := make([]*huh.Group, 0, len(fields))
 	for index, field := range fields {
 		groups = append(groups, huh.NewGroup(field).
-			Title(fmt.Sprintf("%s · Step %d/%d", task.Title, index+1, len(fields))))
+			Title(fmt.Sprintf("Step %d/%d", index+1, len(fields))))
 	}
 	collect := func() (map[string]any, error) {
 		payload := map[string]any{}
@@ -165,6 +166,9 @@ func runForm(ctx context.Context, form *huh.Form) error {
 	}
 	prefs := DisplayPreferences(ctx)
 	form.WithTheme(theme(prefs.Palette)).WithOutput(stderr).WithInput(stdin).WithAccessible(prefs.Accessible)
+	if !prefs.Accessible {
+		form.WithProgramOptions(tea.WithAltScreen())
+	}
 	var err error
 	if prefs.Accessible {
 		// huh's plain-prompt runner does not observe context cancellation.

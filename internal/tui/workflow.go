@@ -154,14 +154,40 @@ func RunTask(ctx context.Context, engine backend.Backend, task backend.Automatio
 		return &backend.RunError{Code: 2, Message: task.SetupHint}
 	}
 	prefs := DisplayPreferences(ctx)
-	fmt.Fprintln(stderr, prefs.Palette.Banner(prefs.Accessible))
-	fmt.Fprintln(stderr, heading(prefs.Palette).Render(SafeText(task.Title)), SafeText(task.Description))
-	form, collect, err := inputForm(task)
-	if err != nil {
-		return err
-	}
-	if err = runForm(ctx, form); err != nil {
-		return err
+	var collect func() (map[string]any, error)
+	if prefs.Accessible {
+		fmt.Fprintln(stderr, prefs.Palette.Banner(true))
+		fmt.Fprintln(stderr, heading(prefs.Palette).Render(SafeText(task.Title)), SafeText(task.Description))
+		form, gather, err := inputForm(task)
+		if err != nil {
+			return err
+		}
+		if err = runForm(ctx, form); err != nil {
+			return err
+		}
+		collect = gather
+	} else {
+		page, _, gather, err := newTaskPage(task, prefs)
+		if err != nil {
+			return err
+		}
+		collect = gather
+		final, err := tea.NewProgram(
+			page,
+			tea.WithAltScreen(),
+			tea.WithContext(ctx),
+			tea.WithInput(stdin),
+			tea.WithOutput(stderr),
+		).Run()
+		if err != nil {
+			if ctx.Err() != nil {
+				return context.Canceled
+			}
+			return err
+		}
+		if final.(*taskPage).form.State == huh.StateAborted {
+			return context.Canceled
+		}
 	}
 	payload, err := collect()
 	if err != nil {
@@ -203,7 +229,7 @@ func Picker(ctx context.Context, engine backend.Backend, catalog backend.Catalog
 				recent = document.RecentAutomations
 			}
 			model := newLauncher(entries, prefs, recent...)
-			final, err := tea.NewProgram(model, tea.WithContext(ctx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
+			final, err := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(ctx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
 			if err != nil {
 				return err
 			}

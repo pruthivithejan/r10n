@@ -257,7 +257,7 @@ func executeInteractive(ctx context.Context, engine backend.Backend, task backen
 		progress: NewProgress(60, prefs.Palette), events: events, resultErr: resultErr, cancel: cancel,
 		animate: !prefs.ReducedMotion, width: 76, palette: prefs.Palette,
 	}
-	final, err := tea.NewProgram(model, tea.WithContext(parentCtx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
+	final, err := tea.NewProgram(model, tea.WithAltScreen(), tea.WithContext(parentCtx), tea.WithInput(stdin), tea.WithOutput(stderr)).Run()
 	cancel()
 	<-finished
 	if err != nil {
