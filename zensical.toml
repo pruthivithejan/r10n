@@ -36,6 +36,7 @@ nav = [
 extra_css = ["stylesheets/extra.css"]
 
 [project.theme]
+custom_dir = "overrides"
 logo = "assets/brand/r10n.svg"
 favicon = "assets/brand/favicon.svg"
 features = [

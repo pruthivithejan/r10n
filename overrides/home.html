@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block site_nav %}{% endblock %}
+
+{% block tabs %}{% endblock %}
+
+{% block container %}
+<div class="r10n-landing">
+  <section class="r10n-hero" aria-labelledby="r10n-hero-title">
+    <h1 class="r10n-hero__logo" id="r10n-hero-title">
+      <img src="{{ 'assets/brand/r10n.svg' | url }}" alt="r10n" width="1200" height="376">
+    </h1>
+    <p class="r10n-hero__tagline">
+      Routine automation in an accessible, keyboard-first terminal.
+    </p>
+    <p class="r10n-hero__lede">
+      Contacts, PDFs, images, email, and more. One native CLI, reviewed before every run.
+    </p>
+    <div class="r10n-hero__actions">
+      <a class="r10n-button r10n-button--solid" href="{{ 'get-started/' | url }}">Get started</a>
+      <a class="r10n-button" href="{{ 'automations/' | url }}">Browse automations</a>
+    </div>
+    <p class="r10n-hero__install">
+      <code>curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh</code>
+    </p>
+  </section>
+
+  <section class="r10n-showcase" aria-labelledby="r10n-showcase-title">
+    <div class="r10n-terminal" aria-hidden="true">
+      <div class="r10n-terminal__bar">
+        <span></span><span></span><span></span><b>r10n</b>
+      </div>
+      <pre class="r10n-terminal__body"><code>$ r10n
+
+  Search automations
+
+  › Contacts       VCF cards from phone numbers
+  › Fill PDFs      CSV → personalized PDFs
+  › Images         WebP with size limits
+  › Colors         hex → oklch()
+  › Video          images → MP4
+
+  ↑↓ move   ↵ run   esc close</code></pre>
+    </div>
+    <div class="r10n-showcase__copy">
+      <h2 id="r10n-showcase-title">One picker. Every workflow.</h2>
+      <p>
+        Search automations, fill validated inputs, review the resolved paths, then confirm.
+        The same contract runs headless with <code>--yes</code>.
+      </p>
+      <ul class="r10n-list">
+        <li>Forms generated from Python input models</li>
+        <li>Live progress, cancellation, and artifact paths</li>
+        <li>Per-user settings and OS credential storage</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="r10n-section" aria-labelledby="r10n-features-title">
+    <h2 id="r10n-features-title">Built for repetition</h2>
+    <p class="r10n-section__lede">
+      The boring parts of routine work are checked, resolved, and reported for you.
+    </p>
+    <div class="r10n-grid r10n-grid--features">
+      <article class="r10n-card">
+        <span class="r10n-card__meta">Input</span>
+        <span class="r10n-card__title">Keyboard-first</span>
+        <span class="r10n-card__body">Searchable picker, linear prompts, and visible focus.</span>
+      </article>
+      <article class="r10n-card">
+        <span class="r10n-card__meta">Safety</span>
+        <span class="r10n-card__title">Reviewed before running</span>
+        <span class="r10n-card__body">Resolved inputs and artifacts shown before anything starts.</span>
+      </article>
+      <article class="r10n-card">
+        <span class="r10n-card__meta">Automation</span>
+        <span class="r10n-card__title">Headless when needed</span>
+        <span class="r10n-card__body">Complete inputs plus <code>--yes</code> run without prompts.</span>
+      </article>
+      <article class="r10n-card">
+        <span class="r10n-card__meta">Output</span>
+        <span class="r10n-card__title">Clear results</span>
+        <span class="r10n-card__body">Progress, cancellation, and the exact paths that changed.</span>
+      </article>
+      <article class="r10n-card">
+        <span class="r10n-card__meta">System</span>
+        <span class="r10n-card__title">Native settings</span>
+        <span class="r10n-card__body">Per-user preferences and named profiles, never project folders.</span>
+      </article>
+      <article class="r10n-card">
+        <span class="r10n-card__meta">Install</span>
+        <span class="r10n-card__title">No Python required</span>
+        <span class="r10n-card__body">The standalone installer bundles the Python worker.</span>
+      </article>
+    </div>
+  </section>
+
+  <section class="r10n-section" aria-labelledby="r10n-automations-title">
+    <div class="r10n-section__head">
+      <h2 id="r10n-automations-title">Automations</h2>
+      <a class="r10n-textlink" href="{{ 'automations/' | url }}">All automations →</a>
+    </div>
+    <div class="r10n-grid">
+      {% include "partials/home-automations.html" %}
+    </div>
+  </section>
+
+  <section class="r10n-section r10n-about" aria-labelledby="r10n-about-title">
+    <h2 id="r10n-about-title">What is r10n?</h2>
+    <div class="r10n-prose">{{ page.content }}</div>
+  </section>
+
+  <section class="r10n-install" aria-labelledby="r10n-install-title">
+    <h2 id="r10n-install-title">Install once. Run anywhere.</h2>
+    <div class="r10n-install__grid">
+      <div class="r10n-install__card">
+        <span>Standalone</span>
+        <code>curl -fsSL https://raw.githubusercontent.com/pruthivithejan/r10n/main/install.sh | sh</code>
+        <code>r10n</code>
+      </div>
+      <div class="r10n-install__card">
+        <span>uvx</span>
+        <code>uvx --from git+https://github.com/pruthivithejan/r10n.git r10n</code>
+      </div>
+    </div>
+    <p class="r10n-install__note">
+      Linux x86_64 and macOS arm64. Windows x86_64 via GitHub Releases.
+    </p>
+  </section>
+</div>
+{% endblock %}
