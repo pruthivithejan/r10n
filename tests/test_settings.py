@@ -74,3 +74,11 @@ def test_invalid_or_future_settings_are_not_silently_reset(tmp_path, monkeypatch
     )
     with pytest.raises(ValueError, match="extra_forbidden"):
         load_settings()
+
+
+def test_recent_automations_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setenv("R10N_CONFIG_DIR", str(tmp_path / "settings"))
+
+    save_settings(Settings(recent_automations=["contacts", "images"]))
+
+    assert load_settings().recent_automations == ["contacts", "images"]

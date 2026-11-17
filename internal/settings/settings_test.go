@@ -280,3 +280,20 @@ func TestLoadRejectsUnknownAndFutureSettings(t *testing.T) {
 		}
 	}
 }
+
+func TestRecordRecentKeepsNewestDistinctIdentifiers(t *testing.T) {
+	t.Setenv("R10N_CONFIG_DIR", t.TempDir())
+	for _, id := range []string{"a", "b", "a", "c", "d", "e", "f"} {
+		if err := RecordRecent(id); err != nil {
+			t.Fatal(err)
+		}
+	}
+	document, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := strings.Join(document.RecentAutomations, ",")
+	if got != "f,e,d,c,a" {
+		t.Fatalf("recent automations = %q", got)
+	}
+}

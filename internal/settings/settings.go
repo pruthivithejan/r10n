@@ -22,6 +22,7 @@ type Document struct {
 	Theme             string                 `json:"theme"`
 	Accessible        bool                   `json:"accessible"`
 	ReducedMotion     bool                   `json:"reduced_motion"`
+	RecentAutomations []string               `json:"recent_automations,omitempty"`
 	OutputDirectory   string                 `json:"output_directory,omitempty"`
 	ActiveSMTPProfile string                 `json:"active_smtp_profile,omitempty"`
 	SMTPProfiles      map[string]SMTPProfile `json:"smtp_profiles,omitempty"`
@@ -154,7 +155,49 @@ func normalize(document Document) (Document, error) {
 	if document.PDFProfiles == nil {
 		document.PDFProfiles = map[string]PDFProfile{}
 	}
+	document.RecentAutomations = normalizeRecent(document.RecentAutomations)
 	return document, nil
+}
+
+// normalizeRecent keeps the most recent distinct automation identifiers.
+func normalizeRecent(values []string) []string {
+	const limit = 5
+	recent := make([]string, 0, limit)
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		duplicate := false
+		for _, existing := range recent {
+			if existing == value {
+				duplicate = true
+				break
+			}
+		}
+		if !duplicate {
+			recent = append(recent, value)
+		}
+		if len(recent) == limit {
+			break
+		}
+	}
+	return recent
+}
+
+// RecordRecent moves an automation to the front of the recent list.
+func RecordRecent(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil
+	}
+	document, err := Load()
+	if err != nil {
+		return err
+	}
+	document.RecentAutomations = normalizeRecent(append([]string{id}, document.RecentAutomations...))
+	_, err = Save(document)
+	return err
 }
 
 // validate checks settings before writing them.

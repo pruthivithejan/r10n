@@ -62,6 +62,7 @@ class Settings(BaseModel):
     theme: Literal["dark", "light", "system"] = "dark"
     accessible: bool = False
     reduced_motion: bool = False
+    recent_automations: list[str] = Field(default_factory=list)
     output_directory: str = ""
     active_smtp_profile: str = ""
     smtp_profiles: dict[str, SMTPProfile] = Field(default_factory=dict)
